@@ -1,6 +1,7 @@
 import { TOLERANCES, type GeometryEngine } from '@railcad/geometry-api';
 import { dimensionLayout } from './dimension';
 import { snap } from './snap';
+import { evaluateConnections, findCoincidentFreePorts, portPose } from './topology';
 import {
   arcCenter,
   arcFromStartTangentEnd,
@@ -22,6 +23,7 @@ export const geometryEngine: GeometryEngine = {
   startPose,
   endPose,
   poseAt,
+  portPose,
   closestPoint,
   bounds,
   arcCenter: (g) => (g.kind === 'arc' ? arcCenter(g) : null),
@@ -38,5 +40,7 @@ export const geometryEngine: GeometryEngine = {
       TOLERANCES.maxInteractiveRadiusM,
     ),
   snap,
+  evaluateConnections,
+  findCoincidentFreePorts,
   dimensionLayout,
 };

@@ -1,4 +1,4 @@
-import type { DimensionSpec, TrackGeometry, Vec2 } from '@railcad/domain';
+import type { Connection, DimensionSpec, PortName, TrackGeometry, Vec2 } from '@railcad/domain';
 
 export type { Vec2, TrackGeometry } from '@railcad/domain';
 
@@ -15,6 +15,13 @@ export const TOLERANCES = Object.freeze({
   minSegmentLengthM: 1e-6,
   /** Største radius som aksepteres ved interaktiv konstruksjon av buer (nær-rette linjer avvises). Meter. */
   maxInteractiveRadiusM: 1e5,
+  /** Endepunkter i en kobling skal sammenfalle innenfor denne avstanden. Meter. */
+  connectionPositionM: 1e-6,
+  /**
+   * Største tillatte vinkelavvik mellom tangentene i en kobling. Radianer.
+   * FORELØPIG TESTVERDI – ikke faglig fastsatt. Må avklares mot gjeldende krav før bruk i prosjektering.
+   */
+  connectionTangentRad: 1e-6,
 });
 
 export interface Pose {
@@ -63,6 +70,32 @@ export interface TrackRef {
   geometry: TrackGeometry;
 }
 
+export type ConnectionStatus = 'ok' | 'position' | 'tangent' | 'missing';
+
+export interface PortRef {
+  objectId: string;
+  port: PortName;
+}
+
+export interface ConnectionResult {
+  /** Posisjon i `connections`-listen. */
+  index: number;
+  connection: Connection;
+  status: ConnectionStatus;
+  /** Avstand mellom de to endepunktene, meter (NaN hvis et spor mangler). */
+  distanceM: number;
+  /** Vinkelavvik fra perfekt motsatt rettede tangenter, radianer (NaN hvis et spor mangler). */
+  tangentDeviationRad: number;
+  /** Midtpunkt mellom endepunktene – brukes til markering (null hvis et spor mangler). */
+  at: Vec2 | null;
+}
+
+export interface PortPair {
+  a: PortRef;
+  b: PortRef;
+  distanceM: number;
+}
+
 export interface DimensionLayout {
   /** Målt verdi i meter, beregnet fra modellen. */
   valueM: number;
@@ -88,6 +121,8 @@ export interface GeometryEngine {
   endPose(g: TrackGeometry): Pose;
   /** Pose i avstand s fra start (0 ≤ s ≤ lengde; utenfor klemmes). */
   poseAt(g: TrackGeometry, s: number): Pose;
+  /** Endepunktets posisjon og UTGÅENDE retning (bort fra sporet): slutt = retning, start = retning + π. */
+  portPose(g: TrackGeometry, port: PortName): Pose;
   closestPoint(g: TrackGeometry, p: Vec2): ClosestPoint;
   bounds(g: TrackGeometry): Bounds;
   /** Sentrum for buer; null for rette spor. */
@@ -101,6 +136,16 @@ export interface GeometryEngine {
   /** Sirkelbue med gitt start og starttangent som går gjennom `end`. Null hvis ugyldig. */
   arcFromStartTangentEnd(start: Vec2, headingRad: number, end: Vec2): TrackGeometry | null;
   snap(tracks: Iterable<TrackRef>, query: SnapQuery): SnapResult | null;
+  /** Kontrollerer hver kobling mot toleransene i TOLERANCES. Flytter aldri noe. */
+  evaluateConnections(
+    tracks: ReadonlyMap<string, TrackGeometry>,
+    connections: readonly Connection[],
+  ): ConnectionResult[];
+  /** Ukoblede, sammenfallende endepunkter (forslag til nye koblinger). */
+  findCoincidentFreePorts(
+    tracks: ReadonlyMap<string, TrackGeometry>,
+    connections: readonly Connection[],
+  ): PortPair[];
   dimensionLayout(
     spec: DimensionSpec,
     resolveTarget: (id: string) => TrackGeometry | undefined,

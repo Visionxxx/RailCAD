@@ -106,3 +106,23 @@ describe('geometriinvarianter og ID-er', () => {
     expect(createEmptyProject('X').objects).toEqual([]);
   });
 });
+
+describe('koblingsregler', () => {
+  const withConnections = (connections: unknown[]) => {
+    const p: any = demo();
+    p.objects.push({ id: 'track-003', type: 'track_segment', geometry: { kind: 'line', start: [140, 0], headingRad: 0, lengthM: 10 } });
+    p.connections = connections;
+    return validateProject(p);
+  };
+  const c = (a: string, ap: string, b: string, bp: string) => ({ a: { objectId: a, port: ap }, b: { objectId: b, port: bp } });
+
+  it('godtar gyldige koblinger', () => {
+    expect(withConnections([c('track-001', 'end', 'track-003', 'start')]).ok).toBe(true);
+  });
+  it('avviser port som brukes i flere koblinger og kobling til seg selv', () => {
+    const r = withConnections([c('track-001', 'end', 'track-003', 'start'), c('track-001', 'end', 'track-002', 'start')]);
+    expect(!r.ok && r.errors.join()).toContain('koblet flere ganger');
+    const self = withConnections([c('track-001', 'end', 'track-001', 'end')]);
+    expect(self.ok).toBe(false);
+  });
+});

@@ -124,11 +124,20 @@ export function validateProject(raw: unknown): ProjectValidation {
       errors.push(`objects[${i}] (${o.id}): punktene i målet er sammenfallende`);
     }
   });
+  const usedPorts = new Set<string>();
   project.connections.forEach((c, i) => {
     for (const end of [c.a, c.b]) {
       if (ids.get(end.objectId) !== 'track_segment') {
         errors.push(`connections[${i}]: viser til ukjent sporobjekt «${end.objectId}»`);
       }
+      const key = `${end.objectId}:${end.port}`;
+      if (usedPorts.has(key)) {
+        errors.push(`connections[${i}]: porten «${key}» er koblet flere ganger`);
+      }
+      usedPorts.add(key);
+    }
+    if (c.a.objectId === c.b.objectId && c.a.port === c.b.port) {
+      errors.push(`connections[${i}]: en port kan ikke kobles til seg selv`);
     }
   });
 
