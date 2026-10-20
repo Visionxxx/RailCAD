@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { TOLERANCES, type ConnectionResult, type PortRef } from '@railcad/geometry-api';
-import { fmt, fmtDeg, fmtM, radToDeg } from '../format';
+import { fmt, fmtDeg, fmtM, portLabel, radToDeg } from '../format';
 import { useProjectStore } from '../stores/project';
 
 const project = useProjectStore();
 
-const portName = (p: PortRef) => `${p.objectId} ${p.port === 'start' ? 'start' : 'slutt'}`;
+const portName = (p: PortRef) => `${p.objectId} ${portLabel(p.port)}`;
 
 function statusText(r: ConnectionResult): string {
   switch (r.status) {

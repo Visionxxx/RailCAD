@@ -2,12 +2,14 @@ import {
   idPrefix,
   isDimension,
   isTrack,
+  isTurnout,
   nextId,
   type Connection,
   type DimensionSpec,
   type PortName,
   type RailObject,
   type TrackGeometry,
+  type TurnoutPlacement,
   type Vec2,
 } from '@railcad/domain';
 import type { GeometryEngine } from '@railcad/geometry-api';
@@ -115,6 +117,15 @@ export function transformObjects(
           ? engine.translate(o.geometry, op.dx, op.dy)
           : engine.rotate(o.geometry, op.pivot, op.angleRad);
       replacements.set(o.id, { ...o, geometry });
+    } else if (isTurnout(o)) {
+      replacements.set(o.id, {
+        ...o,
+        turnout: {
+          ...o.turnout,
+          position: movePoint(o.turnout.position),
+          headingRad: o.turnout.headingRad + (op.type === 'rotate' ? op.angleRad : 0),
+        },
+      });
     } else if (o.dimension.kind === 'distance') {
       replacements.set(o.id, {
         ...o,
@@ -171,5 +182,33 @@ export function createTrackConnected(
     before: [...connections],
     after: [...connections, { a: anchor, b: { objectId: id, port: 'start' } }],
   };
+  return { patch, id };
+}
+
+/**
+ * Plasserer en sporveksel fra biblioteket. Med `anchor` kobles stamspor inn (SS) til en eksisterende
+ * port i samme angrebare handling.
+ */
+export function createTurnout(
+  objects: readonly RailObject[],
+  connections: readonly Connection[],
+  placement: TurnoutPlacement,
+  anchor?: { objectId: string; port: PortName },
+): { patch: Patch; id: string } {
+  const id = nextId(
+    'turnout',
+    objects.map((o) => o.id),
+  );
+  const object: RailObject = { id, type: 'turnout', turnout: placement };
+  const patch: Patch = {
+    label: 'Plasser sporveksel',
+    objects: { [id]: { before: null, after: object, index: objects.length } },
+  };
+  if (anchor) {
+    patch.connections = {
+      before: [...connections],
+      after: [...connections, { a: anchor, b: { objectId: id, port: 'stem_in' } }],
+    };
+  }
   return { patch, id };
 }

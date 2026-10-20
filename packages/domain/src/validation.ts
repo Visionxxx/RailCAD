@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { RailProject, TrackGeometry } from './types';
+import { getTurnoutType } from './turnout-catalog';
+import { TRACK_PORTS, TURNOUT_PORTS, type RailProject, type TrackGeometry } from './types';
 
 /** Gjeldende filformatversjon. Endres kun sammen med en migrering i `migrate.ts`. */
 export const CURRENT_SCHEMA_VERSION = '0.1.0';
@@ -7,7 +8,7 @@ export const CURRENT_SCHEMA_VERSION = '0.1.0';
 const finite = z.number().refine((n) => Number.isFinite(n), 'må være et endelig tall');
 const vec2 = z.tuple([finite, finite]);
 const nonEmptyString = z.string().min(1, 'kan ikke være tom');
-const portSchema = z.enum(['start', 'end']);
+const portSchema = z.enum(['start', 'end', 'stem_in', 'stem_out', 'diverging_out']);
 const endpointRef = z.object({ objectId: nonEmptyString, port: portSchema }).passthrough();
 
 const geometrySchema = z.discriminatedUnion('kind', [
@@ -33,6 +34,21 @@ const dimensionSchema = z.discriminatedUnion('kind', [
 const objectSchema = z.discriminatedUnion('type', [
   z
     .object({ id: nonEmptyString, type: z.literal('track_segment'), geometry: geometrySchema })
+    .passthrough(),
+  z
+    .object({
+      id: nonEmptyString,
+      type: z.literal('turnout'),
+      turnout: z
+        .object({
+          catalogId: nonEmptyString,
+          catalogRevision: z.string(),
+          position: vec2,
+          headingRad: finite,
+          hand: z.enum(['left', 'right']),
+        })
+        .passthrough(),
+    })
     .passthrough(),
   z
     .object({ id: nonEmptyString, type: z.literal('dimension'), dimension: dimensionSchema })
@@ -113,6 +129,11 @@ export function validateProject(raw: unknown): ProjectValidation {
       for (const msg of validateGeometry(o.geometry))
         errors.push(`objects[${i}] (${o.id}): ${msg}`);
     }
+    if (o.type === 'turnout' && !getTurnoutType(o.turnout.catalogId)) {
+      errors.push(
+        `objects[${i}] (${o.id}): ukjent sporvekseltype «${o.turnout.catalogId}» (finnes ikke i biblioteket)`,
+      );
+    }
   });
   project.objects.forEach((o, i) => {
     if (o.type !== 'dimension') return;
@@ -127,8 +148,16 @@ export function validateProject(raw: unknown): ProjectValidation {
   const usedPorts = new Set<string>();
   project.connections.forEach((c, i) => {
     for (const end of [c.a, c.b]) {
-      if (ids.get(end.objectId) !== 'track_segment') {
+      const kind = ids.get(end.objectId);
+      if (kind !== 'track_segment' && kind !== 'turnout') {
         errors.push(`connections[${i}]: viser til ukjent sporobjekt «${end.objectId}»`);
+      } else {
+        const allowed: readonly string[] = kind === 'turnout' ? TURNOUT_PORTS : TRACK_PORTS;
+        if (!allowed.includes(end.port)) {
+          errors.push(
+            `connections[${i}]: porten «${end.port}» finnes ikke på ${kind === 'turnout' ? 'sporveksel' : 'spor'} «${end.objectId}»`,
+          );
+        }
       }
       const key = `${end.objectId}:${end.port}`;
       if (usedPorts.has(key)) {

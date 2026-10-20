@@ -30,3 +30,12 @@ export function parseNumber(text: string): number | null {
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
+
+const PORT_LABELS: Record<string, string> = {
+  start: 'start',
+  end: 'slutt',
+  stem_in: 'stamspor inn',
+  stem_out: 'stamspor ut',
+  diverging_out: 'avvik ut',
+};
+export const portLabel = (port: string): string => PORT_LABELS[port] ?? port;

@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue';
 import { validateGeometry, type TrackGeometry } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
+import { TURNOUT_CATALOG, TURNOUT_CATALOG_REVISION, getTurnoutType } from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, parseNumber } from '../format';
 import { useProjectStore } from '../stores/project';
@@ -16,6 +17,20 @@ const view = useViewStore();
 
 const lineForm = reactive({ x: '0', y: '0', heading: '0', length: '' });
 const arcForm = reactive({ x: '0', y: '0', heading: '0', radius: '', side: 'left', sweep: '' });
+const turnoutForm = reactive({ x: '0', y: '0', heading: '0' });
+const turnoutType = computed(() => getTurnoutType(view.turnoutTypeId));
+function createTurnoutNumeric() {
+  const v = readAll(turnoutForm, { x: 'X', y: 'Y', heading: 'Retning' });
+  if (!v || !turnoutType.value) return;
+  error.value = '';
+  project.addTurnout({
+    catalogId: turnoutType.value.catalogId,
+    catalogRevision: TURNOUT_CATALOG_REVISION,
+    position: [v.x!, v.y!],
+    headingRad: degToRad(v.heading!),
+    hand: view.turnoutHand,
+  });
+}
 const parallelText = ref(fmt(view.parallelDistanceM));
 const rotateText = ref('');
 const error = ref('');
@@ -239,6 +254,54 @@ function applyRotation() {
     /></label>
     <button class="btn" type="submit" data-testid="connect-create">Opprett</button>
     <span class="muted">Retningen følger tangenten i endepunktet.</span>
+    <div v-if="error" class="err" role="alert">{{ error }}</div>
+  </form>
+
+  <form
+    v-else-if="toolId === 'turnout'"
+    class="tool-options"
+    data-testid="options-turnout"
+    @submit.prevent="createTurnoutNumeric"
+    @pointerdown.stop
+  >
+    <span class="title">Sporveksel</span>
+    <label
+      >Type
+      <select v-model="view.turnoutTypeId" data-testid="turnout-type" style="width: 190px">
+        <option v-for="t in TURNOUT_CATALOG" :key="t.catalogId" :value="t.catalogId">
+          {{ t.name }}
+        </option>
+      </select>
+    </label>
+    <label
+      >Retning
+      <select v-model="view.turnoutHand" data-testid="turnout-hand">
+        <option value="left">Venstre</option>
+        <option value="right">Høyre</option>
+      </select>
+    </label>
+    <label
+      >X (m)<input v-model="turnoutForm.x" data-testid="turnout-x" inputmode="decimal"
+    /></label>
+    <label
+      >Y (m)<input v-model="turnoutForm.y" data-testid="turnout-y" inputmode="decimal"
+    /></label>
+    <label
+      >Retning (°)<input
+        v-model="turnoutForm.heading"
+        data-testid="turnout-heading"
+        inputmode="decimal"
+    /></label>
+    <button class="btn" type="submit" data-testid="create-turnout">Opprett</button>
+    <div
+      v-if="turnoutType"
+      class="muted"
+      style="flex-basis: 100%; font-size: 12px"
+      data-testid="turnout-note"
+    >
+      {{ turnoutType.source.drawing }} · {{ TURNOUT_CATALOG_REVISION }} ·
+      <b style="color: var(--warn)">delvis verifisert</b> – akser avledet fra TRV-hovedmål.
+    </div>
     <div v-if="error" class="err" role="alert">{{ error }}</div>
   </form>
 </template>

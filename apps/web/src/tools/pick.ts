@@ -1,6 +1,7 @@
-import { isDimension, isTrack, type RailObject, type Vec2 } from '@railcad/domain';
+import { isDimension, isTrack, isTurnout, type RailObject, type Vec2 } from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
 import { cachedBounds } from '../rendering/paths';
+import { cachedTurnoutLayout, turnoutBounds } from '../rendering/turnouts';
 
 export interface Pick {
   id: string;
@@ -35,6 +36,21 @@ export function pickObject(
       }
       const c = engine.closestPoint(o.geometry, world);
       take(o.id, c.point, c.distanceM);
+    } else if (isTurnout(o)) {
+      const b = turnoutBounds(o);
+      if (
+        !b ||
+        world[0] < b.minX - tolM ||
+        world[0] > b.maxX + tolM ||
+        world[1] < b.minY - tolM ||
+        world[1] > b.maxY + tolM
+      ) {
+        continue;
+      }
+      for (const seg of cachedTurnoutLayout(o)?.segments ?? []) {
+        const c = engine.closestPoint(seg, world);
+        take(o.id, c.point, c.distanceM);
+      }
     } else if (isDimension(o)) {
       const layout = engine.dimensionLayout(o.dimension, (id) => {
         const t = byId.get(id);

@@ -15,6 +15,7 @@ import {
 } from './operations';
 import { ConnectTool } from './connect';
 import { SelectTool } from './select';
+import { TurnoutTool } from './turnout';
 import type { KeyInfo, PortMenuState, Tool, ToolEnv } from './tool';
 import type { PointerInfo, Preview, ToolId } from './types';
 
@@ -28,6 +29,7 @@ export const TOOL_SHORTCUTS: Record<ToolId, string> = {
   'measure-distance': 'D',
   rotate: 'R',
   connect: 'K',
+  turnout: 'T',
   delete: 'E',
 };
 
@@ -72,6 +74,7 @@ export function createToolController() {
     rotate: new RotateTool(env),
     delete: new DeleteTool(env),
     connect: new ConnectTool(env),
+    turnout: new TurnoutTool(env),
   };
 
   const active = computed(() => tools[activeId.value]);

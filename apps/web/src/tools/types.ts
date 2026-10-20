@@ -46,4 +46,5 @@ export type ToolId =
   | 'measure-distance'
   | 'rotate'
   | 'delete'
-  | 'connect';
+  | 'connect'
+  | 'turnout';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isTrack, type RailObject } from '@railcad/domain';
+import { getTurnoutType, isTrack, isTurnout, type RailObject } from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
 import { fmtM } from '../format';
 import { useProjectStore } from '../stores/project';
@@ -13,6 +13,7 @@ function summary(o: RailObject): string {
       ? len
       : `R ${fmtM(Math.abs(o.geometry.signedRadiusM), 1)} · ${len}`;
   }
+  if (isTurnout(o)) return getTurnoutType(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
   const t = project.byId.get(o.dimension.kind === 'length' ? o.dimension.targetId : '');
   const layout = engine.dimensionLayout(o.dimension, () =>
     t && isTrack(t) ? t.geometry : undefined,
@@ -21,6 +22,7 @@ function summary(o: RailObject): string {
 }
 function kindLabel(o: RailObject): string {
   if (isTrack(o)) return o.geometry.kind === 'line' ? 'Rett' : 'Kurve';
+  if (isTurnout(o)) return o.turnout.hand === 'left' ? 'Veksel v.' : 'Veksel h.';
   return o.dimension.kind === 'length' ? 'Lengdemål' : 'Avstandsmål';
 }
 

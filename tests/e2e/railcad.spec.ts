@@ -458,7 +458,7 @@ test('RC-011: Koble – meny ved musepeker, kurve fra endepunkt og kobling i én
   await expect(page.getByTestId('free-port')).toHaveCount(2);
   await clickWorld(page, 20, 0);
   await expect(page.getByTestId('port-menu')).toBeVisible();
-  await expect(page.getByTestId('port-menu-turnout')).toBeDisabled();
+  await expect(page.getByTestId('port-menu-turnout:left')).toBeEnabled();
   await page.getByTestId('port-menu-arc').click();
   await clickWorld(page, 30, 10);
 
@@ -551,4 +551,145 @@ test('RC-011: Koble til sammenfallende endepunkt via menyen, og koblinger overle
   ]);
   await chooser.setFiles(path);
   await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+});
+
+async function placeTurnoutNumeric(
+  page: import('@playwright/test').Page,
+  v: { type?: string; hand?: string; x?: string; y?: string; heading?: string } = {},
+) {
+  await selectTool(page, 'turnout');
+  const f = page.getByTestId('options-turnout');
+  if (v.type) await f.getByTestId('turnout-type').selectOption(v.type);
+  if (v.hand) await f.getByTestId('turnout-hand').selectOption(v.hand);
+  await f.getByTestId('turnout-x').fill(v.x ?? '0');
+  await f.getByTestId('turnout-y').fill(v.y ?? '0');
+  await f.getByTestId('turnout-heading').fill(v.heading ?? '0');
+  await page.getByTestId('create-turnout').click();
+}
+
+test('RC-010: sporveksel fra bibliotek merkes delvis verifisert og får tre porter', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await selectTool(page, 'turnout');
+  await expect(page.getByTestId('turnout-note')).toContainText('delvis verifisert');
+  await expect(page.getByTestId('turnout-note')).toContainText('KO-701409');
+  await placeTurnoutNumeric(page, { type: 'trv-54E3-1:9-R190-kort', hand: 'right' });
+
+  await expect(page.getByTestId('object-turnout-001')).toContainText('54E3 1:9 R190');
+  await expect(page.getByTestId('turnout-label-turnout-001')).toContainText('delvis verifisert');
+  await expect(page.getByTestId('prop-verification')).toHaveText('Delvis verifisert');
+  await expect(page.getByTestId('prop-turnout-type')).toHaveText('54E3 1:9 R190 (kort kurve)');
+  for (const p of ['stem_in', 'stem_out', 'diverging_out']) {
+    await expect(page.getByTestId(`prop-port-${p}`)).toHaveText('ledig');
+  }
+  await expect(page.getByTestId('free-port')).toHaveCount(0);
+
+  await page.getByTestId('prop-hand').selectOption('left');
+  await setField(page, 'prop-heading', '90');
+  await expect(field(page, 'prop-heading')).toHaveValue('90,0000');
+  expect(errors).toEqual([]);
+});
+
+test('RC-010/RC-011: veksel plasseres på sporendepunkt og kobles automatisk; kan angres samlet', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await selectTool(page, 'turnout');
+  await clickWorld(page, 20, 0);
+  await expect(page.getByTestId('object-turnout-001')).toBeVisible();
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+  await expect(page.getByTestId('prop-port-stem_in')).toContainText('track-001 slutt · OK');
+  await expect(field(page, 'prop-start-x')).toHaveValue('20,000');
+
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('object-turnout-001')).toHaveCount(0);
+  await expect(page.getByTestId('conn-row-0')).toHaveCount(0);
+});
+
+test('RC-010: veksel fra Koble-menyen, og avvikende spor kobles tangentielt', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { x: '-40', length: '20' });
+  await selectTool(page, 'connect');
+  await clickWorld(page, -20, 0);
+  await page.getByTestId('port-menu-turnout:right').click();
+  await expect(page.getByTestId('object-turnout-001')).toContainText('60E1 1:9 R300');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+  await expect(page.getByTestId('prop-hand')).toHaveValue('right');
+
+  // Fortsett fra avviksporten (høyreveksel: svinger mot −Y) med rett spor
+  const a = Math.atan(1 / 9);
+  await clickWorld(page, -20 + 300 * Math.sin(a), -300 * (1 - Math.cos(a)));
+  await page.getByTestId('port-menu-line').click();
+  await page.getByTestId('connect-length').fill('10');
+  await page.getByTestId('connect-create').click();
+  await expect(page.getByTestId('conn-status-1')).toHaveText('OK');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+});
+
+test('RC-010: veksel kan velges med musen, flyttes via panelet og slettes', async ({ page }) => {
+  await openApp(page);
+  await placeTurnoutNumeric(page, { x: '-20', y: '0' });
+  await selectTool(page, 'select');
+  await page.keyboard.press('Escape'); // fjern valg
+  await expect(page.getByText('Ingen objekt valgt.')).toBeVisible();
+  await clickWorld(page, -10, 0); // på stamsporet
+  await expect(page.getByTestId('prop-id')).toHaveText('turnout-001');
+  await setField(page, 'prop-start-x', '-30');
+  await expect(field(page, 'prop-start-x')).toHaveValue('-30,000');
+  await page.getByTestId('delete-selected').click();
+  await expect(page.getByTestId('object-list').locator('li')).toHaveCount(0);
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('object-turnout-001')).toBeVisible();
+});
+
+test('RC-010: sporveksel og kobling overlever lagring; ukjent katalogtype avvises', async ({
+  page,
+}, info) => {
+  const { writeFileSync } = await import('node:fs');
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await selectTool(page, 'turnout');
+  await clickWorld(page, 20, 0);
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('veksel.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.objects[1]).toMatchObject({
+    id: 'turnout-001',
+    type: 'turnout',
+    turnout: { catalogId: 'trv-60E1-1:9-R300-EVF', hand: 'left', position: [20, 0] },
+  });
+  expect(saved.objects[1].turnout.catalogRevision).toContain('TRV');
+  expect(saved.objects[1].geometry).toBeUndefined(); // geometri lagres ikke – den utledes av katalogen
+  expect(saved.connections).toEqual([
+    { a: { objectId: 'track-001', port: 'end' }, b: { objectId: 'turnout-001', port: 'stem_in' } },
+  ]);
+
+  await menu(page, 'file', 'menu-new');
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByTestId('object-turnout-001')).toBeVisible();
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+
+  saved.objects[1].turnout.catalogId = 'finnes-ikke';
+  const bad = info.outputPath('ukjent-veksel.json');
+  writeFileSync(bad, JSON.stringify(saved));
+  await page.getByTestId('menu-file').click();
+  const [chooser2] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser2.setFiles(bad);
+  await expect(page.getByTestId('dialog')).toContainText('ukjent sporvekseltype');
 });

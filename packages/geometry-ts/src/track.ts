@@ -42,6 +42,13 @@ export function poseAt(g: TrackGeometry, sIn: number): Pose {
 export const startPose = (g: TrackGeometry): Pose => poseAt(g, 0);
 export const endPose = (g: TrackGeometry): Pose => poseAt(g, length(g));
 
+/** Endepunkt med UTGÅENDE retning (bort fra sporet): slutt = retning, start = retning + π. */
+export function portPose(g: TrackGeometry, port: 'start' | 'end'): Pose {
+  if (port === 'end') return endPose(g);
+  const s = startPose(g);
+  return { point: s.point, headingRad: s.headingRad + Math.PI };
+}
+
 export function closestPoint(g: TrackGeometry, p: Vec2): ClosestPoint {
   if (g.kind === 'line') {
     const d = unit(g.headingRad);

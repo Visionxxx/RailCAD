@@ -3,25 +3,29 @@ import { computed, ref, shallowRef } from 'vue';
 import {
   createEmptyProject,
   isTrack,
+  isTurnout,
   type Connection,
   type DimensionSpec,
   type ProjectMeta,
   type RailObject,
   type RailProject,
   type TrackGeometry,
+  type TurnoutPlacement,
 } from '@railcad/domain';
-import type { PortRef, TrackRef } from '@railcad/geometry-api';
+import { portKey, type Pose, type PortRef, type TrackRef } from '@railcad/geometry-api';
 import { applyPatch, type Patch } from '../commands/patch';
 import {
   connectPorts,
   createDimension,
   createTrack,
   createTrackConnected,
+  createTurnout,
   deleteObjects,
   disconnect,
   replaceObjects,
 } from '../commands/builders';
 import { geometryEngine as engine } from '../engine';
+import { cachedTurnoutLayout } from '../rendering/turnouts';
 
 /** Spesifikasjonen krever minst 50 reverserbare handlinger. */
 export const HISTORY_LIMIT = 200;
@@ -40,9 +44,19 @@ export const useProjectStore = defineStore('project', () => {
   const loadCount = ref(0);
 
   const byId = computed(() => new Map(objects.value.map((o) => [o.id, o] as const)));
-  const trackRefs = computed<TrackRef[]>(() =>
-    objects.value.filter(isTrack).map((o) => ({ id: o.id, geometry: o.geometry })),
-  );
+  /** Alle akser som kan snappes mot: spor og sporvekslenes segmenter (`<id>#<n>`). */
+  const trackRefs = computed<TrackRef[]>(() => {
+    const out: TrackRef[] = [];
+    for (const o of objects.value) {
+      if (isTrack(o)) out.push({ id: o.id, geometry: o.geometry });
+      else if (isTurnout(o)) {
+        cachedTurnoutLayout(o)?.segments.forEach((g, i) =>
+          out.push({ id: `${o.id}#${i}`, geometry: g }),
+        );
+      }
+    }
+    return out;
+  });
   const selectedObjects = computed(() =>
     selection.value.map((id) => byId.value.get(id)).filter((o): o is RailObject => !!o),
   );
@@ -53,12 +67,52 @@ export const useProjectStore = defineStore('project', () => {
   const trackGeometries = computed(
     () => new Map(objects.value.filter(isTrack).map((o) => [o.id, o.geometry] as const)),
   );
+  /** Alle porter (spor og sporvekslers) med posisjon og utgående retning. */
+  const portPoses = computed(() => {
+    const m = new Map<string, Pose>();
+    for (const o of objects.value) {
+      if (isTrack(o)) {
+        for (const port of ['start', 'end'] as const) {
+          m.set(portKey(o.id, port), engine.portPose(o.geometry, port));
+        }
+      } else if (isTurnout(o)) {
+        const layout = cachedTurnoutLayout(o);
+        if (layout) {
+          for (const [port, pose] of Object.entries(layout.ports)) {
+            m.set(`${o.id}:${port}`, pose);
+          }
+        }
+      }
+    }
+    return m;
+  });
+  /** Porter som ikke inngår i noen kobling, med utgående retning. */
+  const freePorts = computed(() => {
+    const used = new Set(
+      connections.value.flatMap((c) => [
+        portKey(c.a.objectId, c.a.port),
+        portKey(c.b.objectId, c.b.port),
+      ]),
+    );
+    const out: Array<PortRef & { point: readonly [number, number]; headingRad: number }> = [];
+    for (const [key, pose] of portPoses.value) {
+      if (used.has(key)) continue;
+      const split = key.lastIndexOf(':');
+      out.push({
+        objectId: key.slice(0, split),
+        port: key.slice(split + 1) as PortRef['port'],
+        point: pose.point,
+        headingRad: pose.headingRad,
+      });
+    }
+    return out;
+  });
   /** Kontroll av alle koblinger mot toleransene – gjøres på nytt ved hver modellendring. */
   const connectionResults = computed(() =>
-    engine.evaluateConnections(trackGeometries.value, connections.value),
+    engine.evaluateConnections(portPoses.value, connections.value),
   );
   const connectionSuggestions = computed(() =>
-    engine.findCoincidentFreePorts(trackGeometries.value, connections.value),
+    engine.findCoincidentFreePorts(portPoses.value, connections.value),
   );
   const lastRedoLabel = computed(() => redoStack.value.at(-1)?.label ?? '');
 
@@ -136,6 +190,13 @@ export const useProjectStore = defineStore('project', () => {
     return id;
   }
 
+  function addTurnout(placement: TurnoutPlacement, anchor?: PortRef): string {
+    const { patch, id } = createTurnout(objects.value, connections.value, placement, anchor);
+    execute(patch);
+    selection.value = [id];
+    return id;
+  }
+
   function updateObject(next: RailObject, label: string): boolean {
     return execute(replaceObjects(objects.value, new Map([[next.id, next]]), label));
   }
@@ -191,6 +252,8 @@ export const useProjectStore = defineStore('project', () => {
     byId,
     trackRefs,
     trackGeometries,
+    portPoses,
+    freePorts,
     connectionResults,
     connectionSuggestions,
     selectedObjects,
@@ -210,6 +273,7 @@ export const useProjectStore = defineStore('project', () => {
     connect,
     removeConnection,
     addTrackFromPort,
+    addTurnout,
     deleteSelection,
     deleteIds,
     updateMeta,

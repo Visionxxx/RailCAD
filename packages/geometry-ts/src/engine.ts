@@ -1,7 +1,8 @@
 import { TOLERANCES, type GeometryEngine } from '@railcad/geometry-api';
 import { dimensionLayout } from './dimension';
 import { snap } from './snap';
-import { evaluateConnections, findCoincidentFreePorts, portPose } from './topology';
+import { evaluateConnections, findCoincidentFreePorts } from './topology';
+import { turnoutLayout } from './turnout';
 import {
   arcCenter,
   arcFromStartTangentEnd,
@@ -11,6 +12,7 @@ import {
   length,
   offset,
   poseAt,
+  portPose,
   rotateGeometry,
   signedOffsetOf,
   startPose,
@@ -43,4 +45,5 @@ export const geometryEngine: GeometryEngine = {
   evaluateConnections,
   findCoincidentFreePorts,
   dimensionLayout,
+  turnoutLayout,
 };

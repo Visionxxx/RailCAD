@@ -216,3 +216,75 @@ describe('koblinger i prosjektstore', () => {
     expect((store.byId.get('track-002') as any).geometry.start).toEqual([10, 0]); // uendret
   });
 });
+
+describe('sporveksler i prosjektstore', () => {
+  const placement = (x = 0) => ({
+    catalogId: 'trv-60E1-1:9-R300-EVF',
+    catalogRevision: 'test',
+    position: [x, 0] as [number, number],
+    headingRad: 0,
+    hand: 'left' as const,
+  });
+  let store: ReturnType<typeof useProjectStore>;
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+
+  it('plasserer sporveksel med tre porter og snappbare segmenter', () => {
+    const id = store.addTurnout(placement());
+    expect(id).toBe('turnout-001');
+    expect([...store.portPoses.keys()].sort()).toEqual([
+      'turnout-001:diverging_out',
+      'turnout-001:stem_in',
+      'turnout-001:stem_out',
+    ]);
+    expect(store.trackRefs.map((r) => r.id)).toEqual(['turnout-001#0', 'turnout-001#1']); // stamspor + bue (D mangler)
+    expect(store.freePorts).toHaveLength(3);
+  });
+
+  it('plassering fra port gir sporveksel og kobling i én angrehandling, og kontrollen er OK', () => {
+    store.addTrack(line(0, 20));
+    store.addTurnout({ ...placement(20) }, { objectId: 'track-001', port: 'end' });
+    expect(store.connections).toEqual([
+      {
+        a: { objectId: 'track-001', port: 'end' },
+        b: { objectId: 'turnout-001', port: 'stem_in' },
+      },
+    ]);
+    expect(store.connectionResults[0]?.status).toBe('ok');
+    store.undo();
+    expect(store.objects).toHaveLength(1);
+    expect(store.connections).toEqual([]);
+  });
+
+  it('flytting og rotasjon endrer plasseringen, ikke katalogdata; sletting fjerner koblinger', () => {
+    store.addTrack(line(0, 20));
+    store.addTurnout(placement(20), { objectId: 'track-001', port: 'end' });
+    store.execute(
+      transformObjects(
+        store.objects,
+        new Set(['turnout-001']),
+        engine,
+        { type: 'move', dx: 1, dy: 2 },
+        'Flytt',
+      ),
+    );
+    const t = store.byId.get('turnout-001') as any;
+    expect(t.turnout.position).toEqual([21, 2]);
+    expect(t.turnout.catalogId).toBe('trv-60E1-1:9-R300-EVF');
+    expect(store.connectionResults[0]?.status).toBe('position'); // rapportert, ikke rettet
+    store.execute(
+      transformObjects(
+        store.objects,
+        new Set(['turnout-001']),
+        engine,
+        { type: 'rotate', pivot: [21, 2], angleRad: 1 },
+        'Roter',
+      ),
+    );
+    expect((store.byId.get('turnout-001') as any).turnout.headingRad).toBeCloseTo(1, 12);
+    store.deleteIds(['turnout-001']);
+    expect(store.connections).toEqual([]);
+  });
+});

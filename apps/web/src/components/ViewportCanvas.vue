@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch, nextTick } from 'vue';
-import { isDimension, isTrack, type DimensionSpec, type Vec2 } from '@railcad/domain';
+import {
+  getTurnoutType,
+  isDimension,
+  isTrack,
+  isTurnout,
+  type DimensionSpec,
+  type TrackGeometry,
+  type Vec2,
+} from '@railcad/domain';
 import type { DimensionLayout, SnapResult } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
 import { fmtM } from '../format';
 import { cachedBounds, railPaths, trackPath } from '../rendering/paths';
+import { cachedTurnoutLayout, turnoutBounds } from '../rendering/turnouts';
 import { intersects, screenToWorld, visibleWorldRect, worldToScreen } from '../rendering/viewport';
 import { useProjectStore } from '../stores/project';
 import { SNAP_LABELS, useViewStore } from '../stores/view';
@@ -31,9 +40,38 @@ let panButton = -1;
 const selectedSet = computed(() => new Set(project.selection));
 const worldRect = computed(() => visibleWorldRect(v, 40));
 
-const visibleTracks = computed(() => {
+/** Tegnbare enheter: et spor har én akse, en sporveksel flere segmenter. */
+interface Drawable {
+  id: string;
+  geometries: TrackGeometry[];
+}
+const visibleTracks = computed<Drawable[]>(() => {
   const rect = worldRect.value;
-  return project.objects.filter(isTrack).filter((t) => intersects(cachedBounds(t.geometry), rect));
+  const out: Drawable[] = [];
+  for (const o of project.objects) {
+    if (isTrack(o)) {
+      if (intersects(cachedBounds(o.geometry), rect))
+        out.push({ id: o.id, geometries: [o.geometry] });
+    } else if (isTurnout(o)) {
+      const b = turnoutBounds(o);
+      const layout = cachedTurnoutLayout(o);
+      if (b && layout && intersects(b, rect)) out.push({ id: o.id, geometries: layout.segments });
+    }
+  }
+  return out;
+});
+const visibleTurnoutLabels = computed(() => {
+  const rect = worldRect.value;
+  const out: Array<{ id: string; text: string; x: number; y: number }> = [];
+  for (const o of project.objects) {
+    if (!isTurnout(o)) continue;
+    const b = turnoutBounds(o);
+    if (!b || !intersects(b, rect)) continue;
+    const [x, y] = worldToScreen(v, o.turnout.position);
+    const name = getTurnoutType(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
+    out.push({ id: o.id, text: `${name} – delvis verifisert`, x, y });
+  }
+  return out;
 });
 
 function resolveGeometry(id: string) {
@@ -325,37 +363,39 @@ watch(
           :class="{ 't-selected': selectedSet.has(t.id) }"
           :data-track="t.id"
         >
-          <path
-            v-if="selectedSet.has(t.id) || ctrl.preview.value?.hoverId === t.id"
-            :class="[
-              't-halo',
-              {
-                hover: !selectedSet.has(t.id),
-                danger:
-                  ctrl.preview.value?.hoverKind === 'danger' &&
-                  ctrl.preview.value?.hoverId === t.id,
-              },
-            ]"
-            :d="trackPath(t.geometry)"
-            vector-effect="non-scaling-stroke"
-          />
-          <path
-            v-if="showSleepers"
-            class="t-sleepers"
-            :d="trackPath(t.geometry)"
-            :stroke-width="2.6"
-            stroke-dasharray="0.25 0.35"
-          />
-          <template v-if="showRails">
+          <template v-for="(g, gi) in t.geometries" :key="gi">
             <path
-              v-for="(d, i) in railPaths(t.geometry)"
-              :key="i"
-              class="t-rail"
-              :d="d"
+              v-if="selectedSet.has(t.id) || ctrl.preview.value?.hoverId === t.id"
+              :class="[
+                't-halo',
+                {
+                  hover: !selectedSet.has(t.id),
+                  danger:
+                    ctrl.preview.value?.hoverKind === 'danger' &&
+                    ctrl.preview.value?.hoverId === t.id,
+                },
+              ]"
+              :d="trackPath(g)"
               vector-effect="non-scaling-stroke"
             />
+            <path
+              v-if="showSleepers"
+              class="t-sleepers"
+              :d="trackPath(g)"
+              :stroke-width="2.6"
+              stroke-dasharray="0.25 0.35"
+            />
+            <template v-if="showRails">
+              <path
+                v-for="(d, i) in railPaths(g)"
+                :key="i"
+                class="t-rail"
+                :d="d"
+                vector-effect="non-scaling-stroke"
+              />
+            </template>
+            <path class="t-axis" :d="trackPath(g)" vector-effect="non-scaling-stroke" />
           </template>
-          <path class="t-axis" :d="trackPath(t.geometry)" vector-effect="non-scaling-stroke" />
         </g>
 
         <g v-for="d in visibleDims" :key="d.id" :class="{ 'd-selected': selectedSet.has(d.id) }">
@@ -399,6 +439,16 @@ watch(
 
       <!-- Skjermlag: tekst, grep og markører i piksler. -->
       <g>
+        <text
+          v-for="t in visibleTurnoutLabels"
+          :key="t.id"
+          class="t-label"
+          :x="t.x + 8"
+          :y="t.y - 10"
+          :data-testid="`turnout-label-${t.id}`"
+        >
+          {{ t.text }}
+        </text>
         <text
           v-for="d in visibleDims"
           :key="d.id"

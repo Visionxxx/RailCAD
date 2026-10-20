@@ -110,19 +110,73 @@ describe('geometriinvarianter og ID-er', () => {
 describe('koblingsregler', () => {
   const withConnections = (connections: unknown[]) => {
     const p: any = demo();
-    p.objects.push({ id: 'track-003', type: 'track_segment', geometry: { kind: 'line', start: [140, 0], headingRad: 0, lengthM: 10 } });
+    p.objects.push({
+      id: 'track-003',
+      type: 'track_segment',
+      geometry: { kind: 'line', start: [140, 0], headingRad: 0, lengthM: 10 },
+    });
     p.connections = connections;
     return validateProject(p);
   };
-  const c = (a: string, ap: string, b: string, bp: string) => ({ a: { objectId: a, port: ap }, b: { objectId: b, port: bp } });
+  const c = (a: string, ap: string, b: string, bp: string) => ({
+    a: { objectId: a, port: ap },
+    b: { objectId: b, port: bp },
+  });
 
   it('godtar gyldige koblinger', () => {
     expect(withConnections([c('track-001', 'end', 'track-003', 'start')]).ok).toBe(true);
   });
   it('avviser port som brukes i flere koblinger og kobling til seg selv', () => {
-    const r = withConnections([c('track-001', 'end', 'track-003', 'start'), c('track-001', 'end', 'track-002', 'start')]);
+    const r = withConnections([
+      c('track-001', 'end', 'track-003', 'start'),
+      c('track-001', 'end', 'track-002', 'start'),
+    ]);
     expect(!r.ok && r.errors.join()).toContain('koblet flere ganger');
     const self = withConnections([c('track-001', 'end', 'track-001', 'end')]);
     expect(self.ok).toBe(false);
+  });
+});
+
+describe('sporveksler i prosjektfil', () => {
+  const withTurnout = (turnout: Record<string, unknown>, connections: unknown[] = []) => {
+    const p: any = demo();
+    p.objects.push({ id: 'turnout-001', type: 'turnout', turnout });
+    p.connections = connections;
+    return validateProject(p);
+  };
+  const ok = {
+    catalogId: 'trv-60E1-1:9-R300-EVF',
+    catalogRevision: 'r',
+    position: [0, 0],
+    headingRad: 0,
+    hand: 'left',
+  };
+
+  it('godtar kjent katalogtype og koblinger til vekselporter', () => {
+    expect(withTurnout(ok).ok).toBe(true);
+    const c = [
+      {
+        a: { objectId: 'track-001', port: 'end' },
+        b: { objectId: 'turnout-001', port: 'stem_in' },
+      },
+    ];
+    expect(withTurnout(ok, c).ok).toBe(true);
+  });
+  it('avviser ukjent katalogtype, ugyldig retning og porter som ikke finnes på objektet', () => {
+    const unknown = withTurnout({ ...ok, catalogId: 'finnes-ikke' });
+    expect(!unknown.ok && unknown.errors.join()).toContain('ukjent sporvekseltype');
+    expect(withTurnout({ ...ok, hand: 'opp' }).ok).toBe(false);
+    const wrong = [
+      {
+        a: { objectId: 'track-001', port: 'stem_in' },
+        b: { objectId: 'turnout-001', port: 'stem_in' },
+      },
+    ];
+    const r = withTurnout(ok, wrong);
+    expect(!r.ok && r.errors.join()).toContain('finnes ikke på spor');
+    const wrong2 = [
+      { a: { objectId: 'track-001', port: 'end' }, b: { objectId: 'turnout-001', port: 'start' } },
+    ];
+    expect(withTurnout(ok, wrong2).ok).toBe(false);
   });
 });

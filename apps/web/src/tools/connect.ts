@@ -1,6 +1,6 @@
-import { isTrack, type Vec2 } from '@railcad/domain';
+import { TURNOUT_CATALOG_REVISION, getTurnoutType, type Vec2 } from '@railcad/domain';
 import { TOLERANCES, type PortRef } from '@railcad/geometry-api';
-import { fmtM } from '../format';
+import { fmtM, portLabel } from '../format';
 import { Tool } from './tool';
 import type { PointerInfo } from './types';
 
@@ -82,20 +82,15 @@ export class ConnectTool extends Tool {
       this.env.setPreview({ ghosts: [], portHover: hit.point });
       this.env.openPortMenu({
         screen: p.screen,
-        title: `${hit.objectId} · ${hit.port === 'start' ? 'start' : 'slutt'}`,
+        title: `${hit.objectId} · ${portLabel(hit.port)}`,
         items: [
           ...this.partnersOf(hit).map((o) => ({
             id: `connect:${o.objectId}:${o.port}`,
-            label: `Koble til ${o.objectId} (${o.port === 'start' ? 'start' : 'slutt'})`,
+            label: `Koble til ${o.objectId} (${portLabel(o.port)})`,
           })),
           { id: 'line', label: 'Rett spor (tangentielt)' },
           { id: 'arc', label: 'Kurve (tangentiell)' },
-          {
-            id: 'turnout',
-            label: 'Sporveksel …',
-            disabled: true,
-            note: 'Kommer – venter på verifiserte vekseldata',
-          },
+          ...this.turnoutItems(),
         ],
       });
     } else if (m.kind === 'line') {
@@ -122,9 +117,24 @@ export class ConnectTool extends Tool {
       const [, objectId, port] = id.split(':');
       const ok = this.env.project.connect(
         { objectId: m.port.objectId, port: m.port.port },
-        { objectId: objectId as string, port: port as 'start' | 'end' },
+        { objectId: objectId as string, port: port as PortRef['port'] },
       );
       if (!ok) this.env.ui.notify('Portene kunne ikke kobles (allerede i bruk).', 'error');
+      this.reset();
+    } else if (id === 'turnout:left' || id === 'turnout:right') {
+      const type = getTurnoutType(this.env.view.turnoutTypeId);
+      if (type) {
+        this.env.project.addTurnout(
+          {
+            catalogId: type.catalogId,
+            catalogRevision: TURNOUT_CATALOG_REVISION,
+            position: m.port.point,
+            headingRad: m.port.headingRad,
+            hand: id === 'turnout:left' ? 'left' : 'right',
+          },
+          { objectId: m.port.objectId, port: m.port.port },
+        );
+      }
       this.reset();
     } else if (id === 'line' || id === 'arc') {
       this.mode = { kind: id, port: m.port };
@@ -177,25 +187,18 @@ export class ConnectTool extends Tool {
     return { kind: 'line' as const, start: port.point, headingRad: port.headingRad, lengthM };
   }
 
-  /** Alle ledige porter (ikke i noen kobling). */
+  /** Alle ledige porter (ikke i noen kobling) – spor og sporveksler. */
   freePorts(): PortHit[] {
-    const { project, engine } = this.env;
-    const used = new Set(
-      project.connections.flatMap((c) => [
-        `${c.a.objectId}:${c.a.port}`,
-        `${c.b.objectId}:${c.b.port}`,
-      ]),
-    );
-    const out: PortHit[] = [];
-    for (const o of project.objects) {
-      if (!isTrack(o)) continue;
-      for (const port of ['start', 'end'] as const) {
-        if (used.has(`${o.id}:${port}`)) continue;
-        const pose = engine.portPose(o.geometry, port);
-        out.push({ objectId: o.id, port, point: pose.point, headingRad: pose.headingRad });
-      }
-    }
-    return out;
+    return this.env.project.freePorts.map((f) => ({ ...f, point: f.point as Vec2 }));
+  }
+
+  private turnoutItems() {
+    const type = getTurnoutType(this.env.view.turnoutTypeId);
+    if (!type) return [];
+    return [
+      { id: 'turnout:left', label: `Sporveksel ${type.name} – venstre`, note: 'delvis verifisert' },
+      { id: 'turnout:right', label: `Sporveksel ${type.name} – høyre`, note: 'delvis verifisert' },
+    ];
   }
 
   private portAt(world: Vec2): PortHit | null {

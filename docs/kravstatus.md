@@ -50,4 +50,4 @@ A (grunngeometri) ✓ · B (140 → 150) ✓ · C (bue/radius) ✓ · D (lagre/l
 
 - Tangenttoleranse (`TOLERANCES.connectionTangentRad`) er en **foreløpig testverdi** (ikke faglig fastsatt) og vises som sådan i koblingspanelet.
 - Avvik rapporteres (posisjon, tangent, manglende spor) – ingenting flyttes automatisk.
-- Sporveksel-valget i portmenyen er foreløpig deaktivert («venter på verifiserte vekseldata»).
+- Sporveksler: se `docs/vekseldata-trv.md`. Alle typer har `verification: 'partial'` og vises som «delvis verifisert» i panel, på tegneflaten og i tegningsmenyen. Geometrien lagres ikke i prosjektfilen, den utledes fra katalog + plassering (katalogrevisjon lagres for sporbarhet).

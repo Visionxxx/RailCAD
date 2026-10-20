@@ -24,6 +24,11 @@ const tools: Array<{ id: ToolId; label: string; paths: string[]; gap?: boolean }
     paths: ['M10 8H8a4 4 0 0 0 0 8h2', 'M14 8h2a4 4 0 0 1 0 8h-2', 'M9 12h6'],
     gap: true,
   },
+  {
+    id: 'turnout',
+    label: 'Sporveksel',
+    paths: ['M3 12h18', 'M8 12c4 0 6-5 13-5'],
+  },
   { id: 'rotate', label: 'Roter', paths: ['M20 12a8 8 0 1 1-2.3-5.7', 'M20 4v4h-4'] },
   {
     id: 'measure-length',

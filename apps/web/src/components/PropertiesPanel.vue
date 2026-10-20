@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import {
+  TRACK_PORTS,
+  TURNOUT_PORTS,
+  getTurnoutType,
   isDimension,
   isTrack,
+  isTurnout,
   validateGeometry,
   type DimensionObject,
   type TrackGeometry,
   type TrackSegment,
+  type TurnoutObject,
+  type TurnoutPlacement,
   type Vec2,
 } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
-import { degToRad, fmt, fmtM, radToDeg } from '../format';
+import { degToRad, fmt, fmtM, portLabel, radToDeg } from '../format';
 import NumberField from './NumberField.vue';
 import { useProjectStore } from '../stores/project';
 
@@ -84,24 +90,58 @@ function setCurveSide(e: Event) {
   );
 }
 
+// --- Sporveksel ---
+const turnout = computed<TurnoutObject | null>(() => {
+  const o = selected.value.length === 1 ? selected.value[0] : undefined;
+  return o && isTurnout(o) ? o : null;
+});
+const turnoutType = computed(() =>
+  turnout.value ? getTurnoutType(turnout.value.turnout.catalogId) : undefined,
+);
+const turnoutDims = computed(() => {
+  const m = turnoutType.value?.mainDimensionsMm;
+  if (!m) return '';
+  return (['A', 'B', 'C', 'D', 'L', 'E', 'F'] as const)
+    .map((k) => `${k} ${m[k] ?? '–'}`)
+    .join(' · ');
+});
+function editTurnout(label: string, make: (p: TurnoutPlacement, n: number) => TurnoutPlacement) {
+  return {
+    commit: (n: number) => {
+      const o = turnout.value;
+      if (o) project.updateObject({ ...o, turnout: make(o.turnout, n) }, label);
+    },
+  };
+}
+const tX = editTurnout('Flytt sporveksel', (p, n) => ({ ...p, position: [n, p.position[1]] }));
+const tY = editTurnout('Flytt sporveksel', (p, n) => ({ ...p, position: [p.position[0], n] }));
+const tHeading = editTurnout('Roter sporveksel', (p, n) => ({ ...p, headingRad: degToRad(n) }));
+function setTurnoutHand(e: Event) {
+  const o = turnout.value;
+  if (!o) return;
+  const hand = (e.target as HTMLSelectElement).value === 'right' ? 'right' : 'left';
+  project.updateObject({ ...o, turnout: { ...o.turnout, hand } }, 'Endre vekselretning');
+}
+
 // --- Koblinger ---
 const portInfo = computed(() => {
-  const t = track.value;
-  if (!t) return [];
-  return (['start', 'end'] as const).map((port) => {
+  const o = track.value ?? turnout.value;
+  if (!o) return [];
+  const ports = track.value ? TRACK_PORTS : TURNOUT_PORTS;
+  return ports.map((port) => {
     const r = project.connectionResults.find(
       (x) =>
-        (x.connection.a.objectId === t.id && x.connection.a.port === port) ||
-        (x.connection.b.objectId === t.id && x.connection.b.port === port),
+        (x.connection.a.objectId === o.id && x.connection.a.port === port) ||
+        (x.connection.b.objectId === o.id && x.connection.b.port === port),
     );
     if (!r) return { port, text: 'ledig', cls: 'muted' };
     const other =
-      r.connection.a.objectId === t.id && r.connection.a.port === port
+      r.connection.a.objectId === o.id && r.connection.a.port === port
         ? r.connection.b
         : r.connection.a;
     return {
       port,
-      text: `${other.objectId} ${other.port === 'start' ? 'start' : 'slutt'} · ${r.status === 'ok' ? 'OK' : 'avvik'}`,
+      text: `${other.objectId} ${portLabel(other.port)} · ${r.status === 'ok' ? 'OK' : 'avvik'}`,
       cls: r.status === 'ok' ? '' : 'st position',
     };
   });
@@ -271,7 +311,7 @@ const dimBy = dimPoint('b', 1);
         <label>Senter X / Y</label><output>{{ fmt(center[0]) }} / {{ fmt(center[1]) }}</output>
       </div>
       <div v-for="p in portInfo" :key="p.port" class="field ro">
-        <label>{{ p.port === 'start' ? 'Kobling start' : 'Kobling slutt' }}</label>
+        <label>Kobling {{ portLabel(p.port) }}</label>
         <output :data-testid="`prop-port-${p.port}`" :class="p.cls">{{ p.text }}</output>
       </div>
       <div class="field ro">
@@ -279,6 +319,80 @@ const dimBy = dimPoint('b', 1);
       </div>
       <div class="field ro">
         <label>Regelverk</label><output><span class="badge">ikke vurdert</span></output>
+      </div>
+      <div class="row-actions">
+        <button
+          class="btn secondary"
+          data-testid="delete-selected"
+          @click="project.deleteSelection()"
+        >
+          Slett
+        </button>
+      </div>
+    </template>
+
+    <template v-else-if="turnout && turnoutType">
+      <div class="field ro">
+        <label>Objekt-ID</label><output data-testid="prop-id">{{ turnout.id }}</output>
+      </div>
+      <div class="field ro">
+        <label>Type</label><output data-testid="prop-turnout-type">{{ turnoutType.name }}</output>
+      </div>
+      <div class="field ro">
+        <label>Kilde</label>
+        <output>{{ turnoutType.source.drawing }}</output>
+      </div>
+      <div class="field ro">
+        <label>Hovedmål (mm)</label><output style="font-size: 11px">{{ turnoutDims }}</output>
+      </div>
+      <div class="field ro">
+        <label>Verifisering</label
+        ><output
+          ><span class="badge" style="color: var(--warn)" data-testid="prop-verification"
+            >Delvis verifisert</span
+          ></output
+        >
+      </div>
+      <p class="muted" style="font-size: 11px; margin: 0 0 8px">
+        {{ turnoutType.verificationNote }} ({{ turnout.turnout.catalogRevision }})
+      </p>
+      <div class="field">
+        <label for="prop-hand">Avviksretning</label>
+        <select
+          id="prop-hand"
+          data-testid="prop-hand"
+          :value="turnout.turnout.hand"
+          @change="setTurnoutHand"
+        >
+          <option value="left">Venstre</option>
+          <option value="right">Høyre</option>
+        </select>
+      </div>
+      <NumberField
+        id="prop-start-x"
+        label="SS X"
+        unit="m"
+        :model-value="turnout.turnout.position[0]"
+        @commit="tX.commit"
+      />
+      <NumberField
+        id="prop-start-y"
+        label="SS Y"
+        unit="m"
+        :model-value="turnout.turnout.position[1]"
+        @commit="tY.commit"
+      />
+      <NumberField
+        id="prop-heading"
+        label="Retning"
+        unit="°"
+        :decimals="4"
+        :model-value="radToDeg(turnout.turnout.headingRad)"
+        @commit="tHeading.commit"
+      />
+      <div v-for="p in portInfo" :key="p.port" class="field ro">
+        <label>Kobling {{ portLabel(p.port) }}</label>
+        <output :data-testid="`prop-port-${p.port}`" :class="p.cls">{{ p.text }}</output>
       </div>
       <div class="row-actions">
         <button

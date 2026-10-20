@@ -13,7 +13,7 @@ JSON, lagret som `*.railcad.json`. Alle lengder i meter, alle vinkler i radianer
     "coordinateSystem": { "type": "local_xy" },
   },
   "objects": [/* spor og mål, se under */],
-  "connections": [], // topologi: { "a": {"objectId","port":"start|end"}, "b": {…} } – P1
+  "connections": [], // { "a": {"objectId","port"}, "b": {…} }  port: spor = start|end, veksel = stem_in|stem_out|diverging_out
 }
 ```
 

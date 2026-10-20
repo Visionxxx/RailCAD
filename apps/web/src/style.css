@@ -772,3 +772,12 @@ button {
   padding: 1px 8px;
   font-size: 12px;
 }
+
+.t-label {
+  fill: var(--warn);
+  font: 11px var(--font);
+  paint-order: stroke;
+  stroke: var(--canvas);
+  stroke-width: 3px;
+  pointer-events: none;
+}

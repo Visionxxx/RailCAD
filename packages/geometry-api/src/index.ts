@@ -1,4 +1,13 @@
-import type { Connection, DimensionSpec, PortName, TrackGeometry, Vec2 } from '@railcad/domain';
+import type {
+  Connection,
+  DimensionSpec,
+  PortName,
+  TrackGeometry,
+  TurnoutPlacement,
+  TurnoutPortName,
+  TurnoutType,
+  Vec2,
+} from '@railcad/domain';
 
 export type { Vec2, TrackGeometry } from '@railcad/domain';
 
@@ -72,6 +81,15 @@ export interface TrackRef {
 
 export type ConnectionStatus = 'ok' | 'position' | 'tangent' | 'missing';
 
+/** Nøkkel for en port i portkartet: `<objektId>:<port>`. */
+export const portKey = (objectId: string, port: PortName): string => `${objectId}:${port}`;
+
+export interface TurnoutLayout {
+  /** Aksene som rette/buede segmenter i prosjektkoordinater: stamspor, avviksbue og evt. rett avvik. */
+  segments: TrackGeometry[];
+  ports: Record<TurnoutPortName, Pose>;
+}
+
 export interface PortRef {
   objectId: string;
   port: PortName;
@@ -122,7 +140,7 @@ export interface GeometryEngine {
   /** Pose i avstand s fra start (0 ≤ s ≤ lengde; utenfor klemmes). */
   poseAt(g: TrackGeometry, s: number): Pose;
   /** Endepunktets posisjon og UTGÅENDE retning (bort fra sporet): slutt = retning, start = retning + π. */
-  portPose(g: TrackGeometry, port: PortName): Pose;
+  portPose(g: TrackGeometry, port: 'start' | 'end'): Pose;
   closestPoint(g: TrackGeometry, p: Vec2): ClosestPoint;
   bounds(g: TrackGeometry): Bounds;
   /** Sentrum for buer; null for rette spor. */
@@ -138,14 +156,19 @@ export interface GeometryEngine {
   snap(tracks: Iterable<TrackRef>, query: SnapQuery): SnapResult | null;
   /** Kontrollerer hver kobling mot toleransene i TOLERANCES. Flytter aldri noe. */
   evaluateConnections(
-    tracks: ReadonlyMap<string, TrackGeometry>,
+    ports: ReadonlyMap<string, Pose>,
     connections: readonly Connection[],
   ): ConnectionResult[];
   /** Ukoblede, sammenfallende endepunkter (forslag til nye koblinger). */
   findCoincidentFreePorts(
-    tracks: ReadonlyMap<string, TrackGeometry>,
+    ports: ReadonlyMap<string, Pose>,
     connections: readonly Connection[],
   ): PortPair[];
+  /**
+   * Sporveksel fra biblioteket: akser og porter i prosjektkoordinater. Geometrien er avledet av
+   * hovedmålene (se `TurnoutType`) og skal vises som delvis verifisert.
+   */
+  turnoutLayout(type: TurnoutType, placement: TurnoutPlacement): TurnoutLayout;
   dimensionLayout(
     spec: DimensionSpec,
     resolveTarget: (id: string) => TrackGeometry | undefined,

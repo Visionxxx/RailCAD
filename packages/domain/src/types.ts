@@ -55,9 +55,36 @@ export interface DimensionObject {
   dimension: DimensionSpec;
 }
 
-export type RailObject = TrackSegment | DimensionObject;
+/**
+ * Sporveksel plassert fra biblioteket. Geometrien lagres IKKE – den utledes av katalogoppføringen
+ * (`catalogId`) og plasseringen. Plasseringspunktet er stokkskinneskjøten (SS) i stamsporet inn,
+ * og `headingRad` er stamsporets retning.
+ */
+export interface TurnoutPlacement {
+  catalogId: string;
+  /** Katalogrevisjonen plasseringen ble gjort mot (sporbarhet). */
+  catalogRevision: string;
+  position: Vec2;
+  headingRad: number;
+  /** Retning avvikssporet tar sett fra stamsporet innover mot krysset. */
+  hand: 'left' | 'right';
+}
 
-export type PortName = 'start' | 'end';
+export interface TurnoutObject {
+  id: string;
+  type: 'turnout';
+  turnout: TurnoutPlacement;
+}
+
+export type RailObject = TrackSegment | DimensionObject | TurnoutObject;
+
+export type TrackPortName = 'start' | 'end';
+/** Stamspor inn (SS), stamspor ut (bakkant), avvikende spor ut (bakkant). */
+export type TurnoutPortName = 'stem_in' | 'stem_out' | 'diverging_out';
+export type PortName = TrackPortName | TurnoutPortName;
+
+export const TRACK_PORTS: readonly TrackPortName[] = ['start', 'end'];
+export const TURNOUT_PORTS: readonly TurnoutPortName[] = ['stem_in', 'stem_out', 'diverging_out'];
 
 /**
  * Eksplisitt topologisk kobling mellom to sporendepunkter.
@@ -89,4 +116,8 @@ export function isTrack(o: RailObject): o is TrackSegment {
 
 export function isDimension(o: RailObject): o is DimensionObject {
   return o.type === 'dimension';
+}
+
+export function isTurnout(o: RailObject): o is TurnoutObject {
+  return o.type === 'turnout';
 }

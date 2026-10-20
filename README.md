@@ -46,6 +46,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Egenskapspanelet** redigerer geometrien direkte (start, retning, lengde / radius, kurveretning, sveipvinkel, buelengde). Tall kan skrives med komma eller punktum; ugyldige verdier gir en feilmelding og endrer ingenting. **Visning → Skjematisk skinne-/svillevisning** tegner to skinner (1,435 m, kun skjematisk) og sviller ved høy zoom.
 
+**Topologi:** Koblinger lagres eksplisitt i prosjektfilen (`connections`) og kontrolleres mot toleranser (posisjon `1 µm`, tangent foreløpig `1e-6` rad). Avvik rapporteres, ingenting flyttes automatisk.
+
 **Lagring:** Fil → Lagre laster ned `<prosjektnavn>.railcad.json`. Åpne leser filen tilbake og validerer den (struktur, tall, invarianter, unike ID-er, referanser) før noe vises; ved feil forklares det hva som er galt og prosjektet er urørt.
 
 ## Arkitektur
@@ -79,7 +81,9 @@ Se `docs/` for filformat og beslutninger.
 ## Kjente begrensninger
 
 - **Ikke regelverkskontrollert.** Ingen kontroller mot Bane NOR/TRV. Panelet viser «ikke vurdert»; ingenting presenteres som godkjent.
-- **Ingen sporveksler, topologi/koblinger, DXF, referansebakgrunn, lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
+- **Sporveksler er delvis verifisert** (3 typer, akser avledet fra TRV-hovedmål, ikke kontrollert mot KO-tegning – se `docs/vekseldata-trv.md`). Dobbel kryssveksel, sporsløyfer og EVB-typer er ikke lagt inn.
+- **Tangenttoleranse for koblinger er en foreløpig testverdi.**
+- **Ingen DXF, referansebakgrunn, lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
 - Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.
@@ -90,4 +94,4 @@ Se `docs/` for filformat og beslutninger.
 
 ## Neste steg (P1)
 
-Sporvekselbibliotek med dokumenterte dimensjoner og porter, topologiske koblinger og feilrapportering, DXF-eksport (med lag), referansebakgrunn, parametriske sammenhenger mellom spor. MVP skal være ferdig verifisert før dette starter.
+Verifisert sporvekselgeometri fra KO-tegninger (se `docs/henvendelse-bane-nor.md`), flere vekseltyper, DXF-eksport (med lag), referansebakgrunn, parametriske sammenhenger mellom spor. MVP skal være ferdig verifisert før dette starter.
