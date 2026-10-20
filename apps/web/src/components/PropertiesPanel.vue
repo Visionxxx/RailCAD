@@ -1,0 +1,187 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import {
+  isDimension, isTrack, validateGeometry,
+  type DimensionObject, type TrackGeometry, type TrackSegment, type Vec2,
+} from '@railcad/domain';
+import { TOLERANCES } from '@railcad/geometry-api';
+import { geometryEngine as engine } from '../engine';
+import { degToRad, fmt, fmtM, radToDeg } from '../format';
+import NumberField from './NumberField.vue';
+import { useProjectStore } from '../stores/project';
+
+const project = useProjectStore();
+
+const selected = computed(() => project.selectedObjects);
+const track = computed<TrackSegment | null>(() => {
+  const o = selected.value.length === 1 ? selected.value[0] : undefined;
+  return o && isTrack(o) ? o : null;
+});
+const dimension = computed<DimensionObject | null>(() => {
+  const o = selected.value.length === 1 ? selected.value[0] : undefined;
+  return o && isDimension(o) ? o : null;
+});
+
+const geom = computed(() => track.value?.geometry ?? null);
+const arc = computed(() => (geom.value?.kind === 'arc' ? geom.value : null));
+const line = computed(() => (geom.value?.kind === 'line' ? geom.value : null));
+const end = computed(() => (geom.value ? engine.endPose(geom.value) : null));
+const center = computed(() => (geom.value ? engine.arcCenter(geom.value) : null));
+const totalLength = computed(() => (geom.value ? engine.length(geom.value) : 0));
+
+/** Bygger en validator som sjekker hele den nye geometrien mot invariantene før noe lagres. */
+function geometryValidator(make: (g: TrackGeometry, n: number) => TrackGeometry) {
+  return (n: number): string | null => {
+    const g = geom.value;
+    if (!g) return null;
+    const next = make(g, n);
+    const errors = validateGeometry(next);
+    if (errors.length) return errors[0] ?? null;
+    if (engine.length(next) < TOLERANCES.minSegmentLengthM) return 'Sporet blir for kort.';
+    return null;
+  };
+}
+
+function editGeometry(label: string, make: (g: TrackGeometry, n: number) => TrackGeometry) {
+  return {
+    validate: geometryValidator(make),
+    commit: (n: number) => {
+      const t = track.value;
+      if (t) project.updateObject({ ...t, geometry: make(t.geometry, n) }, label);
+    },
+  };
+}
+
+const withStartX = editGeometry('Endre startpunkt', (g, n) => ({ ...g, start: [n, g.start[1]] }));
+const withStartY = editGeometry('Endre startpunkt', (g, n) => ({ ...g, start: [g.start[0], n] }));
+const withHeading = editGeometry('Endre retning', (g, n) => ({ ...g, headingRad: degToRad(n) }));
+const withLength = editGeometry('Endre lengde', (g, n) => (g.kind === 'line' ? { ...g, lengthM: n } : g));
+const withRadius = editGeometry('Endre radius', (g, n) =>
+  g.kind === 'arc' ? { ...g, signedRadiusM: Math.sign(g.signedRadiusM) * n } : g,
+);
+const withSweep = editGeometry('Endre sveipvinkel', (g, n) => (g.kind === 'arc' ? { ...g, sweepRad: degToRad(n) } : g));
+const withArcLength = editGeometry('Endre buelengde', (g, n) =>
+  g.kind === 'arc' ? { ...g, sweepRad: n / Math.abs(g.signedRadiusM) } : g,
+);
+
+function setCurveSide(e: Event) {
+  const side = (e.target as HTMLSelectElement).value;
+  const t = track.value;
+  if (!t || t.geometry.kind !== 'arc') return;
+  const magnitude = Math.abs(t.geometry.signedRadiusM);
+  project.updateObject(
+    { ...t, geometry: { ...t.geometry, signedRadiusM: side === 'left' ? magnitude : -magnitude } },
+    'Endre kurveretning',
+  );
+}
+
+// --- Mål ---
+const dimLayout = computed(() => {
+  const d = dimension.value;
+  if (!d) return null;
+  return engine.dimensionLayout(d.dimension, (id) => {
+    const t = project.byId.get(id);
+    return t && isTrack(t) ? t.geometry : undefined;
+  });
+});
+
+function editDimension(label: string, make: (d: DimensionObject['dimension'], n: number) => DimensionObject['dimension']) {
+  const check = (n: number): string | null => {
+    const d = dimension.value;
+    if (!d) return null;
+    const next = make(d.dimension, n);
+    if (next.kind === 'distance' && next.a[0] === next.b[0] && next.a[1] === next.b[1]) {
+      return 'Punktene kan ikke være sammenfallende.';
+    }
+    const layout = engine.dimensionLayout(next, (id) => {
+      const t = project.byId.get(id);
+      return t && isTrack(t) ? t.geometry : undefined;
+    });
+    return layout ? null : 'Målelinjen kan ikke plasseres slik.';
+  };
+  return {
+    validate: check,
+    commit: (n: number) => {
+      const d = dimension.value;
+      if (d) project.updateObject({ ...d, dimension: make(d.dimension, n) }, label);
+    },
+  };
+}
+
+const dimOffset = editDimension('Endre målforskyvning', (d, n) => ({ ...d, offsetM: n }));
+const dimPoint = (which: 'a' | 'b', axis: 0 | 1) =>
+  editDimension('Endre målpunkt', (d, n) => {
+    if (d.kind !== 'distance') return d;
+    const p: Vec2 = which === 'a' ? d.a : d.b;
+    const moved: Vec2 = axis === 0 ? [n, p[1]] : [p[0], n];
+    return which === 'a' ? { ...d, a: moved } : { ...d, b: moved };
+  });
+const dimAx = dimPoint('a', 0);
+const dimAy = dimPoint('a', 1);
+const dimBx = dimPoint('b', 0);
+const dimBy = dimPoint('b', 1);
+</script>
+
+<template>
+  <section class="props" aria-labelledby="prop-h" data-testid="properties">
+    <h2 id="prop-h">Egenskaper</h2>
+
+    <p v-if="!selected.length" class="muted">Ingen objekt valgt.</p>
+
+    <template v-else-if="selected.length > 1">
+      <p data-testid="multi-count">{{ selected.length }} objekter valgt.</p>
+      <div class="row-actions">
+        <button class="btn secondary" data-testid="delete-selected" @click="project.deleteSelection()">Slett valgte</button>
+      </div>
+    </template>
+
+    <template v-else-if="track && geom">
+      <div class="field ro"><label>Objekt-ID</label><output data-testid="prop-id">{{ track.id }}</output></div>
+      <div class="field ro"><label>Type</label><output>{{ geom.kind === 'line' ? 'Rett spor' : 'Sirkelkurve' }}</output></div>
+
+      <NumberField id="prop-start-x" label="Start X" unit="m" :model-value="geom.start[0]" :validate="withStartX.validate" @commit="withStartX.commit" />
+      <NumberField id="prop-start-y" label="Start Y" unit="m" :model-value="geom.start[1]" :validate="withStartY.validate" @commit="withStartY.commit" />
+      <NumberField id="prop-heading" label="Retning" unit="°" :decimals="4" :model-value="radToDeg(geom.headingRad)" :validate="withHeading.validate" @commit="withHeading.commit" />
+
+      <NumberField v-if="line" id="prop-length" label="Lengde" unit="m" :model-value="line.lengthM" :validate="withLength.validate" @commit="withLength.commit" />
+
+      <template v-if="arc">
+        <NumberField id="prop-radius" label="Radius" unit="m" :model-value="Math.abs(arc.signedRadiusM)" :validate="withRadius.validate" @commit="withRadius.commit" />
+        <div class="field">
+          <label for="prop-side">Kurveretning</label>
+          <select id="prop-side" data-testid="prop-side" :value="arc.signedRadiusM > 0 ? 'left' : 'right'" @change="setCurveSide">
+            <option value="left">Venstre</option>
+            <option value="right">Høyre</option>
+          </select>
+        </div>
+        <NumberField id="prop-sweep" label="Sveipvinkel" unit="°" :decimals="4" :model-value="radToDeg(arc.sweepRad)" :validate="withSweep.validate" @commit="withSweep.commit" />
+        <NumberField id="prop-arclength" label="Buelengde" unit="m" :model-value="totalLength" :validate="withArcLength.validate" @commit="withArcLength.commit" />
+      </template>
+
+      <div v-if="end" class="field ro"><label>Slutt X / Y</label><output data-testid="prop-end">{{ fmt(end.point[0]) }} / {{ fmt(end.point[1]) }}</output></div>
+      <div v-if="end" class="field ro"><label>Slutt retning</label><output>{{ fmt(radToDeg(end.headingRad), 4) }}°</output></div>
+      <div v-if="center" class="field ro"><label>Senter X / Y</label><output>{{ fmt(center[0]) }} / {{ fmt(center[1]) }}</output></div>
+      <div class="field ro"><label>Tilkoblinger</label><output class="muted">ingen (kommer i P1)</output></div>
+      <div class="field ro"><label>Status</label><output><span class="badge ok">Gyldig geometri</span></output></div>
+      <div class="field ro"><label>Regelverk</label><output><span class="badge">ikke vurdert</span></output></div>
+      <div class="row-actions"><button class="btn secondary" data-testid="delete-selected" @click="project.deleteSelection()">Slett</button></div>
+    </template>
+
+    <template v-else-if="dimension">
+      <div class="field ro"><label>Objekt-ID</label><output data-testid="prop-id">{{ dimension.id }}</output></div>
+      <div class="field ro">
+        <label>Type</label>
+        <output>{{ dimension.dimension.kind === 'length' ? `Lengdemål (${dimension.dimension.targetId})` : 'Avstandsmål' }}</output>
+      </div>
+      <div class="field ro"><label>Måltall</label><output data-testid="prop-dim-value">{{ dimLayout ? fmtM(dimLayout.valueM) : '–' }}</output></div>
+      <template v-if="dimension.dimension.kind === 'distance'">
+        <NumberField id="prop-ax" label="A X" unit="m" :model-value="dimension.dimension.a[0]" :validate="dimAx.validate" @commit="dimAx.commit" />
+        <NumberField id="prop-ay" label="A Y" unit="m" :model-value="dimension.dimension.a[1]" :validate="dimAy.validate" @commit="dimAy.commit" />
+        <NumberField id="prop-bx" label="B X" unit="m" :model-value="dimension.dimension.b[0]" :validate="dimBx.validate" @commit="dimBx.commit" />
+        <NumberField id="prop-by" label="B Y" unit="m" :model-value="dimension.dimension.b[1]" :validate="dimBy.validate" @commit="dimBy.commit" />
+      </template>
+      <NumberField id="prop-dim-offset" label="Forskyvning" unit="m" :model-value="dimension.dimension.offsetM" :validate="dimOffset.validate" @commit="dimOffset.commit" />
+      <div class="row-actions"><button class="btn secondary" data-testid="delete-selected" @click="project.deleteSelection()">Slett</button></div>
+    </template>
+  </section>
+</template>

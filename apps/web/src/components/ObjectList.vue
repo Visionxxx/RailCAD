@@ -1,0 +1,47 @@
+<script setup lang="ts">
+import { isTrack, type RailObject } from '@railcad/domain';
+import { geometryEngine as engine } from '../engine';
+import { fmtM } from '../format';
+import { useProjectStore } from '../stores/project';
+
+const project = useProjectStore();
+
+function summary(o: RailObject): string {
+  if (isTrack(o)) {
+    const len = fmtM(engine.length(o.geometry));
+    return o.geometry.kind === 'line' ? len : `R ${fmtM(Math.abs(o.geometry.signedRadiusM), 1)} · ${len}`;
+  }
+  const t = project.byId.get(o.dimension.kind === 'length' ? o.dimension.targetId : '');
+  const layout = engine.dimensionLayout(o.dimension, () => (t && isTrack(t) ? t.geometry : undefined));
+  return layout ? fmtM(layout.valueM) : '–';
+}
+function kindLabel(o: RailObject): string {
+  if (isTrack(o)) return o.geometry.kind === 'line' ? 'Rett' : 'Kurve';
+  return o.dimension.kind === 'length' ? 'Lengdemål' : 'Avstandsmål';
+}
+
+function pick(id: string, e: MouseEvent) {
+  if (e.shiftKey) project.toggleSelect(id);
+  else project.select([id]);
+}
+</script>
+
+<template>
+  <section class="objects" aria-labelledby="obj-h">
+    <h2 id="obj-h">Objekter ({{ project.objects.length }})</h2>
+    <ul class="object-list" data-testid="object-list">
+      <li v-for="o in project.objects" :key="o.id">
+        <button
+          :aria-current="project.selection.includes(o.id)"
+          :data-testid="`object-${o.id}`"
+          @click="pick(o.id, $event)"
+        >
+          <span>{{ o.id }}</span>
+          <span class="muted">{{ kindLabel(o) }}</span>
+          <span class="sum">{{ summary(o) }}</span>
+        </button>
+      </li>
+    </ul>
+    <p v-if="!project.objects.length" class="muted">Ingen objekter ennå. Velg et tegneverktøy.</p>
+  </section>
+</template>
