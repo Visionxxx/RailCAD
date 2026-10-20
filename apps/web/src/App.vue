@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, watchEffect } from 'vue';
 import { useActions } from './actions';
-import BackgroundPanel from './components/BackgroundPanel.vue';
-import ConnectionsPanel from './components/ConnectionsPanel.vue';
 import MenuBar from './components/MenuBar.vue';
 import ModalDialog from './components/ModalDialog.vue';
-import ObjectList from './components/ObjectList.vue';
 import ProjectSettings from './components/ProjectSettings.vue';
-import PropertiesPanel from './components/PropertiesPanel.vue';
+import SidePanel from './components/SidePanel.vue';
 import StatusBar from './components/StatusBar.vue';
 import ToastList from './components/ToastList.vue';
 import ToolBar from './components/ToolBar.vue';
@@ -102,12 +99,7 @@ onBeforeUnmount(() => {
     <MenuBar />
     <ToolBar />
     <main class="canvas-area"><ViewportCanvas /></main>
-    <aside class="side" aria-label="Egenskaper og objekter">
-      <PropertiesPanel />
-      <ConnectionsPanel />
-      <BackgroundPanel />
-      <ObjectList />
-    </aside>
+    <SidePanel />
     <StatusBar />
     <ToastList />
     <ModalDialog />

@@ -77,3 +77,18 @@ export async function setField(page: Page, id: string, value: string) {
   await f.fill(value);
   await f.press('Enter');
 }
+
+export type SideTabId = 'properties' | 'objects' | 'connections' | 'backgrounds';
+
+/** Åpner en fane i høyre panel. */
+export async function openTab(page: Page, tab: SideTabId) {
+  await page.getByTestId(`tab-${tab}`).click();
+  await expect(page.getByTestId(`tabpanel-${tab}`)).toBeVisible();
+}
+
+/** Velger et objekt via objektlisten (åpner fanen først). Egenskaper vises etterpå. */
+export async function selectInList(page: Page, id: string) {
+  await openTab(page, 'objects');
+  await page.getByTestId(`object-${id}`).click();
+  await expect(page.getByTestId('tabpanel-properties')).toBeVisible();
+}

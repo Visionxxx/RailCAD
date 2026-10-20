@@ -44,6 +44,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Snapping** (bunnlinjen, kan slås av/på): endepunkt, senter, tangent (fra forrige punkt), nærmeste punkt og rutenett. Søkeradius er 12 px og omregnes til meter – den påvirker aldri modellen. Merket vises ved markøren.
 
+**Høyre panel** har fire faner: _Egenskaper_, _Objekter_, _Koblinger_ og _Bakgrunn_. Fanene viser antall (rødt merke på Koblinger ved avvik), kan betjenes med piltaster, og valgt fane huskes. Å velge et objekt (på tegneflaten eller i listen) viser egenskapene; i fanene Koblinger og Bakgrunn blir du værende.
+
 **Egenskapspanelet** redigerer geometrien direkte (start, retning, lengde / radius, kurveretning, sveipvinkel, buelengde). Tall kan skrives med komma eller punktum; ugyldige verdier gir en feilmelding og endrer ingenting. **Visning → Skjematisk skinne-/svillevisning** tegner to skinner (1,435 m, kun skjematisk) og sviller ved høy zoom.
 
 **Topologi:** Koblinger lagres eksplisitt i prosjektfilen (`connections`) og kontrolleres mot toleranser (posisjon `1 µm`, tangent foreløpig `1e-6` rad). Avvik rapporteres, ingenting flyttes automatisk.

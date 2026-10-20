@@ -107,6 +107,7 @@ export function useActions() {
     const bg = result.background;
     project.addBackground(bg);
     viewStore.activeBackgroundId = bg.id;
+    ui.showTab('backgrounds');
     viewStore.fitToBounds(backgroundWorldBounds(bg));
     if (result.notes.length) {
       ui.showDialog({ title: `Bakgrunn importert: ${bg.name}`, lines: result.notes });

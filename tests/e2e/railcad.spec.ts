@@ -7,6 +7,8 @@ import {
   field,
   menu,
   openApp,
+  openTab,
+  selectInList,
   selectTool,
   setField,
   viewInfo,
@@ -18,6 +20,7 @@ test('starter uten feil og viser tegneflate, verktøy og statuslinje', async ({ 
   await expect(page.getByTestId('tool-line')).toBeVisible();
   await expect(page.getByTestId('statusbar')).toContainText('px/m');
   await expect(page.locator('svg pattern#pat-minor')).toHaveCount(1);
+  await openTab(page, 'objects');
   await expect(page.getByTestId('object-list')).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -29,7 +32,7 @@ test('RC-002/RC-004: tegn rett spor numerisk og endre lengde i egenskapspanelet 
   await createLineNumeric(page, { length: '140' });
   await expect(page.getByTestId('object-track-001')).toContainText('140,000 m');
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await expect(field(page, 'prop-length')).toHaveValue('140,000');
   await expect(page.getByTestId('prop-end')).toHaveText('140,000 / 0,000');
 
@@ -46,7 +49,7 @@ test('RC-004: ugyldige verdier gir tydelig feilmelding og endrer ikke modellen',
   await openApp(page);
   await createLineNumeric(page, { length: '140' });
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await setField(page, 'prop-length', '0');
   await expect(page.getByRole('alert').first()).toContainText('Lengde må være et positivt');
   await setField(page, 'prop-length', 'abc');
@@ -130,13 +133,13 @@ test('RC-009/scenario A+B: parallelle spor er uavhengige kopier', async ({ page 
 
   await expect(page.getByTestId('object-list').locator('li')).toHaveCount(3);
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-002').click();
+  await selectInList(page, 'track-002');
   await expect(field(page, 'prop-start-y')).toHaveValue('5,000');
   await expect(field(page, 'prop-length')).toHaveValue('140,000');
-  await page.getByTestId('object-track-003').click();
+  await selectInList(page, 'track-003');
   await expect(field(page, 'prop-start-y')).toHaveValue('-5,000');
 
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await setField(page, 'prop-length', '150');
   await expect(page.getByTestId('object-track-001')).toContainText('150,000 m');
   await expect(page.getByTestId('object-track-002')).toContainText('140,000 m');
@@ -157,7 +160,7 @@ test('RC-008: lengdemål følger sporet og er synlig etter lagring og åpning (s
   await expect(page.getByTestId('dim-label-dim-001')).toHaveText('140,000 m');
 
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await setField(page, 'prop-length', '150');
   await expect(page.getByTestId('dim-label-dim-001')).toHaveText('150,000 m');
 
@@ -254,7 +257,7 @@ test('RC-001: ugyldig prosjektfil avvises med forklaring og endrer ikke prosjekt
   await chooser.setFiles(bad);
   await expect(page.getByTestId('dialog')).toContainText('Lengde må være et positivt');
   await page.getByTestId('dialog-close').click();
-  await expect(page.getByTestId('object-track-001')).toBeVisible();
+  await expect(page.getByTestId('object-track-001')).toBeAttached();
 });
 
 test('eksempelprosjekt åpnes med tre parallelle spor à 140 m', async ({ page }) => {
@@ -292,7 +295,7 @@ test('zoom rundt markøren, panorering og direkte redigering av endepunkt med mu
 
   // Dra sluttgrepet til (30, 0) – snapper til rutenettet
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await page.keyboard.press('f'); // tilpass visning så sluttpunktet er synlig
   const end = await worldToPage(page, 40, 0);
   const target = await worldToPage(page, 30, 0);
@@ -362,7 +365,7 @@ test('flytt (dra), roter (numerisk) og slett med tilknyttet mål – kan angres'
   await selectTool(page, 'measure-length');
   await clickWorld(page, 20, 0);
   await clickWorld(page, 20, 4);
-  await expect(page.getByTestId('object-dim-001')).toBeVisible();
+  await expect(page.getByTestId('object-dim-001')).toBeAttached();
 
   // Flytt: dra sporet fra (10, 0) til (10, 6)
   await selectTool(page, 'select');
@@ -381,7 +384,7 @@ test('flytt (dra), roter (numerisk) og slett med tilknyttet mål – kan angres'
   await page.getByTestId('rotate-angle').fill('90');
   await page.getByTestId('rotate-apply').click();
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await expect(field(page, 'prop-heading')).toHaveValue('90,0000');
   await expect(page.getByTestId('prop-end')).toHaveText('0,000 / 46,000');
 
@@ -432,7 +435,7 @@ test('panorering med midtknapp og rotasjon med tre museklikk (pivot, referanse, 
   await clickWorld(page, 10, 0); // referanseretning
   await clickWorld(page, 0, 10); // ny retning → +90°
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await expect(field(page, 'prop-heading')).toHaveValue('90,0000');
   await expect(page.getByTestId('prop-end')).toHaveText('0,000 / 20,000');
   expect(errors).toEqual([]);
@@ -467,7 +470,7 @@ test('RC-011: Koble – meny ved musepeker, kurve fra endepunkt og kobling i én
   await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
   await expect(page.getByTestId('conn-mark-0')).toHaveAttribute('data-status', 'ok');
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-001').click();
+  await selectInList(page, 'track-001');
   await expect(page.getByTestId('prop-port-end')).toContainText('track-002 start · OK');
   await expect(page.getByTestId('prop-port-start')).toHaveText('ledig');
 
@@ -502,13 +505,14 @@ test('RC-011: forslag kobler sammenfallende endepunkter; avvik rapporteres uten 
   await openApp(page);
   await createLineNumeric(page, { length: '10' });
   await createLineNumeric(page, { x: '10', length: '10' });
+  await openTab(page, 'connections');
   await expect(page.getByTestId('suggest-connect-0')).toBeVisible();
   await page.getByTestId('suggest-connect-0').click();
   await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
   await expect(page.getByTestId('suggest-connect-0')).toHaveCount(0);
 
   await selectTool(page, 'select');
-  await page.getByTestId('object-track-002').click();
+  await selectInList(page, 'track-002');
   await setField(page, 'prop-start-x', '10,25');
   await expect(page.getByTestId('conn-status-0')).toHaveText('Posisjonsavvik 0,250 m');
   await expect(page.getByTestId('conn-errors')).toContainText('1 avvik');
@@ -599,7 +603,7 @@ test('RC-010/RC-011: veksel plasseres på sporendepunkt og kobles automatisk; ka
   await createLineNumeric(page, { length: '20' });
   await selectTool(page, 'turnout');
   await clickWorld(page, 20, 0);
-  await expect(page.getByTestId('object-turnout-001')).toBeVisible();
+  await expect(page.getByTestId('object-turnout-001')).toBeAttached();
   await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
   await expect(page.getByTestId('prop-port-stem_in')).toContainText('track-001 slutt · OK');
   await expect(field(page, 'prop-start-x')).toHaveValue('20,000');
@@ -642,7 +646,7 @@ test('RC-010: veksel kan velges med musen, flyttes via panelet og slettes', asyn
   await page.getByTestId('delete-selected').click();
   await expect(page.getByTestId('object-list').locator('li')).toHaveCount(0);
   await page.keyboard.press('Control+z');
-  await expect(page.getByTestId('object-turnout-001')).toBeVisible();
+  await expect(page.getByTestId('object-turnout-001')).toBeAttached();
 });
 
 test('RC-010: sporveksel og kobling overlever lagring; ukjent katalogtype avvises', async ({
@@ -680,7 +684,7 @@ test('RC-010: sporveksel og kobling overlever lagring; ukjent katalogtype avvise
     page.getByTestId('menu-open').click(),
   ]);
   await chooser.setFiles(path);
-  await expect(page.getByTestId('object-turnout-001')).toBeVisible();
+  await expect(page.getByTestId('object-turnout-001')).toBeAttached();
   await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
 
   saved.objects[1].turnout.catalogId = 'finnes-ikke';
@@ -701,12 +705,12 @@ test('avansert eksempel (Lodalen-inspirert) åpnes med veksler og kontrollerte k
   const errors = await openApp(page);
   await menu(page, 'file', 'menu-demo-lodalen');
   await expect(page.getByTestId('project-title')).toContainText('Lodalen-inspirert');
-  await expect(page.getByTestId('object-turnout-008')).toBeVisible();
+  await expect(page.getByTestId('object-turnout-008')).toBeAttached();
   await expect(page.getByTestId('connections')).toContainText('Koblinger (35)');
   await expect(page.getByTestId('connections')).toContainText('alle OK');
   await expect(page.getByTestId('conn-errors')).toHaveCount(0);
   await expect(page.getByTestId('turnout-label-turnout-001')).toHaveCount(0); // skjult ved lav zoom
-  await page.getByTestId('object-turnout-001').click();
+  await selectInList(page, 'turnout-001');
   await expect(page.getByTestId('turnout-label-turnout-001')).toContainText('delvis verifisert');
   expect(errors).toEqual([]);
 });
@@ -926,4 +930,56 @@ test('RC-013: «Flytt fra → til» snapper til hjørner i DXF-bakgrunnen og fly
     before,
     0,
   );
+});
+
+test('faner i høyre panel: antall, avviksmerke, piltaster, automatisk bytte og husket valg', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  const selected = async () =>
+    page.locator('[role=tab][aria-selected=true]').getAttribute('data-testid');
+  expect(await selected()).toBe('tab-properties');
+  await expect(page.getByTestId('tabpanel-objects')).toBeHidden();
+
+  await createLineNumeric(page, { length: '10' });
+  await createLineNumeric(page, { x: '10', length: '10' });
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('2');
+  await expect(page.getByTestId('tab-count-properties')).toHaveText('1'); // nytt spor er valgt
+  await expect(page.getByTestId('tab-count-connections')).toHaveCount(0);
+
+  // Piltaster flytter mellom faner og fokus følger
+  await page.getByTestId('tab-properties').focus();
+  await page.keyboard.press('ArrowRight');
+  expect(await selected()).toBe('tab-objects');
+  await expect(page.getByTestId('tab-objects')).toBeFocused();
+  await expect(page.getByTestId('tabpanel-objects')).toBeVisible();
+  await page.keyboard.press('End');
+  expect(await selected()).toBe('tab-backgrounds');
+  await page.keyboard.press('ArrowRight'); // rundt
+  expect(await selected()).toBe('tab-properties');
+
+  // Valg i objektlisten viser egenskapene
+  await openTab(page, 'objects');
+  await page.getByTestId('object-track-001').click();
+  await expect(page.getByTestId('tabpanel-properties')).toBeVisible();
+
+  // Koble via forslag: Koblinger-fanen får antall; avvik gir rødt merke og fanen beholdes ved valg
+  await openTab(page, 'connections');
+  await page.getByTestId('suggest-connect-0').click();
+  await expect(page.getByTestId('tab-count-connections')).toHaveText('1');
+  await expect(page.getByTestId('tab-count-connections')).not.toHaveClass(/alert/);
+  await selectInList(page, 'track-002');
+  await setField(page, 'prop-start-x', '10,5');
+  await expect(page.getByTestId('tab-count-connections')).toHaveClass(/alert/);
+  await openTab(page, 'connections');
+  await page.getByTestId('conn-row-0').getByRole('button').first().click(); // velger de to sporene
+  await expect(page.getByTestId('tabpanel-connections')).toBeVisible(); // fanen beholdes
+  await expect(page.getByTestId('tab-count-properties')).toHaveText('2');
+
+  // Valgt fane huskes etter omlasting
+  await openTab(page, 'objects');
+  await page.reload();
+  await expect(page.getByTestId('viewport')).toBeVisible();
+  expect(await selected()).toBe('tab-objects');
+  expect(errors).toEqual([]);
 });
