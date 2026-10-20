@@ -203,6 +203,20 @@ const connectionMarks = computed(() => {
     )
     .map((r) => ({ index: r.index, status: r.status, p: worldToScreen(v, r.at as Vec2) }));
 });
+/** Kryssende spor (uten kryss/veksel) – vises alltid; bekreftede (planskilt) dempet. */
+const crossingMarks = computed(() => {
+  const rect = worldRect.value;
+  return project.crossingIssues
+    .map((x, i) => ({ x, i }))
+    .filter(
+      ({ x }) =>
+        x.point[0] >= rect.minX &&
+        x.point[0] <= rect.maxX &&
+        x.point[1] >= rect.minY &&
+        x.point[1] <= rect.maxY,
+    )
+    .map(({ x, i }) => ({ i, acked: x.acknowledged, kind: x.kind, p: worldToScreen(v, x.point) }));
+});
 const freePortMarks = computed(() => {
   if (ctrl.activeId.value !== 'connect') return [];
   const rect = worldRect.value;
@@ -597,6 +611,19 @@ watch(
           />
         </g>
 
+        <g
+          v-for="m in crossingMarks"
+          :key="`xm${m.i}`"
+          :class="['cross-mark', { acked: m.acked }]"
+          :data-testid="`crossing-mark-${m.i}`"
+          :data-kind="m.kind"
+          :data-acked="m.acked"
+        >
+          <circle :cx="m.p[0]" :cy="m.p[1]" r="9" />
+          <path
+            :d="`M${m.p[0] - 4} ${m.p[1] - 4}L${m.p[0] + 4} ${m.p[1] + 4}M${m.p[0] + 4} ${m.p[1] - 4}L${m.p[0] - 4} ${m.p[1] + 4}`"
+          />
+        </g>
         <circle
           v-for="m in connectionMarks"
           :key="`cm${m.index}`"

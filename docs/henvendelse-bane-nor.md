@@ -20,7 +20,8 @@ Vi utvikler et parametrisk 2D-CAD-program for prosjektering av sporplaner (verks
 3. Bekreftelse av definisjonene i tegnforklaringen:
    - Måles C og D langs avviksbuens tangent, eller i X-retning (stamsporets retning)?
    - Ender avvikssporets midtlinje på R2 + D langs tangenten, eller på bakkantlinjen (BK)?
-4. Vilkår for å bruke geometrien i programvare og for å distribuere den i et versjonert objektbibliotek (med kilde og revisjon).
+4. For sporkryss (diamantkryss) og kryssveksler: tillatte krysningsvinkler, krav til rette strekninger før/etter og avstand til nærmeste sporveksel/kurve, og hvilke krysningsgeometrier Bane NOR bruker (f.eks. 1:9, 1:12). Vi trenger dette for å kunne markere ulovlige kryssinger i skisser.
+5. Vilkår for å bruke geometrien i programvare og for å distribuere den i et versjonert objektbibliotek (med kilde og revisjon).
 
 Oppgi gjerne dokumentrevisjon og dato slik at vi kan versjonere biblioteket sporbart.
 

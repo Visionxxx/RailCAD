@@ -404,3 +404,57 @@ describe('ulagret-status og historikk', () => {
     expect(store.connections).toHaveLength(before);
   });
 });
+
+describe('kryssende spor', () => {
+  let store: ReturnType<typeof useProjectStore>;
+  const cross = () => {
+    store.addTrack({ kind: 'line', start: [-10, 0], headingRad: 0, lengthM: 20 }); // track-001
+    store.addTrack({ kind: 'line', start: [0, -10], headingRad: Math.PI / 2, lengthM: 20 }); // track-002
+  };
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+
+  it('finner kryssing mellom ulike spor, men ikke mellom spor koblet ende mot ende', () => {
+    cross();
+    expect(store.crossingIssues).toHaveLength(1);
+    expect(store.crossingIssues[0]).toMatchObject({
+      kind: 'crossing',
+      key: 'track-001|track-002',
+      acknowledged: false,
+    });
+    expect(store.openCrossingCount).toBe(1);
+
+    store.reset();
+    store.addTrack({ kind: 'line', start: [0, 0], headingRad: 0, lengthM: 10 });
+    store.addTrack({ kind: 'line', start: [10, 0], headingRad: 0.2, lengthM: 10 }); // møtes i endepunktet
+    expect(store.crossingIssues).toEqual([]);
+  });
+
+  it('«planskilt»-bekreftelse kan angres, lagres i prosjektet og beholdes ved åpning', () => {
+    cross();
+    store.toggleCrossingAck('track-001|track-002');
+    expect(store.openCrossingCount).toBe(0);
+    expect(store.crossingIssues[0]?.acknowledged).toBe(true);
+    expect(store.toProject().acknowledgedCrossings).toEqual(['track-001|track-002']);
+    store.undo();
+    expect(store.openCrossingCount).toBe(1);
+    store.redo();
+    const saved = store.toProject();
+    store.reset();
+    store.load(saved);
+    expect(store.crossingIssues).toHaveLength(1);
+    expect(store.crossingIssues[0]?.acknowledged).toBe(true); // bekreftelsen overlever lagring og åpning
+    expect(store.openCrossingCount).toBe(0);
+  });
+
+  it('gamle bekreftelser for slettede spor tas ikke med i prosjektfilen', () => {
+    cross();
+    store.toggleCrossingAck('track-001|track-002');
+    store.deleteIds(['track-002']);
+    expect(store.toProject().acknowledgedCrossings).toBeUndefined();
+    store.undo(); // sporet er tilbake – bekreftelsen gjelder igjen
+    expect(store.toProject().acknowledgedCrossings).toEqual(['track-001|track-002']);
+  });
+});

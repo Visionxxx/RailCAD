@@ -64,7 +64,13 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 | Testscenarier A–D (kap. 11) | Dekket av e2e; E (sporveksler/koblingsfeil) dekket av veksel- og koblingstester                                                     |
 | Uavhengig kodegjennomgang   | 12 funn verifisert og rettet, hver med test                                                                                         |
 
+### Tillegg etter sluttkontroll
+
+- **Kryssende spor** (advarsel, ikke vurdert mot regelverk): `geometry-ts/intersect.ts`, `ConnectionsPanel.vue`, `docs/kryssing.md`. Tester: enhet `intersect.test.ts` (14) + store (3); e2e (2). Eksempelplanene gir 0 treff.
+
 ### Kjente åpne punkter
+
+- Sporkryss og kryssveksler mangler i biblioteket (ingen åpne måltabeller; se `docs/kryssing.md`, `docs/henvendelse-leverandor.md`).
 
 - Sporveksler venter på KO-tegninger (se `docs/henvendelse-bane-nor.md`). Tangenttoleranse for koblinger er en foreløpig testverdi.
 - Speilede sirkler/polylinjer (negativ ekstrusjon) i DXF-bakgrunn støttes ikke; bare buer.

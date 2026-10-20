@@ -24,6 +24,8 @@ export const TOLERANCES = Object.freeze({
   minSegmentLengthM: 1e-6,
   /** Største radius som aksepteres ved interaktiv konstruksjon av buer (nær-rette linjer avvises). Meter. */
   maxInteractiveRadiusM: 1e5,
+  /** Avstand langs en akse for å regne et skjæringspunkt som «i enden» av aksen. Meter. */
+  intersectionEndM: 1e-4,
   /** Endepunkter i en kobling skal sammenfalle innenfor denne avstanden. Meter. */
   connectionPositionM: 1e-6,
   /**
@@ -114,6 +116,35 @@ export interface PortPair {
   distanceM: number;
 }
 
+export type IntersectionKind = 'crossing' | 'touch' | 'overlap';
+
+/** Et objekt (spor eller sporveksel) som akser: ett eller flere segmenter. */
+export interface IntersectionItem {
+  id: string;
+  segments: readonly TrackGeometry[];
+}
+
+/**
+ * Sted der to ulike objekters akser møtes uten å være koblet ende mot ende.
+ * - `crossing`: aksene krysser hverandre (begge innvendig).
+ * - `touch`: ett objekts ende ligger på et annet objekts akse (T-forbindelse uten veksel).
+ * - `overlap`: aksene ligger oppå hverandre over en strekning.
+ * Ende mot ende regnes ikke (det er en mulig kobling, ikke en kryssing).
+ */
+export interface Intersection {
+  /** Objekt-ID-ene, sortert (a < b). */
+  a: string;
+  b: string;
+  point: Vec2;
+  kind: IntersectionKind;
+  /** Spiss vinkel mellom aksenes tangenter, radianer (0 – π/2). 0 for overlapp. */
+  angleRad: number;
+  /** Lengde av overlappet, meter (kun `overlap`). */
+  overlapM?: number;
+  /** Ved `touch`: objektet hvis ende ligger på det andre. */
+  endOf?: string;
+}
+
 export interface DimensionLayout {
   /** Målt verdi i meter, beregnet fra modellen. */
   valueM: number;
@@ -164,6 +195,8 @@ export interface GeometryEngine {
     ports: ReadonlyMap<string, Pose>,
     connections: readonly Connection[],
   ): PortPair[];
+  /** Finner steder der akser fra ulike objekter krysser, berører eller overlapper hverandre. */
+  findIntersections(items: readonly IntersectionItem[]): Intersection[];
   /**
    * Sporveksel fra biblioteket: akser og porter i prosjektkoordinater. Geometrien er avledet av
    * hovedmålene (se `TurnoutType`) og skal vises som delvis verifisert.

@@ -101,6 +101,12 @@ export const useViewStore = defineStore('view', () => {
       apply(fitBounds(view, b));
     }
   }
+  /** Sentrerer utsnittet på et punkt og sørger for at det er zoomet nær nok til å se detaljer. */
+  function focusPoint(p: readonly [number, number], minScale = 4) {
+    view.cx = p[0];
+    view.cy = p[1];
+    if (view.scale < minScale) view.scale = minScale;
+  }
   function fitToBounds(b: { minX: number; minY: number; maxX: number; maxY: number }) {
     apply(fitBounds(view, b));
   }
@@ -134,6 +140,7 @@ export const useViewStore = defineStore('view', () => {
     pan,
     fitAll,
     fitToBounds,
+    focusPoint,
     reveal,
     setTheme,
   };

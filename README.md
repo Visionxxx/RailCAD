@@ -42,6 +42,8 @@ Ingen hemmeligheter eller miljøvariabler er nødvendige. Alt kjører lokalt, og
 
 Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn), `Ctrl+S` lagre, `Ctrl+O` åpne, `F` tilpass visning, `Enter` bekrefter parallelt spor.
 
+**Kryssende spor:** programmet markerer der spor krysser, ender på eller overlapper hverandre uten kryss/veksel (gult kryss på tegneflaten og i **Kontroll → Kryssende spor**). Status er «ikke vurdert»; «Planskilt» bekrefter en bevisst kryssing i ulik høyde. Se `docs/kryssing.md`.
+
 **Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
 
 **Valg og tegning:** dra på tom flate for _valgboks_ (mot høyre: helt innenfor, mot venstre: alt som berøres, Skift legger til). Hold **Skift** mens du tegner et rett spor for å låse retningen til 15°. Pil opp/ned i tallfelt justerer verdien (Skift ×10, Alt ×0,1). Objekter opprettet via skjema utenfor skjermen blir vist automatisk.
@@ -100,6 +102,7 @@ Se `docs/` for filformat og beslutninger.
 - **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
 - **Bakgrunn:** bare side 1 av PDF, ingen georeferering, DXF uten HATCH/DIMENSION.
 - **Ingen lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
+- Kryssende spor oppdages, men sporkryss/kryssveksler finnes ikke i biblioteket (mangler verifiserte data), og høyder finnes ikke i modellen.
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
 - Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.

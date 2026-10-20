@@ -283,3 +283,16 @@ export function connectMany(
     },
   };
 }
+
+/** Bekrefter (eller opphever bekreftelse av) at kryssingen mellom to objekter er bevisst. */
+export function toggleCrossingAckPatch(acks: readonly string[], key: string): Patch {
+  const has = acks.includes(key);
+  return {
+    label: has ? 'Opphev planskilt-bekreftelse' : 'Bekreft planskilt kryssing',
+    objects: {},
+    crossingAcks: {
+      before: [...acks],
+      after: has ? acks.filter((k) => k !== key) : [...acks, key],
+    },
+  };
+}

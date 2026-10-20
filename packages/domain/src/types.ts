@@ -111,6 +111,11 @@ export interface RailProject {
   connections: Connection[];
   /** Referansebakgrunner (valgfri; mangler i eldre filer). */
   backgrounds?: Background[];
+  /**
+   * Kryssende spor brukeren har bekreftet som bevisst (f.eks. planskilt), som objekt-ID-par `a|b`
+   * (sortert). Valgfritt felt.
+   */
+  acknowledgedCrossings?: string[];
 }
 
 export function isTrack(o: RailObject): o is TrackSegment {

@@ -10,8 +10,10 @@ import PropertiesPanel from './PropertiesPanel.vue';
 const project = useProjectStore();
 const ui = useUiStore();
 
+/** Avvik som trenger oppmerksomhet: koblingsavvik og kryssende spor som ikke er bekreftet. */
 const connectionIssues = computed(
-  () => project.connectionResults.filter((r) => r.status !== 'ok').length,
+  () =>
+    project.connectionResults.filter((r) => r.status !== 'ok').length + project.openCrossingCount,
 );
 
 const tabs = computed(() => [
@@ -29,8 +31,8 @@ const tabs = computed(() => [
   },
   {
     id: 'connections' as const,
-    label: 'Koblinger',
-    count: project.connections.length || null,
+    label: 'Kontroll',
+    count: connectionIssues.value || project.connections.length || null,
     alert: connectionIssues.value > 0,
   },
   {

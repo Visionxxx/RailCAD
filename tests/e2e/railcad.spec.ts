@@ -709,6 +709,7 @@ test('avansert eksempel (Lodalen-inspirert) åpnes med veksler og kontrollerte k
   await expect(page.getByTestId('connections')).toContainText('Koblinger (35)');
   await expect(page.getByTestId('connections')).toContainText('alle OK');
   await expect(page.getByTestId('conn-errors')).toHaveCount(0);
+  await expect(page.getByTestId('crossing-mark-0')).toHaveCount(0); // ingen kryssende spor i planen
   await expect(page.getByTestId('turnout-label-turnout-001')).toHaveCount(0); // skjult ved lav zoom
   await selectInList(page, 'turnout-001');
   await expect(page.getByTestId('turnout-label-turnout-001')).toContainText('delvis verifisert');
@@ -1240,4 +1241,69 @@ test('ugyldige/ekstreme verdier gir feilmelding i stedet for ødelagt visning', 
   await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
   const v = await viewInfo(page);
   expect(Number.isFinite(v.scale) && Number.isFinite(v.cx)).toBe(true);
+});
+
+// ---------- Kryssende spor ----------
+test('kryssende spor flagges med markering, kan vises, bekreftes som planskilt og angres', async ({
+  page,
+}, info) => {
+  const errors = await openApp(page);
+  await createLineNumeric(page, { x: '-10', length: '20' });
+  await createLineNumeric(page, { x: '0', y: '-10', heading: '90', length: '20' });
+
+  await expect(page.getByTestId('crossing-mark-0')).toBeVisible();
+  await expect(page.getByTestId('crossing-mark-0')).toHaveAttribute('data-kind', 'crossing');
+  await expect(page.getByTestId('tab-count-connections')).toHaveClass(/alert/);
+  await expect(page.getByTestId('tab-count-connections')).toHaveText('1');
+
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('cross-row-0')).toContainText(
+    'track-001 × track-002 krysser i 90,0°',
+  );
+  await expect(page.getByTestId('crossings-heading')).toContainText('(1)');
+  await expect(page.getByTestId('crossings-heading')).toContainText('ikke vurdert');
+
+  await page.getByTestId('cross-row-0').getByRole('button').first().click(); // Vis: velger begge sporene
+  await expect(page.getByTestId('tab-count-properties')).toHaveText('2');
+
+  await page.getByTestId('cross-ack-0').click(); // Planskilt
+  await expect(page.getByTestId('crossing-mark-0')).toHaveAttribute('data-acked', 'true');
+  await expect(page.getByTestId('crossings-heading')).toContainText('(0)');
+  await expect(page.getByTestId('tab-count-connections')).toHaveCount(0); // ingen avvik, ingen koblinger
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('planskilt.railcad.json');
+  await download.saveAs(path);
+  expect(JSON.parse(readFileSync(path, 'utf8')).acknowledgedCrossings).toEqual([
+    'track-001|track-002',
+  ]);
+
+  await page.getByTestId('undo-btn').click();
+  await expect(page.getByTestId('crossing-mark-0')).toHaveAttribute('data-acked', 'false');
+  await expect(page.getByTestId('crossings-heading')).toContainText('(1)');
+  expect(errors).toEqual([]);
+});
+
+test('T-forbindelse (spor som ender på et annet) og overlapp flagges, og flytting løser det', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await createLineNumeric(page, { x: '10', heading: '90', length: '10' });
+  await expect(page.getByTestId('crossing-mark-0')).toHaveAttribute('data-kind', 'touch');
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('cross-row-0')).toContainText('track-002 ender på track-001');
+
+  await selectInList(page, 'track-002');
+  await setField(page, 'prop-start-y', '5'); // flyttet bort fra sporet
+  await expect(page.getByTestId('crossing-mark-0')).toHaveCount(0);
+
+  await createLineNumeric(page, { x: '5', length: '20' }); // oppå track-001 fra x=5
+  await expect(page.getByTestId('crossing-mark-0')).toHaveAttribute('data-kind', 'overlap');
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('cross-row-0')).toContainText('overlapper 15,0 m');
 });

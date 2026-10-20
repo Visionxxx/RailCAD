@@ -11,12 +11,15 @@ export interface Patch {
   connections?: { before: Connection[]; after: Connection[] };
   /** Referansebakgrunner (hele listen før/etter – elementene deles, så det koster ingen kopiering). */
   backgrounds?: { before: Background[]; after: Background[] };
+  /** Bekreftede kryssinger (`idA|idB`). */
+  crossingAcks?: { before: string[]; after: string[] };
 }
 
 export interface ModelState {
   objects: RailObject[];
   connections: Connection[];
   backgrounds: Background[];
+  crossingAcks: string[];
 }
 
 export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'undo'): ModelState {
@@ -51,5 +54,9 @@ export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'u
   if (patch.backgrounds) {
     backgrounds = direction === 'do' ? patch.backgrounds.after : patch.backgrounds.before;
   }
-  return { objects: result, connections, backgrounds };
+  let crossingAcks = state.crossingAcks;
+  if (patch.crossingAcks) {
+    crossingAcks = direction === 'do' ? patch.crossingAcks.after : patch.crossingAcks.before;
+  }
+  return { objects: result, connections, backgrounds, crossingAcks };
 }

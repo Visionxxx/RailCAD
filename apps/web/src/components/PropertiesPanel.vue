@@ -253,6 +253,15 @@ const dimBy = dimPoint('b', 1);
         >
       </div>
       <div class="field ro">
+        <label>Kryssende spor</label
+        ><output data-testid="ov-crossings"
+          >{{ project.openCrossingCount
+          }}<span v-if="project.openCrossingCount" class="st position">
+            · ikke vurdert</span
+          ></output
+        >
+      </div>
+      <div class="field ro">
         <label>Bakgrunner</label><output>{{ project.backgrounds.length }}</output>
       </div>
     </template>

@@ -37,3 +37,19 @@ describe('eksempelprosjekter', () => {
     expect(engine.findCoincidentFreePorts(ports, p.connections)).toEqual([]);
   });
 });
+
+describe('eksempelplanene har ingen kryssende spor', () => {
+  it('verksted og Lodalen-inspirert plan: ingen kryssing, T-forbindelse eller overlapp', async () => {
+    const { isTrack, isTurnout } = await import('@railcad/domain');
+    for (const data of [demo, lodalen]) {
+      const r = loadProject(data);
+      if (!r.ok) throw new Error('ugyldig');
+      const items = r.project.objects.flatMap((o) => {
+        if (isTrack(o)) return [{ id: o.id, segments: [o.geometry] }];
+        if (isTurnout(o)) return [{ id: o.id, segments: cachedTurnoutLayout(o)!.segments }];
+        return [];
+      });
+      expect(engine.findIntersections(items)).toEqual([]);
+    }
+  });
+});

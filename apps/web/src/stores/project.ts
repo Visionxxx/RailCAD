@@ -13,13 +13,20 @@ import {
   type TrackGeometry,
   type TurnoutPlacement,
 } from '@railcad/domain';
-import { portKey, type Pose, type PortRef, type TrackRef } from '@railcad/geometry-api';
+import {
+  portKey,
+  type IntersectionItem,
+  type Pose,
+  type PortRef,
+  type TrackRef,
+} from '@railcad/geometry-api';
 import { applyPatch, type Patch } from '../commands/patch';
 import {
   addBackgroundPatch,
   removeBackgroundPatch,
   updateBackgroundPatch,
   connectMany,
+  toggleCrossingAckPatch,
   connectPorts,
   createDimension,
   createTrack,
@@ -40,6 +47,7 @@ export const useProjectStore = defineStore('project', () => {
   const objects = shallowRef<RailObject[]>([]);
   const connections = shallowRef<Connection[]>([]);
   const backgrounds = shallowRef<Background[]>([]);
+  const crossingAcks = shallowRef<string[]>([]);
   const selection = shallowRef<string[]>([]);
   const undoStack = shallowRef<Patch[]>([]);
   const redoStack = shallowRef<Patch[]>([]);
@@ -132,6 +140,32 @@ export const useProjectStore = defineStore('project', () => {
   const connectionSuggestions = computed(() =>
     engine.findCoincidentFreePorts(portPoses.value, connections.value),
   );
+  /** Steder der akser fra ulike objekter krysser, berører eller overlapper (ikke vurdert mot regelverk). */
+  const intersections = computed(() => {
+    const items: IntersectionItem[] = [];
+    for (const o of objects.value) {
+      if (isTrack(o)) items.push({ id: o.id, segments: [o.geometry] });
+      else if (isTurnout(o)) {
+        const layout = cachedTurnoutLayout(o);
+        if (layout) items.push({ id: o.id, segments: layout.segments });
+      }
+    }
+    return engine.findIntersections(items);
+  });
+  const crossingIssues = computed(() =>
+    intersections.value.map((x) => ({
+      ...x,
+      key: `${x.a}|${x.b}`,
+      acknowledged: crossingAcks.value.includes(`${x.a}|${x.b}`),
+    })),
+  );
+  const openCrossingCount = computed(
+    () => crossingIssues.value.filter((x) => !x.acknowledged).length,
+  );
+  /** Bekreftelser som fortsatt gjelder to eksisterende objekter. */
+  function liveAcks(): string[] {
+    return crossingAcks.value.filter((k) => k.split('|').every((id) => byId.value.has(id)));
+  }
   const lastRedoLabel = computed(() => redoStack.value.at(-1)?.label ?? '');
 
   function pruneSelection() {
@@ -143,10 +177,12 @@ export const useProjectStore = defineStore('project', () => {
     objects: RailObject[];
     connections: Connection[];
     backgrounds: Background[];
+    crossingAcks: string[];
   }) {
     objects.value = next.objects;
     connections.value = next.connections;
     backgrounds.value = next.backgrounds;
+    crossingAcks.value = next.crossingAcks;
     revision.value++;
     pruneSelection();
   }
@@ -156,7 +192,12 @@ export const useProjectStore = defineStore('project', () => {
     if (!patch) return false;
     commit(
       applyPatch(
-        { objects: objects.value, connections: connections.value, backgrounds: backgrounds.value },
+        {
+          objects: objects.value,
+          connections: connections.value,
+          backgrounds: backgrounds.value,
+          crossingAcks: crossingAcks.value,
+        },
         patch,
         'do',
       ),
@@ -171,7 +212,12 @@ export const useProjectStore = defineStore('project', () => {
     if (!patch) return;
     commit(
       applyPatch(
-        { objects: objects.value, connections: connections.value, backgrounds: backgrounds.value },
+        {
+          objects: objects.value,
+          connections: connections.value,
+          backgrounds: backgrounds.value,
+          crossingAcks: crossingAcks.value,
+        },
         patch,
         'undo',
       ),
@@ -186,7 +232,12 @@ export const useProjectStore = defineStore('project', () => {
     if (!patch) return;
     commit(
       applyPatch(
-        { objects: objects.value, connections: connections.value, backgrounds: backgrounds.value },
+        {
+          objects: objects.value,
+          connections: connections.value,
+          backgrounds: backgrounds.value,
+          crossingAcks: crossingAcks.value,
+        },
         patch,
         'do',
       ),
@@ -227,6 +278,9 @@ export const useProjectStore = defineStore('project', () => {
     const { patch, connected } = connectMany(connections.value, pairs);
     execute(patch);
     return connected;
+  }
+  function toggleCrossingAck(key: string) {
+    return execute(toggleCrossingAckPatch(crossingAcks.value, key));
   }
   function removeConnection(index: number): boolean {
     return execute(disconnect(connections.value, index));
@@ -279,6 +333,7 @@ export const useProjectStore = defineStore('project', () => {
     objects.value = project.objects;
     connections.value = project.connections;
     backgrounds.value = project.backgrounds ?? [];
+    crossingAcks.value = project.acknowledgedCrossings ?? [];
     selection.value = [];
     undoStack.value = [];
     redoStack.value = [];
@@ -302,6 +357,7 @@ export const useProjectStore = defineStore('project', () => {
       connections: [...connections.value],
       // Valgfritt felt: utelates når det ikke finnes bakgrunner (filene forblir like som før).
       ...(backgrounds.value.length ? { backgrounds: [...backgrounds.value] } : {}),
+      ...(liveAcks().length ? { acknowledgedCrossings: liveAcks() } : {}),
     };
   }
 
@@ -333,6 +389,11 @@ export const useProjectStore = defineStore('project', () => {
     freePorts,
     connectionResults,
     connectionSuggestions,
+    intersections,
+    crossingIssues,
+    openCrossingCount,
+    crossingAcks,
+    toggleCrossingAck,
     selectedObjects,
     dirty,
     canUndo,

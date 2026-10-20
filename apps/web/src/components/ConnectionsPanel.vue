@@ -4,6 +4,7 @@ import { TOLERANCES, type ConnectionResult, type PortRef } from '@railcad/geomet
 import { fmt, fmtDeg, fmtM, portLabel, radToDeg } from '../format';
 import { useProjectStore } from '../stores/project';
 import { useUiStore } from '../stores/ui';
+import { useViewStore } from '../stores/view';
 
 const project = useProjectStore();
 const ui = useUiStore();
@@ -51,6 +52,24 @@ function connectAll() {
   if (skipped) {
     ui.notify(`${n} koblet. ${skipped} forslag har tangentavvik (knekk) og må kobles enkeltvis.`);
   }
+}
+
+type Issue = (typeof project.crossingIssues)[number];
+const view = useViewStore();
+
+function crossingText(x: Issue): string {
+  const where = `(${fmt(x.point[0], 1)}; ${fmt(x.point[1], 1)})`;
+  if (x.kind === 'overlap')
+    return `${x.a} og ${x.b} overlapper ${fmtM(x.overlapM ?? 0, 1)} ${where}`;
+  if (x.kind === 'touch') {
+    const other = x.endOf === x.a ? x.b : x.a;
+    return `${x.endOf} ender på ${other} ${where}`;
+  }
+  return `${x.a} × ${x.b} krysser i ${fmtDeg(x.angleRad, 1)} ${where}`;
+}
+function showCrossing(x: Issue) {
+  project.select([x.a, x.b]);
+  view.focusPoint(x.point);
 }
 </script>
 
@@ -120,6 +139,43 @@ function connectAll() {
       Posisjonstoleranse {{ fmt(TOLERANCES.connectionPositionM * 1e6, 3) }} µm. Tangenttoleranse
       {{ tangentTolDeg }}° er en <b>foreløpig testverdi</b>, ikke faglig fastsatt. Avvik rapporteres
       – ingenting flyttes automatisk.
+    </p>
+
+    <h2 style="margin-top: 14px" data-testid="crossings-heading">
+      Kryssende spor ({{ project.openCrossingCount }})
+      <span class="badge" style="color: var(--warn)">ikke vurdert</span>
+    </h2>
+    <p v-if="!project.crossingIssues.length" class="muted" data-testid="no-crossings">
+      Ingen kryssende spor funnet.
+    </p>
+    <div
+      v-for="(x, i) in project.crossingIssues"
+      :key="`${x.key}-${x.kind}-${x.point[0]}-${x.point[1]}`"
+      :class="['conn-row', { acked: x.acknowledged }]"
+      :data-testid="`cross-row-${i}`"
+      :data-kind="x.kind"
+    >
+      <button class="who" :title="crossingText(x)" @click="showCrossing(x)">
+        {{ crossingText(x) }}
+      </button>
+      <button
+        class="btn secondary small"
+        :title="
+          x.acknowledged
+            ? 'Opphev bekreftelsen'
+            : 'Bekreft at kryssingen er bevisst (f.eks. bro/tunnel)'
+        "
+        :data-testid="`cross-ack-${i}`"
+        @click="project.toggleCrossingAck(x.key)"
+      >
+        {{ x.acknowledged ? 'Angre' : 'Planskilt' }}
+      </button>
+    </div>
+    <p class="muted" style="margin-top: 6px; font-size: 11px">
+      Spor kan ikke krysse hverandre i samme plan uten sporkryss eller kryssveksel (finnes ikke i
+      biblioteket ennå), og en T-forbindelse krever sporveksel. «Planskilt» bekrefter at du bevisst
+      har tegnet en kryssing i ulik høyde – høyder finnes ikke i modellen ennå. Ikke vurdert mot
+      regelverk.
     </p>
   </section>
 </template>

@@ -1083,3 +1083,22 @@ button {
   color: var(--text-dim);
   font-weight: 600;
 }
+
+.conn-row.acked .who {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+.cross-mark circle {
+  fill: rgba(232, 184, 74, 0.18);
+  stroke: var(--warn);
+  stroke-width: 2;
+}
+.cross-mark path {
+  stroke: var(--warn);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+}
+.cross-mark.acked {
+  opacity: 0.4;
+}

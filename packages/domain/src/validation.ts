@@ -132,6 +132,9 @@ const projectSchema = z
     objects: z.array(objectSchema),
     connections: z.array(z.object({ a: endpointRef, b: endpointRef }).passthrough()),
     backgrounds: z.array(backgroundSchema).optional(),
+    acknowledgedCrossings: z
+      .array(z.string().regex(/^[A-Za-z0-9_.-]+\|[A-Za-z0-9_.-]+$/, 'forventet «idA|idB»'))
+      .optional(),
   })
   .passthrough();
 
