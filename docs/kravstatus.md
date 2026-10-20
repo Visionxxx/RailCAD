@@ -72,11 +72,13 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Brukerforbedringer (kopiér/lim inn, lås, lag, tittelendring)** og **DXF-bakgrunn:** speilede sirkler/polylinjer, PDF-sidevalg. Tester: store (4), DXF (3), domene (1), e2e (4+1).
 
+- **Kryssveksel (enkel/dobbel) og sovitet sporkryss** (brukerdefinert/delvis verifisert): `geometry-ts/crossing.ts`, `scissors.ts`, `tools/scissors.ts`. Tester: enhet `scissors.test.ts` (7), kryssveksel (3+1), e2e (3).
+
 ### Kjente åpne punkter
 
 - Sporkryss og kryssveksler mangler i biblioteket (ingen åpne måltabeller; se `docs/kryssing.md`, `docs/henvendelse-leverandor.md`).
 
 - Sporveksler venter på KO-tegninger (se `docs/henvendelse-bane-nor.md`). Tangenttoleranse for koblinger er en foreløpig testverdi.
 - Speilede sirkler/polylinjer (negativ ekstrusjon) i DXF-bakgrunn støttes ikke; bare buer.
-- Ikke implementert: sporkryss/kryssveksel med verifiserte mål, høyder.
+- Ikke implementert: verifiserte mål for kryss/kryssveksel, høyder, 3D/profil/kjøretøykontroll (RC-015).
 - Bare side 1 av PDF; ingen georeferering.

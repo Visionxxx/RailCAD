@@ -1,6 +1,7 @@
 import { TURNOUT_CATALOG_REVISION, getTurnoutType, type Vec2 } from '@railcad/domain';
 import { TOLERANCES, type PortRef } from '@railcad/geometry-api';
 import { fmtM, portLabel } from '../format';
+import { crossingFromView } from './crossing';
 import { Tool } from './tool';
 import type { PointerInfo } from './types';
 
@@ -93,7 +94,10 @@ export class ConnectTool extends Tool {
           ...this.turnoutItems(),
           {
             id: 'crossing',
-            label: `Sporkryss 1:${this.env.view.crossingRatioN}`,
+            label:
+              this.env.view.crossingSlip === 'none'
+                ? `Sporkryss 1:${this.env.view.crossingRatioN}`
+                : `Kryssveksel 1:${this.env.view.crossingRatioN}`,
             note: 'ikke verifisert',
           },
         ],
@@ -127,22 +131,19 @@ export class ConnectTool extends Tool {
       if (!ok) this.env.ui.notify('Portene kunne ikke kobles (allerede i bruk).', 'error');
       this.reset();
     } else if (id === 'crossing') {
-      const { crossingRatioN: ratioN, crossingHalfLengthM: halfLengthM } = this.env.view;
-      if (ratioN >= 1.5 && ratioN <= 100 && halfLengthM > 0 && halfLengthM <= 1e4) {
-        this.env.project.addCrossing(
-          {
-            position: [
-              m.port.point[0] + Math.cos(m.port.headingRad) * halfLengthM,
-              m.port.point[1] + Math.sin(m.port.headingRad) * halfLengthM,
-            ],
-            headingRad: m.port.headingRad,
-            ratioN,
-            halfLengthM,
-          },
-          { objectId: m.port.objectId, port: m.port.port },
-        );
+      const half = this.env.view.crossingHalfLengthM;
+      const r = crossingFromView(
+        this.env.view,
+        [
+          m.port.point[0] + Math.cos(m.port.headingRad) * half,
+          m.port.point[1] + Math.sin(m.port.headingRad) * half,
+        ],
+        m.port.headingRad,
+      );
+      if (r.ok) {
+        this.env.project.addCrossing(r.placement, { objectId: m.port.objectId, port: m.port.port });
       } else {
-        this.env.ui.notify('Angi gyldig forhold og lengde i Sporkryss-verktøyet først.', 'error');
+        this.env.ui.notify(r.error, 'error');
       }
       this.reset();
     } else if (id === 'turnout:left' || id === 'turnout:right') {

@@ -15,7 +15,7 @@ import {
   type TurnoutPlacement,
   type Vec2,
 } from '@railcad/domain';
-import type { GeometryEngine } from '@railcad/geometry-api';
+import type { AssemblyPlan, GeometryEngine } from '@railcad/geometry-api';
 import type { Patch } from './patch';
 import { DEFAULT_LAYER_ID, type ProjectLayer } from '@railcad/domain';
 
@@ -508,4 +508,47 @@ export function pasteObjects(
     patch.connections = { before: [...connections], after: [...connections, ...newConns] };
   }
   return { patch, ids: created.map((o) => o.id) };
+}
+
+/**
+ * Oppretter en sammenstilling (flere objekter + koblinger mellom dem) som ÉN angrebar handling.
+ * `plan.parts[].key` oversettes til nye objekt-ID-er; returnerer nøkkel→ID og alle nye ID-er.
+ */
+export function createAssembly(
+  objects: readonly RailObject[],
+  connections: readonly Connection[],
+  plan: Extract<AssemblyPlan, { ok: true }>,
+  label: string,
+): { patch: Patch; ids: string[]; idByKey: Map<string, string> } {
+  const existing = objects.map((o) => o.id);
+  const idByKey = new Map<string, string>();
+  const entries: Patch['objects'] = {};
+  let index = objects.length;
+  for (const part of plan.parts) {
+    const type: RailObject['type'] =
+      part.kind === 'turnout' ? 'turnout' : part.kind === 'crossing' ? 'crossing' : 'track_segment';
+    const id = nextId(idPrefix(type), existing);
+    existing.push(id);
+    idByKey.set(part.key, id);
+    const object: RailObject =
+      part.kind === 'turnout'
+        ? { id, type: 'turnout', turnout: part.turnout as TurnoutPlacement }
+        : part.kind === 'crossing'
+          ? { id, type: 'crossing', crossing: part.crossing as CrossingPlacement }
+          : { id, type: 'track_segment', geometry: part.track as TrackGeometry };
+    entries[id] = { before: null, after: object, index: index++ };
+  }
+  const added: Connection[] = plan.links.map((l) => ({
+    a: { objectId: idByKey.get(l.a.key) as string, port: l.a.port },
+    b: { objectId: idByKey.get(l.b.key) as string, port: l.b.port },
+  }));
+  return {
+    patch: {
+      label,
+      objects: entries,
+      connections: { before: [...connections], after: [...connections, ...added] },
+    },
+    ids: [...idByKey.values()],
+    idByKey,
+  };
 }

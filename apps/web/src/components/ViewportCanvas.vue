@@ -13,9 +13,10 @@ import {
 } from '@railcad/domain';
 import type { DimensionLayout, SnapResult } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
-import { fmt, fmtM } from '../format';
+import { fmtM } from '../format';
 import { cachedBounds, railPaths, trackPath } from '../rendering/paths';
 import { backgroundMatrix, backgroundWorldCorners, type Background } from '@railcad/domain';
+import { crossingTitle } from '../crossing-labels';
 import { cachedCrossingLayout, crossingBounds } from '../rendering/crossings';
 import { cachedTurnoutLayout, turnoutBounds } from '../rendering/turnouts';
 import {
@@ -86,7 +87,7 @@ const visibleTurnoutLabels = computed(() => {
       const [x, y] = worldToScreen(v, o.crossing.position);
       out.push({
         id: o.id,
-        text: `Sporkryss 1:${fmt(o.crossing.ratioN, 1)} – ikke verifisert`,
+        text: `${crossingTitle(o.crossing)} – ikke verifisert`,
         x,
         y,
       });

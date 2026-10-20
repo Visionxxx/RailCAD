@@ -24,7 +24,10 @@ import { TOLERANCES } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, fmtM, portLabel, radToDeg } from '../format';
 import NumberField from './NumberField.vue';
+import { crossingTitle, slipTangentM } from '../crossing-labels';
 import { useProjectStore } from '../stores/project';
+import { useUiStore } from '../stores/ui';
+import { useViewStore } from '../stores/view';
 
 const project = useProjectStore();
 
@@ -201,16 +204,69 @@ function editCrossing(
 const cX = editCrossing('Flytt sporkryss', (p, n) => ({ ...p, position: [n, p.position[1]] }));
 const cY = editCrossing('Flytt sporkryss', (p, n) => ({ ...p, position: [p.position[0], n] }));
 const cHeading = editCrossing('Roter sporkryss', (p, n) => ({ ...p, headingRad: degToRad(n) }));
+/** Kryssveksel: tangentlengden R·tan(α/2) må rekke innenfor lengden fra M til enden. */
+function slipProblem(
+  ratioN: number,
+  halfLengthM: number,
+  slip: CrossingPlacement['slip'],
+): string | null {
+  if (!slip) return null;
+  const t = slipTangentM(ratioN, slip.radiusM);
+  return t > halfLengthM
+    ? `Tangentlengden R·tan(α/2) = ${fmt(t, 2)} m er lengre enn lengden fra M til enden (${fmt(halfLengthM, 2)} m).`
+    : null;
+}
 const cRatio = editCrossing(
   'Endre krysningsforhold',
   (p, n) => ({ ...p, ratioN: n }),
-  (n) => (n >= 1.5 && n <= 100 ? null : 'Forholdet 1:n må ha n mellom 1,5 og 100.'),
+  (n) => {
+    if (!(n >= 1.5 && n <= 100)) return 'Forholdet 1:n må ha n mellom 1,5 og 100.';
+    const c = crossing.value?.crossing;
+    return c ? slipProblem(n, c.halfLengthM, c.slip) : null;
+  },
 );
 const cHalf = editCrossing(
   'Endre sporkryss-lengde',
   (p, n) => ({ ...p, halfLengthM: n }),
-  (n) => (n > 0 && n <= 1e4 ? null : 'Lengden må være mellom 0 og 10 000 m.'),
+  (n) => {
+    if (!(n > 0 && n <= 1e4)) return 'Lengden må være mellom 0 og 10 000 m.';
+    const c = crossing.value?.crossing;
+    return c ? slipProblem(c.ratioN, n, c.slip) : null;
+  },
 );
+const cRadius = editCrossing(
+  'Endre kryssveksel-radius',
+  (p, n) => ({ ...p, slip: p.slip ? { ...p.slip, radiusM: n } : p.slip }),
+  (n) => {
+    if (!(n > 0 && n <= 1e5)) return 'Radius må være mellom 0 og 100 000 m.';
+    const c = crossing.value?.crossing;
+    return c ? slipProblem(c.ratioN, c.halfLengthM, { arcs: 'both', radiusM: n }) : null;
+  },
+);
+const slipKind = computed(() => crossing.value?.crossing.slip?.arcs ?? 'none');
+function setSlipKind(e: Event) {
+  const o = crossing.value;
+  if (!o) return;
+  const kind = (e.target as HTMLSelectElement).value as 'none' | 'ab' | 'ba' | 'both';
+  const c = o.crossing;
+  const rest: CrossingPlacement = { ...c };
+  delete rest.slip;
+  if (kind === 'none') {
+    project.updateObject({ ...o, crossing: rest }, 'Fjern kryssveksel-buer');
+    return;
+  }
+  const radiusM = c.slip?.radiusM ?? useViewStore().crossingSlipRadiusM;
+  const problem = slipProblem(c.ratioN, c.halfLengthM, { arcs: kind, radiusM });
+  if (problem) {
+    useUiStore().notify(`${problem} Øk lengden M→ende eller velg mindre radius først.`, 'error');
+    (e.target as HTMLSelectElement).value = slipKind.value;
+    return;
+  }
+  project.updateObject(
+    { ...o, crossing: { ...rest, slip: { arcs: kind, radiusM } } },
+    'Endre kryssvekseltype',
+  );
+}
 const crossingAngleDeg = computed(() =>
   crossing.value ? radToDeg(Math.atan(1 / crossing.value.crossing.ratioN)) : 0,
 );
@@ -478,7 +534,7 @@ const dimBy = dimPoint('b', 1);
       </div>
       <div class="field ro">
         <label>Type</label
-        ><output data-testid="prop-crossing-type">Sporkryss (diamantkryss)</output>
+        ><output data-testid="prop-crossing-type">{{ crossingTitle(crossing.crossing) }}</output>
       </div>
       <div class="field ro">
         <label>Verifisering</label
@@ -516,6 +572,31 @@ const dimBy = dimPoint('b', 1);
         :decimals="4"
         :model-value="radToDeg(crossing.crossing.headingRad)"
         @commit="cHeading.commit"
+      />
+      <div class="field">
+        <label for="prop-slip">Type</label>
+        <select
+          id="prop-slip"
+          :disabled="isLocked"
+          :value="slipKind"
+          data-testid="prop-slip"
+          @change="setSlipKind"
+        >
+          <option value="none">Sporkryss (ingen buer)</option>
+          <option value="ab">Enkel kryssveksel (A→B)</option>
+          <option value="ba">Enkel kryssveksel (B→A)</option>
+          <option value="both">Dobbel kryssveksel</option>
+        </select>
+      </div>
+      <NumberField
+        v-if="crossing.crossing.slip"
+        id="prop-slip-radius"
+        :disabled="isLocked"
+        label="Radius"
+        unit="m"
+        :model-value="crossing.crossing.slip.radiusM"
+        :validate="cRadius.validate"
+        @commit="cRadius.commit"
       />
       <NumberField
         id="prop-ratio"

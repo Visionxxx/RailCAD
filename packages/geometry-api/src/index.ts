@@ -100,6 +100,42 @@ export interface CrossingLayout {
   ports: Record<CrossingPortName, Pose>;
 }
 
+/** Del av en sammenstilling (flere objekter som opprettes og kobles i ett). */
+export interface AssemblyPart {
+  /** Nøkkel som kobling viser til (ikke en objekt-ID – den tildeles ved opprettelse). */
+  key: string;
+  kind: 'turnout' | 'crossing' | 'track';
+  turnout?: TurnoutPlacement;
+  crossing?: CrossingPlacement;
+  track?: TrackGeometry;
+}
+
+export interface AssemblyLink {
+  a: { key: string; port: PortName };
+  b: { key: string; port: PortName };
+}
+
+export type AssemblyPlan =
+  | {
+      ok: true;
+      parts: AssemblyPart[];
+      links: AssemblyLink[];
+      /** Porter som er ledige for videre spor. */
+      freePorts: Array<{ key: string; port: PortName }>;
+    }
+  | { ok: false; error: string };
+
+export interface ScissorsInput {
+  /** Midtpunktet M (kryssets sentrum). */
+  position: Vec2;
+  /** Sporenes retning (de to parallelle sporene går langs denne). */
+  headingRad: number;
+  /** Senteravstand mellom de to sporene, meter. */
+  spacingM: number;
+  /** Lengde fra M til hver ende av det midtre krysset, meter (brukerdefinert). */
+  crossingHalfLengthM: number;
+}
+
 export interface PortRef {
   objectId: string;
   port: PortName;
@@ -205,6 +241,11 @@ export interface GeometryEngine {
   ): PortPair[];
   /** Sporkryss (diamantkryss): to rette akser som krysser i M med vinkel atan(1/n). */
   crossingLayout(placement: CrossingPlacement): CrossingLayout;
+  /**
+   * Sovitet sporkryss (SRR): to parallelle spor forbundet av to kryssende forbindelser. Fire veksler fra
+   * biblioteket (valgt type), et kryss med vinkel 2α i midten og rette spor imellom, alt koblet.
+   */
+  scissorsPlan(type: TurnoutType, input: ScissorsInput): AssemblyPlan;
   /** Finner steder der akser fra ulike objekter krysser, berører eller overlapper hverandre. */
   findIntersections(items: readonly IntersectionItem[]): Intersection[];
   /**

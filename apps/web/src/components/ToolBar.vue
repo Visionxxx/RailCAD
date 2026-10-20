@@ -34,6 +34,11 @@ const tools: Array<{ id: ToolId; label: string; paths: string[]; gap?: boolean }
     label: 'Sporkryss',
     paths: ['M4 6l16 12M4 18L20 6'],
   },
+  {
+    id: 'scissors',
+    label: 'Sovitet sporkryss',
+    paths: ['M3 8h18M3 16h18M7 8l10 8M7 16L17 8'],
+  },
   { id: 'rotate', label: 'Roter', paths: ['M20 12a8 8 0 1 1-2.3-5.7', 'M20 4v4h-4'] },
   {
     id: 'measure-length',

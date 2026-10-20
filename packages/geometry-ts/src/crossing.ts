@@ -1,4 +1,4 @@
-import type { CrossingPlacement, LineGeometry } from '@railcad/domain';
+import type { ArcGeometry, CrossingPlacement, LineGeometry, TrackGeometry } from '@railcad/domain';
 import type { CrossingLayout } from '@railcad/geometry-api';
 import { add, mul, unit } from './vec';
 
@@ -17,8 +17,34 @@ export function crossingLayout(p: CrossingPlacement): CrossingLayout {
   const a = axis(hA);
   const b = axis(hB);
   const end = (g: LineGeometry) => add(g.start, mul(unit(g.headingRad), g.lengthM));
+  const segments: TrackGeometry[] = [a, b];
+  if (p.slip) {
+    // Tangentlengde fra M langs begge aksene: T = R·tan(α/2). Buene tangerer aksene i ±T.
+    const t = p.slip.radiusM * Math.tan(alpha / 2);
+    const onAxis = (heading: number, dist: number) => add(p.position, mul(unit(heading), dist));
+    if (p.slip.arcs === 'ab' || p.slip.arcs === 'both') {
+      const arc: ArcGeometry = {
+        kind: 'arc',
+        start: onAxis(hA, -t),
+        headingRad: hA,
+        signedRadiusM: p.slip.radiusM,
+        sweepRad: alpha,
+      };
+      segments.push(arc);
+    }
+    if (p.slip.arcs === 'ba' || p.slip.arcs === 'both') {
+      const arc: ArcGeometry = {
+        kind: 'arc',
+        start: onAxis(hB, -t),
+        headingRad: hB,
+        signedRadiusM: -p.slip.radiusM,
+        sweepRad: alpha,
+      };
+      segments.push(arc);
+    }
+  }
   return {
-    segments: [a, b],
+    segments,
     ports: {
       a_start: { point: a.start, headingRad: hA + Math.PI },
       a_end: { point: end(a), headingRad: hA },

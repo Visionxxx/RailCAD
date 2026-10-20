@@ -87,3 +87,54 @@ describe('sporkryss: spor gjennom midtpunktet', () => {
     ).toHaveLength(1);
   });
 });
+
+describe('kryssveksel (slip)', () => {
+  const slip = (arcs: 'ab' | 'ba' | 'both', radiusM = 200, over = {}) =>
+    e.crossingLayout(p({ slip: { arcs, radiusM }, ...over }));
+
+  it('enkel: én bue; dobbel: to buer, i tillegg til de to aksene', () => {
+    expect(slip('ab').segments).toHaveLength(3);
+    expect(slip('ba').segments).toHaveLength(3);
+    expect(slip('both').segments).toHaveLength(4);
+    expect(e.crossingLayout(p()).segments).toHaveLength(2);
+  });
+
+  it('buene tangerer aksene i avstand T = R·tan(α/2) fra M og slutter på den andre aksen med riktig retning', () => {
+    const alpha = Math.atan(1 / 9);
+    const t = 200 * Math.tan(alpha / 2);
+    const l = slip('both', 200, { headingRad: 0.3 });
+    const [a, b, ab, ba] = l.segments as [any, any, any, any];
+    // ab: starter på A, t før M, tangent til A; slutter på B, t etter M, tangent til B
+    expect(e.closestPoint(a, ab.start).distanceM).toBeCloseTo(0, 9);
+    expect(e.closestPoint(a, ab.start).s).toBeCloseTo(17.223 - t, 9);
+    const abEnd = e.endPose(ab);
+    expect(e.closestPoint(b, abEnd.point).distanceM).toBeCloseTo(0, 9);
+    expect(e.closestPoint(b, abEnd.point).s).toBeCloseTo(17.223 + t, 9);
+    expect(abEnd.headingRad).toBeCloseTo(b.headingRad, 12);
+    // ba: starter på B, slutter på A etter M (med klokka)
+    const baEnd = e.endPose(ba);
+    expect(e.closestPoint(a, baEnd.point).distanceM).toBeCloseTo(0, 9);
+    expect(e.closestPoint(a, baEnd.point).s).toBeCloseTo(17.223 + t, 9);
+    expect(baEnd.headingRad).toBeCloseTo(a.headingRad, 12);
+  });
+
+  it('kryssvekselens egne buer flagges ikke som kryssing, men et fremmed spor over buen gjør det', () => {
+    const l = slip('both');
+    expect(e.findIntersections([{ id: 'crossing-001', segments: l.segments }])).toEqual([]);
+    const mid = e.poseAt(l.segments[2]!, e.length(l.segments[2]!) / 2).point;
+    const across = {
+      id: 'track-001',
+      segments: [
+        {
+          kind: 'line' as const,
+          start: [mid[0], mid[1] - 3] as [number, number],
+          headingRad: Math.PI / 2,
+          lengthM: 6,
+        },
+      ],
+    };
+    expect(
+      e.findIntersections([{ id: 'crossing-001', segments: l.segments }, across]).length,
+    ).toBeGreaterThan(0);
+  });
+});

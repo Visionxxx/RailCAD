@@ -16,6 +16,7 @@ import {
 import { BackgroundMoveTool, BackgroundScaleTool } from './background';
 import { ConnectTool } from './connect';
 import { CrossingTool } from './crossing';
+import { ScissorsTool } from './scissors';
 import { SelectTool } from './select';
 import { TurnoutTool } from './turnout';
 import type { KeyInfo, PortMenuState, Tool, ToolEnv } from './tool';
@@ -33,6 +34,7 @@ export const TOOL_SHORTCUTS: Record<ToolId, string> = {
   connect: 'K',
   turnout: 'T',
   crossing: 'X',
+  scissors: 'S',
   'bg-scale': '',
   'bg-move': '',
   delete: 'E',
@@ -81,6 +83,7 @@ export function createToolController() {
     connect: new ConnectTool(env),
     turnout: new TurnoutTool(env),
     crossing: new CrossingTool(env),
+    scissors: new ScissorsTool(env),
     'bg-scale': new BackgroundScaleTool(env),
     'bg-move': new BackgroundMoveTool(env),
   };

@@ -3,6 +3,7 @@ import { dimensionLayout } from './dimension';
 import { snap } from './snap';
 import { crossingLayout } from './crossing';
 import { findIntersections } from './intersect';
+import { scissorsPlan } from './scissors';
 import { evaluateConnections, findCoincidentFreePorts } from './topology';
 import { turnoutLayout } from './turnout';
 import {
@@ -50,4 +51,5 @@ export const geometryEngine: GeometryEngine = {
   turnoutLayout,
   findIntersections,
   crossingLayout,
+  scissorsPlan,
 };

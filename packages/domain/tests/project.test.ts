@@ -300,3 +300,22 @@ describe('lag og låsing i prosjektfil', () => {
     expect(validateProject(dup).ok).toBe(false);
   });
 });
+
+describe('kryssveksel i prosjektfil', () => {
+  const withSlip = (slip: Record<string, unknown>, half = 17) => {
+    const p: any = demo();
+    p.objects.push({
+      id: 'crossing-001',
+      type: 'crossing',
+      crossing: { position: [0, 0], headingRad: 0, ratioN: 9, halfLengthM: half, slip },
+    });
+    return validateProject(p);
+  };
+  it('godtar gyldig slip og avviser for stor tangentlengde, ukjent type og ugyldig radius', () => {
+    expect(withSlip({ arcs: 'both', radiusM: 200 }).ok).toBe(true); // T = 200·tan(3,17°) = 11,08 ≤ 17
+    const tooBig = withSlip({ arcs: 'ab', radiusM: 400 }); // T = 22,2 > 17
+    expect(!tooBig.ok && tooBig.errors.join()).toContain('tangentlengde');
+    expect(withSlip({ arcs: 'xx', radiusM: 200 }).ok).toBe(false);
+    expect(withSlip({ arcs: 'ab', radiusM: 0 }).ok).toBe(false);
+  });
+});

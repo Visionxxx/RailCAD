@@ -58,6 +58,13 @@ export const useViewStore = defineStore('view', () => {
   /** Sporkryss: krysningsforhold 1:n og lengde fra M til hver ende (brukerdefinert – ingen åpne norske mål). */
   const crossingRatioN = ref(9);
   const crossingHalfLengthM = ref(17);
+  /** Kryssveksel: ingen (vanlig sporkryss), enkel A→B, enkel B→A eller dobbel – og buenes radius (brukerdefinert). */
+  /** Sovitet sporkryss: veksltype, sporavstand (TRV nevner 4700 mm for sporsløyfe) og midtkryssets halve lengde (brukerdefinert). */
+  const scissorsTurnoutId = ref('trv-60E1-1:9-R300-EVF');
+  const scissorsSpacingM = ref(4.7);
+  const scissorsHalfLengthM = ref(3);
+  const crossingSlip = ref<'none' | 'ab' | 'ba' | 'both'>('none');
+  const crossingSlipRadiusM = ref(200);
   const turnoutHand = ref<'left' | 'right'>('left');
   /** Markørposisjon i verdenskoordinater (rå, ikke snappet). */
   const cursor = ref<readonly [number, number] | null>(null);
@@ -134,6 +141,11 @@ export const useViewStore = defineStore('view', () => {
     turnoutHand,
     crossingRatioN,
     crossingHalfLengthM,
+    scissorsTurnoutId,
+    scissorsSpacingM,
+    scissorsHalfLengthM,
+    crossingSlip,
+    crossingSlipRadiusM,
     activeBackgroundId,
     cursor,
     activeSnapKinds,

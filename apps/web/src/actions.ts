@@ -155,7 +155,7 @@ export function useActions() {
     ui.showDialog({
       title: 'Hurtigtaster og tips',
       lines: [
-        'Verktøy: V marker · H panorer · L rett spor · C sirkelkurve · P parallelt spor · T sporveksel · X sporkryss · K koble · R roter · M mål lengde · D mål avstand · E slett.',
+        'Verktøy: V marker · H panorer · L rett spor · C sirkelkurve · P parallelt spor · T sporveksel · X sporkryss/kryssveksel · S sovitet sporkryss · K koble · R roter · M mål lengde · D mål avstand · E slett.',
         'Mus: hjul = zoom rundt markøren · midtknapp eller Mellomrom + dra = panorer · klikk = velg · Skift + klikk = flervalg · dra et objekt = flytt · dra et endepunkt = rediger.',
         'Valgboks: dra på tom flate. Mot høyre = objekter helt innenfor, mot venstre = alt boksen berører. Skift legger til i valget.',
         'Tastatur: Esc avbryter · Del sletter · Ctrl+C/V kopier og lim inn · Ctrl+D dupliser · Ctrl+Z angre · Ctrl+Y gjør om · Ctrl+S lagre · Ctrl+O åpne · F tilpass visning · ? denne hjelpen.',

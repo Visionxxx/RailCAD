@@ -103,6 +103,14 @@ export interface CrossingPlacement {
   ratioN: number;
   /** Lengde fra M til hver ende av begge aksene, meter. */
   halfLengthM: number;
+  /**
+   * Kryssveksel (slip): sirkelbuer med radius R som kobler aksene inne i krysset. Tangentlengden
+   * T = R·tan(α/2) fra M må ikke overstige `halfLengthM`.
+   * `ab`: bue fra spor A (før M) over til spor B (etter M), svinger mot klokka (enkel kryssveksel).
+   * `ba`: bue fra spor B (før M) over til spor A (etter M), svinger med klokka (enkel kryssveksel).
+   * `both`: begge (dobbel kryssveksel).
+   */
+  slip?: { arcs: 'ab' | 'ba' | 'both'; radiusM: number };
 }
 
 export interface CrossingObject {

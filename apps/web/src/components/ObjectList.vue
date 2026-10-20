@@ -24,7 +24,7 @@ function summary(o: RailObject): string {
 }
 function kindLabel(o: RailObject): string {
   if (isTrack(o)) return o.geometry.kind === 'line' ? 'Rett' : 'Kurve';
-  if (isCrossing(o)) return 'Sporkryss';
+  if (isCrossing(o)) return o.crossing.slip ? 'Kryssveksel' : 'Sporkryss';
   if (isTurnout(o)) return o.turnout.hand === 'left' ? 'Veksel v.' : 'Veksel h.';
   return o.dimension.kind === 'length' ? 'Lengdemål' : 'Avstandsmål';
 }

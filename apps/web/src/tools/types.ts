@@ -51,5 +51,6 @@ export type ToolId =
   | 'connect'
   | 'turnout'
   | 'crossing'
+  | 'scissors'
   | 'bg-scale'
   | 'bg-move';

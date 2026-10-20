@@ -1568,3 +1568,99 @@ test('prosjektnavn kan endres ved dobbeltklikk på tittelen (Enter lagrer, Esc a
   await expect(page.getByTestId('project-title')).toContainText('Hensetting Øst');
   await expect(page.getByTestId('project-title')).toContainText('•'); // navneendring er ulagret
 });
+
+test('kryssveksel: dobbel/enkel med radius, tangentlengde-kontroll, redigerbar og lagres', async ({
+  page,
+}, info) => {
+  const errors = await openApp(page);
+  await selectTool(page, 'crossing');
+  const f = page.getByTestId('options-crossing');
+  await expect(f.getByTestId('crossing-radius')).toHaveCount(0); // vanlig sporkryss: ingen radius
+  await f.getByTestId('crossing-slip').selectOption('both');
+  await f.getByTestId('crossing-radius').fill('400'); // T = 22,2 m > lengden 17 m
+  await page.getByTestId('create-crossing').click();
+  await expect(f.getByRole('alert')).toContainText('Tangentlengden');
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+
+  await f.getByTestId('crossing-radius').fill('200'); // T = 11,08 m
+  await page.getByTestId('create-crossing').click();
+  await expect(page.getByTestId('prop-crossing-type')).toHaveText('Dobbel kryssveksel 1:9,0 R200');
+  await expect(page.getByTestId('object-crossing-001')).toContainText('Kryssveksel');
+  await expect(page.getByTestId('turnout-label-crossing-001')).toContainText('Dobbel kryssveksel');
+  await expect(page.locator('[data-track="crossing-001"] path.t-axis')).toHaveCount(4); // to akser + to buer
+
+  await page.getByTestId('prop-slip').selectOption('ab');
+  await expect(page.getByTestId('prop-crossing-type')).toContainText('Enkel kryssveksel (A→B)');
+  await expect(page.locator('[data-track="crossing-001"] path.t-axis')).toHaveCount(3);
+  await setField(page, 'prop-slip-radius', '500');
+  await expect(page.getByRole('alert').first()).toContainText('Tangentlengden');
+  await setField(page, 'prop-slip-radius', '150');
+  await expect(field(page, 'prop-slip-radius')).toHaveValue('150,000');
+  await page.getByTestId('prop-slip').selectOption('none');
+  await expect(page.locator('[data-track="crossing-001"] path.t-axis')).toHaveCount(2);
+  await page.getByTestId('prop-slip').selectOption('both');
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('kryssveksel.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.objects[0].crossing.slip).toEqual({ arcs: 'both', radiusM: 200 }); // fjernet og lagt til igjen: verktøyets standardradius
+  expect(errors).toEqual([]);
+});
+
+test('sovitet sporkryss: 11 objekter, 12 koblinger alle OK, ingen kryssadvarsel, ett angretrinn og lagres', async ({
+  page,
+}, info) => {
+  const errors = await openApp(page);
+  await selectTool(page, 'scissors');
+  const f = page.getByTestId('options-scissors');
+  await expect(f.getByTestId('scissors-note')).toContainText('delvis verifisert');
+  await f.getByTestId('scissors-spacing').fill('1,5'); // for liten
+  await page.getByTestId('create-scissors').click();
+  await expect(f.getByRole('alert')).toContainText('Minste sporavstand');
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+
+  await f.getByTestId('scissors-spacing').fill('4,7');
+  await page.getByTestId('create-scissors').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('11');
+  await expect(page.getByTestId('tab-count-properties')).toHaveText('11'); // alle nye objekter valgt
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('connections')).toContainText('Koblinger (12)');
+  await expect(page.getByTestId('connections')).toContainText('alle OK');
+  await expect(page.getByTestId('conn-errors')).toHaveCount(0);
+  await expect(page.getByTestId('crossings-heading')).toContainText('(0)'); // ingen kryssadvarsel
+  await expect(page.getByTestId('crossing-mark-0')).toHaveCount(0);
+
+  await page.getByTestId('undo-btn').click(); // alt som ett trinn
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+  await page.getByTestId('redo-btn').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('11');
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('sovitet.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.objects.filter((o: { type: string }) => o.type === 'turnout')).toHaveLength(4);
+  expect(saved.objects.filter((o: { type: string }) => o.type === 'crossing')).toHaveLength(1);
+  expect(saved.connections).toHaveLength(12);
+  expect(errors).toEqual([]);
+});
+
+test('sovitet sporkryss kan plasseres med to museklikk (M og retning)', async ({ page }) => {
+  await openApp(page);
+  await selectTool(page, 'scissors');
+  await clickWorld(page, 0, 0);
+  const p = await worldToPage(page, 30, 0);
+  await page.mouse.move(p.x, p.y);
+  await expect(page.getByTestId('hud')).toContainText('α =');
+  await page.mouse.click(p.x, p.y);
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('11');
+});

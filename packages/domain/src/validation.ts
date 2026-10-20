@@ -113,6 +113,16 @@ const objectSchema = z.discriminatedUnion('type', [
             (n) => n > 0 && n <= 1e4,
             'lengden fra M til enden må være mellom 0 og 10 000 m',
           ),
+          slip: z
+            .object({
+              arcs: z.enum(['ab', 'ba', 'both']),
+              radiusM: finite.refine(
+                (n) => n > 0 && n <= 1e5,
+                'radius må være mellom 0 og 100 000 m',
+              ),
+            })
+            .passthrough()
+            .optional(),
         })
         .passthrough(),
     })
@@ -319,6 +329,15 @@ export function validateProject(raw: unknown): ProjectValidation {
     if (o.type === 'track_segment') {
       for (const msg of validateGeometry(o.geometry))
         errors.push(`objects[${i}] (${o.id}): ${msg}`);
+    }
+    if (o.type === 'crossing' && o.crossing.slip) {
+      const alpha = Math.atan(1 / o.crossing.ratioN);
+      const tangent = o.crossing.slip.radiusM * Math.tan(alpha / 2);
+      if (tangent > o.crossing.halfLengthM) {
+        errors.push(
+          `objects[${i}] (${o.id}): kryssvekselens tangentlengde R·tan(α/2) = ${tangent.toFixed(3)} m overstiger lengden fra M til enden (${o.crossing.halfLengthM} m)`,
+        );
+      }
     }
     if (o.type === 'turnout' && !getTurnoutType(o.turnout.catalogId)) {
       errors.push(

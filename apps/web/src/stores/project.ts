@@ -20,6 +20,7 @@ import {
 } from '@railcad/domain';
 import {
   portKey,
+  type AssemblyPlan,
   type IntersectionItem,
   type Pose,
   type PortRef,
@@ -43,6 +44,7 @@ import {
   connectPorts,
   createDimension,
   createTrack,
+  createAssembly,
   createCrossing,
   createTrackConnected,
   createTurnout,
@@ -410,6 +412,14 @@ export const useProjectStore = defineStore('project', () => {
     return id;
   }
 
+  /** Oppretter en sammenstilling (f.eks. sovitet sporkryss) som ett angretrinn; alle nye objekter velges. */
+  function addAssembly(plan: Extract<AssemblyPlan, { ok: true }>, label: string): string[] {
+    const { patch, ids } = createAssembly(objects.value, connections.value, plan, label);
+    execute(onActiveLayer(patch));
+    selection.value = ids;
+    return ids;
+  }
+
   function updateObject(next: RailObject, label: string): boolean {
     return execute(replaceObjects(objects.value, new Map([[next.id, next]]), label));
   }
@@ -626,6 +636,7 @@ export const useProjectStore = defineStore('project', () => {
     addTrackFromPort,
     addTurnout,
     addCrossing,
+    addAssembly,
     addBackground,
     updateBackground,
     removeBackground,

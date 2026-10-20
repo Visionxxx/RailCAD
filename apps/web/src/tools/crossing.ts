@@ -1,6 +1,7 @@
 import type { CrossingPlacement, Vec2 } from '@railcad/domain';
 import { TOLERANCES, type PortRef } from '@railcad/geometry-api';
-import { fmtDeg } from '../format';
+import { slipTangentM } from '../crossing-labels';
+import { fmt, fmtDeg } from '../format';
 import { cachedCrossingLayout } from '../rendering/crossings';
 import { Tool } from './tool';
 import type { PointerInfo } from './types';
@@ -12,6 +13,42 @@ import type { PointerInfo } from './types';
  * - Klikk på et ledig sporendepunkt: spor A starter der i forlengelsen og kobles automatisk.
  * - Klikk på et fritt punkt (midtpunktet M), deretter retningen på spor A.
  */
+/**
+ * Plassering fra verktøyparametrene. Gir `error` hvis forhold, lengde eller kryssveksel-radius er ugyldig
+ * (tangentlengden R·tan(α/2) må rekke innenfor lengden fra M til enden).
+ */
+export function crossingFromView(
+  view: {
+    crossingRatioN: number;
+    crossingHalfLengthM: number;
+    crossingSlip: 'none' | 'ab' | 'ba' | 'both';
+    crossingSlipRadiusM: number;
+  },
+  position: Vec2,
+  headingRad: number,
+): { ok: true; placement: CrossingPlacement } | { ok: false; error: string } {
+  const { crossingRatioN: ratioN, crossingHalfLengthM: halfLengthM } = view;
+  if (!(ratioN >= 1.5 && ratioN <= 100))
+    return { ok: false, error: 'Krysningsforholdet 1:n må ha n mellom 1,5 og 100.' };
+  if (!(halfLengthM > 0 && halfLengthM <= 1e4))
+    return { ok: false, error: 'Lengden fra M til enden må være mellom 0 og 10 000 m.' };
+  const placement: CrossingPlacement = { position, headingRad, ratioN, halfLengthM };
+  if (view.crossingSlip !== 'none') {
+    const radiusM = view.crossingSlipRadiusM;
+    if (!(radiusM > 0 && radiusM <= 1e5))
+      return { ok: false, error: 'Radius må være mellom 0 og 100 000 m.' };
+    const t = slipTangentM(ratioN, radiusM);
+    if (t > halfLengthM) {
+      return {
+        ok: false,
+        error: `Tangentlengden R·tan(α/2) = ${fmt(t, 2)} m er lengre enn lengden fra M til enden (${fmt(halfLengthM, 2)} m). Øk lengden eller reduser radius.`,
+      };
+    }
+    placement.slip = { arcs: view.crossingSlip, radiusM };
+  }
+  return { ok: true, placement };
+}
+
 export class CrossingTool extends Tool {
   readonly id = 'crossing' as const;
   readonly label = 'Sporkryss';
@@ -86,9 +123,8 @@ export class CrossingTool extends Tool {
   }
 
   private placementAt(position: Vec2, headingRad: number): CrossingPlacement | null {
-    const { crossingRatioN: ratioN, crossingHalfLengthM: halfLengthM } = this.env.view;
-    if (!(ratioN >= 1.5 && ratioN <= 100) || !(halfLengthM > 0 && halfLengthM <= 1e4)) return null;
-    return { position, headingRad, ratioN, halfLengthM };
+    const r = crossingFromView(this.env.view, position, headingRad);
+    return r.ok ? r.placement : null;
   }
 
   private place(position: Vec2, headingRad: number, anchor?: PortRef) {

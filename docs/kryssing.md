@@ -30,6 +30,8 @@ Siden åpne norske produktmål ikke finnes, kan du plassere et **sporkryss** (di
 - Objektet merkes **«ikke verifisert»** i panel, på tegneflaten og i DXF (eget lag `RAILCAD_SPORKRYSS`).
 - Kryssets egne to akser flagges ikke som kryssing; andre spor som krysser dem flagges som vanlig.
 
+- **Kryssveksel** (`slip`) og **sovitet sporkryss**: se `sporkryss-sovitet.md`.
+
 ## Kilder til kryss-/kryssvekseldata (søk 2026-10-20)
 
 Ingen åpne måltabeller funnet:
