@@ -35,5 +35,12 @@ export interface Preview {
 }
 
 export type ToolId =
-  | 'select' | 'pan' | 'line' | 'arc' | 'parallel' | 'measure-length' | 'measure-distance'
-  | 'rotate' | 'delete';
+  | 'select'
+  | 'pan'
+  | 'line'
+  | 'arc'
+  | 'parallel'
+  | 'measure-length'
+  | 'measure-distance'
+  | 'rotate'
+  | 'delete';

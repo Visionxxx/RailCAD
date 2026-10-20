@@ -9,10 +9,14 @@ const project = useProjectStore();
 function summary(o: RailObject): string {
   if (isTrack(o)) {
     const len = fmtM(engine.length(o.geometry));
-    return o.geometry.kind === 'line' ? len : `R ${fmtM(Math.abs(o.geometry.signedRadiusM), 1)} · ${len}`;
+    return o.geometry.kind === 'line'
+      ? len
+      : `R ${fmtM(Math.abs(o.geometry.signedRadiusM), 1)} · ${len}`;
   }
   const t = project.byId.get(o.dimension.kind === 'length' ? o.dimension.targetId : '');
-  const layout = engine.dimensionLayout(o.dimension, () => (t && isTrack(t) ? t.geometry : undefined));
+  const layout = engine.dimensionLayout(o.dimension, () =>
+    t && isTrack(t) ? t.geometry : undefined,
+  );
   return layout ? fmtM(layout.valueM) : '–';
 }
 function kindLabel(o: RailObject): string {

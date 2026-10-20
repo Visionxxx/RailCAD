@@ -53,7 +53,9 @@ export class ParallelTool extends Tool {
   move(p: PointerInfo) {
     const { project, view } = this.env;
     if (!this.refId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) => isTrack(o));
+      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
+        isTrack(o),
+      );
       this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id } : null);
       return;
     }
@@ -64,7 +66,9 @@ export class ParallelTool extends Tool {
     if (p.button !== 0) return;
     const { project, view, ui } = this.env;
     if (!this.refId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) => isTrack(o));
+      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
+        isTrack(o),
+      );
       if (!hit) return;
       const o = project.byId.get(hit.id);
       if (!o || !isTrack(o) || o.geometry.kind !== 'line') {
@@ -102,9 +106,11 @@ export class ParallelTool extends Tool {
     const dist = view.parallelDistanceM;
     if (!(Number.isFinite(dist) && dist > 0)) return null;
     const side =
-      view.parallelSide === 'left' ? 1
-      : view.parallelSide === 'right' ? -1
-      : Math.sign(this.env.engine.signedOffsetOf(o.geometry, world)) || 1;
+      view.parallelSide === 'left'
+        ? 1
+        : view.parallelSide === 'right'
+          ? -1
+          : Math.sign(this.env.engine.signedOffsetOf(o.geometry, world)) || 1;
     return side * dist;
   }
 
@@ -154,7 +160,9 @@ export class MeasureLengthTool extends Tool {
   move(p: PointerInfo) {
     const { project, view } = this.env;
     if (!this.targetId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) => isTrack(o));
+      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
+        isTrack(o),
+      );
       this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id } : null);
       return;
     }
@@ -172,7 +180,9 @@ export class MeasureLengthTool extends Tool {
     if (p.button !== 0) return;
     const { project, view } = this.env;
     if (!this.targetId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) => isTrack(o));
+      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
+        isTrack(o),
+      );
       if (hit) this.targetId = hit.id;
       return;
     }
@@ -182,7 +192,12 @@ export class MeasureLengthTool extends Tool {
       return;
     }
     const offsetM = round3(this.env.engine.signedOffsetOf(t.geometry, p.world));
-    if (!this.env.engine.dimensionLayout({ kind: 'length', targetId: t.id, offsetM }, () => t.geometry)) {
+    if (
+      !this.env.engine.dimensionLayout(
+        { kind: 'length', targetId: t.id, offsetM },
+        () => t.geometry,
+      )
+    ) {
       this.env.ui.notify('Målelinjen kan ikke plasseres der (forbi buens sentrum).', 'error');
       return;
     }
@@ -214,7 +229,12 @@ export class MeasureDistanceTool extends Tool {
     if (!this.a) return;
     if (!this.b) {
       const len = Math.hypot(p.point[0] - this.a[0], p.point[1] - this.a[1]);
-      this.env.setPreview({ ghosts: [], guides: [[this.a, p.point]], hud: [`${fmtM(len)}`], hudValid: len > 0 });
+      this.env.setPreview({
+        ghosts: [],
+        guides: [[this.a, p.point]],
+        hud: [`${fmtM(len)}`],
+        hudValid: len > 0,
+      });
       return;
     }
     this.env.setPreview({
@@ -250,10 +270,17 @@ export class MeasureDistanceTool extends Tool {
     const a = this.a as Vec2;
     const b = this.b as Vec2;
     const line: TrackGeometry = {
-      kind: 'line', start: a, headingRad: Math.atan2(b[1] - a[1], b[0] - a[0]),
+      kind: 'line',
+      start: a,
+      headingRad: Math.atan2(b[1] - a[1], b[0] - a[0]),
       lengthM: Math.hypot(b[0] - a[0], b[1] - a[1]),
     };
-    return { kind: 'distance' as const, a, b, offsetM: round3(this.env.engine.signedOffsetOf(line, world)) };
+    return {
+      kind: 'distance' as const,
+      a,
+      b,
+      offsetM: round3(this.env.engine.signedOffsetOf(line, world)),
+    };
   }
 }
 
@@ -266,7 +293,8 @@ export class RotateTool extends Tool {
 
   hint() {
     if (!this.pivot) return 'Klikk rotasjonspunkt (valgte objekter roteres).';
-    if (this.refAngle === null) return 'Klikk for å angi startretning, eller skriv vinkel i verktøylinjen.';
+    if (this.refAngle === null)
+      return 'Klikk for å angi startretning, eller skriv vinkel i verktøylinjen.';
     return 'Klikk for å angi ny retning. Esc avbryter.';
   }
 
@@ -329,20 +357,29 @@ export class RotateTool extends Tool {
     const ghosts: Ghost[] = [];
     for (const o of this.env.project.objects) {
       if (ids.has(o.id) && isTrack(o)) {
-        ghosts.push({ geometry: this.env.engine.rotate(o.geometry, this.pivot as Vec2, angle), valid: true });
+        ghosts.push({
+          geometry: this.env.engine.rotate(o.geometry, this.pivot as Vec2, angle),
+          valid: true,
+        });
       }
     }
     const shown = ((((radToDeg(angle) + 180) % 360) + 360) % 360) - 180;
     this.env.setPreview({
-      ghosts, pivot: this.pivot as Vec2, guides: [[this.pivot as Vec2, at]],
-      hud: [`${fmt(shown, 3)}°`], hudValid: true,
+      ghosts,
+      pivot: this.pivot as Vec2,
+      guides: [[this.pivot as Vec2, at]],
+      hud: [`${fmt(shown, 3)}°`],
+      hudValid: true,
     });
   }
 
   private apply(angle: number) {
     const patch = transformObjects(
-      this.env.project.objects, new Set(this.env.project.selection), this.env.engine,
-      { type: 'rotate', pivot: this.pivot as Vec2, angleRad: angle }, 'Roter',
+      this.env.project.objects,
+      new Set(this.env.project.selection),
+      this.env.engine,
+      { type: 'rotate', pivot: this.pivot as Vec2, angleRad: angle },
+      'Roter',
     );
     if (!this.env.project.execute(patch)) {
       this.env.ui.notify('Ingenting å rotere – lengdemål følger sporet.');

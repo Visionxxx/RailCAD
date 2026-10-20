@@ -26,8 +26,10 @@ export function pickObject(
     if (isTrack(o)) {
       const b = cachedBounds(o.geometry);
       if (
-        world[0] < b.minX - tolM || world[0] > b.maxX + tolM ||
-        world[1] < b.minY - tolM || world[1] > b.maxY + tolM
+        world[0] < b.minX - tolM ||
+        world[0] > b.maxX + tolM ||
+        world[1] < b.minY - tolM ||
+        world[1] > b.maxY + tolM
       ) {
         continue;
       }

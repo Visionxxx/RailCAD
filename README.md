@@ -1,0 +1,93 @@
+# RailCAD
+
+Parametrisk 2D-CAD for jernbanespor, kjørbart lokalt i nettleseren uten server. Dette er **MVP (P0)** i henhold til `RailCAD_konsept_og_AI_spesifikasjon.md`.
+
+> **Viktig:** RailCAD er et skisse- og geometriverktøy. Ingenting i programmet er regelverkskontrollert, og eksempelprosjektet er illustrativt. Se [Kjente begrensninger](#kjente-begrensninger).
+
+## Installasjon og oppstart
+
+Krever Node.js ≥ 20 (testet med Node 24, npm 11).
+
+```bash
+npm install
+npm run dev          # http://localhost:5173
+```
+
+| Kommando                                                          | Hva den gjør                                     |
+| ----------------------------------------------------------------- | ------------------------------------------------ |
+| `npm run dev`                                                     | Utviklingsserver                                 |
+| `npm run build` / `npm run preview`                               | Typesjekk + produksjonsbygg / forhåndsvis bygget |
+| `npm test`                                                        | Enhetstester (Vitest)                            |
+| `npx playwright install chromium` (én gang) og `npm run test:e2e` | Ende-til-ende-tester (starter dev-serveren selv) |
+| `npm run typecheck`                                               | `vue-tsc` over hele arbeidsområdet               |
+| `npm run lint` / `npm run format`                                 | ESLint / Prettier                                |
+
+Ingen hemmeligheter eller miljøvariabler er nødvendige. Alt kjører lokalt, og ingen data forlater nettleseren.
+
+## Bruk
+
+Åpne **Fil → Åpne eksempelprosjekt** for tre parallelle spor på 140 m, en kurve og to mål.
+
+| Verktøy (hurtigtast) | Slik bruker du det                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Marker (V)           | Klikk velger, Shift+klikk flervalg. Dra objekt for å flytte; dra endepunktgrepene for direkte redigering. Esc avbryter/fjerner valg.                                            |
+| Panorer (H)          | Dra. Midtknapp, eller Mellomrom + dra, panorerer også i alle andre verktøy. Musehjul zoomer rundt markøren.                                                                     |
+| Rett spor (L)        | Klikk start- og sluttpunkt, **eller** fyll ut skjemaet (X, Y, retning, lengde) over tegneflaten og trykk Opprett.                                                               |
+| Sirkelkurve (C)      | Klikk start (starter du i et sporendepunkt fortsetter buen tangentielt), klikk evt. tangentretning, klikk sluttpunkt. Eller bruk skjemaet (radius, venstre/høyre, sveipvinkel). |
+| Parallelt spor (P)   | Sett sporavstand og side i verktøylinjen, klikk et rett referansespor og klikk for å plassere. Kopien er **uavhengig** av referansen.                                           |
+| Roter (R)            | Valgte objekter: klikk pivot, referanseretning og ny retning – eller skriv vinkel (grader, mot klokka).                                                                         |
+| Mål lengde (M)       | Klikk et spor, klikk for å plassere målelinjen. Måltallet er knyttet til sporet og oppdateres automatisk.                                                                       |
+| Mål avstand (D)      | Klikk to punkter (med snapping) og plasser målelinjen. Lagres med egne koordinater.                                                                                             |
+| Slett (E)            | Klikk objekt. Del-tasten sletter valgte. Tilknyttede lengdemål slettes med; Angre gjenoppretter alt.                                                                            |
+
+Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn), `Ctrl+S` lagre, `Ctrl+O` åpne, `F` tilpass visning, `Enter` bekrefter parallelt spor.
+
+**Snapping** (bunnlinjen, kan slås av/på): endepunkt, senter, tangent (fra forrige punkt), nærmeste punkt og rutenett. Søkeradius er 12 px og omregnes til meter – den påvirker aldri modellen. Merket vises ved markøren.
+
+**Egenskapspanelet** redigerer geometrien direkte (start, retning, lengde / radius, kurveretning, sveipvinkel, buelengde). Tall kan skrives med komma eller punktum; ugyldige verdier gir en feilmelding og endrer ingenting. **Visning → Skjematisk skinne-/svillevisning** tegner to skinner (1,435 m, kun skjematisk) og sviller ved høy zoom.
+
+**Lagring:** Fil → Lagre laster ned `<prosjektnavn>.railcad.json`. Åpne leser filen tilbake og validerer den (struktur, tall, invarianter, unike ID-er, referanser) før noe vises; ved feil forklares det hva som er galt og prosjektet er urørt.
+
+## Arkitektur
+
+```
+packages/
+  domain/         Typer, JSON-skjema (zod), validering, migrering, ID-generering
+  geometry-api/   Stabilt GeometryEngine-grensesnitt + eksplisitte toleranser
+  geometry-ts/    TypeScript-implementasjon: linje, bue, offset, rotasjon, snapping, mål
+apps/web/src/
+  commands/       Patch-modell og rene builders (opprett, erstatt, slett, flytt/roter)
+  stores/         Pinia: project (modell + angre/gjør om), view (utsnitt/snap), ui
+  tools/          Verktøy (Marker, tegning, parallell, mål, roter, slett) + controller
+  rendering/      world↔screen, rutenett, SVG-stier
+  components/     Meny, verktøylinje, tegneflate, egenskaper, objektliste, status
+fixtures/         Eksempelprosjekt (tre spor)
+tests/e2e/        Playwright
+docs/             Beslutninger, filformat, kravstatus
+```
+
+Prinsipper (fra spesifikasjonen):
+
+- **Modell først.** Geometri lagres som parametere i meter/radianer. Skjermkoordinater finnes bare i `rendering/` og i pekerhendelser. Zoom/pan endrer aldri modellen.
+- **Ren geometrimotor.** Vue-maler regner ikke faggeometri. Alt går via `GeometryEngine` (`apps/web/src/engine.ts` er eneste bindingspunkt, slik at Rust/WASM kan settes inn senere).
+- **Angre/gjør om som data.** Hver redigering er en `Patch` (før/etter + posisjon) – deterministisk å reversere.
+- **Geometri ≠ topologi.** Filformatet har `connections`; MVP oppretter ingen (P1), men validerer og bevarer dem.
+- **Eksplisitte toleranser:** `TOLERANCES` i `geometry-api`.
+
+Se `docs/` for filformat og beslutninger.
+
+## Kjente begrensninger
+
+- **Ikke regelverkskontrollert.** Ingen kontroller mot Bane NOR/TRV. Panelet viser «ikke vurdert»; ingenting presenteres som godkjent.
+- **Ingen sporveksler, topologi/koblinger, DXF, referansebakgrunn, lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
+- Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
+- Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
+- Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.
+- Mellomrom som panoreringstast virker ikke mens en knapp har tastaturfokus (den aktiverer da knappen).
+- Skinne-/svillevisning er skjematisk (sporvidde 1,435 m, sviller visualisert som mønster), ikke overbygningsprosjektering.
+- Ytelse: tegnet og testet med 5 000 spor (utsnittskulling; ca. 20–40 ms per zoomsteg i testmiljøet). Objektlisten tegner alle rader.
+- Kun lagring som nedlastet fil (ingen automatisk lokal gjenoppretting; nettleseren advarer ved lukking med ulagrede endringer).
+
+## Neste steg (P1)
+
+Sporvekselbibliotek med dokumenterte dimensjoner og porter, topologiske koblinger og feilrapportering, DXF-eksport (med lag), referansebakgrunn, parametriske sammenhenger mellom spor. MVP skal være ferdig verifisert før dette starter.

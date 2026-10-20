@@ -23,8 +23,11 @@ export async function viewInfo(page: Page): Promise<ViewInfo> {
   const vp = page.getByTestId('viewport');
   const num = async (a: string) => Number(await vp.getAttribute(a));
   return {
-    scale: await num('data-scale'), cx: await num('data-cx'), cy: await num('data-cy'),
-    width: await num('data-width'), height: await num('data-height'),
+    scale: await num('data-scale'),
+    cx: await num('data-cx'),
+    cy: await num('data-cy'),
+    width: await num('data-width'),
+    height: await num('data-height'),
   };
 }
 

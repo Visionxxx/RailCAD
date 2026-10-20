@@ -1,5 +1,9 @@
 const nf = (decimals: number) =>
-  new Intl.NumberFormat('nb-NO', { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: false });
+  new Intl.NumberFormat('nb-NO', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    useGrouping: false,
+  });
 const cache = new Map<number, Intl.NumberFormat>();
 
 /** Norsk tallformat med komma som desimaltegn, uten tusenskille. */

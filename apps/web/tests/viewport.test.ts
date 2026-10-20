@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { fmt, fmtDeg, parseNumber } from '../src/format';
-import { fitBounds, gridSteps, panBy, screenToWorld, visibleWorldRect, worldToScreen, zoomAt, type ViewState } from '../src/rendering/viewport';
+import {
+  fitBounds,
+  gridSteps,
+  panBy,
+  screenToWorld,
+  visibleWorldRect,
+  worldToScreen,
+  zoomAt,
+  type ViewState,
+} from '../src/rendering/viewport';
 import { pickObject } from '../src/tools/pick';
 import type { RailObject } from '@railcad/domain';
 
@@ -55,7 +64,8 @@ describe('format og tallinput', () => {
     expect(parseNumber('12,5')).toBe(12.5);
     expect(parseNumber(' 1 234.5 ')).toBe(1234.5);
     expect(parseNumber('-0,25')).toBe(-0.25);
-    for (const bad of ['', 'abc', '1,2,3', 'Infinity', '--1', '1e999']) expect(parseNumber(bad)).toBeNull();
+    for (const bad of ['', 'abc', '1,2,3', 'Infinity', '--1', '1e999'])
+      expect(parseNumber(bad)).toBeNull();
   });
   it('formaterer med norsk desimaltegn og unngår -0', () => {
     expect(fmt(140)).toBe('140,000');
@@ -66,8 +76,16 @@ describe('format og tallinput', () => {
 
 describe('objektvalg', () => {
   const objs: RailObject[] = [
-    { id: 'a', type: 'track_segment', geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: 100 } },
-    { id: 'b', type: 'track_segment', geometry: { kind: 'line', start: [0, 5], headingRad: 0, lengthM: 100 } },
+    {
+      id: 'a',
+      type: 'track_segment',
+      geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: 100 },
+    },
+    {
+      id: 'b',
+      type: 'track_segment',
+      geometry: { kind: 'line', start: [0, 5], headingRad: 0, lengthM: 100 },
+    },
   ];
   const byId = new Map(objs.map((o) => [o.id, o] as const));
   it('velger nærmeste objekt innenfor toleransen og ellers ingenting', () => {

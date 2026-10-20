@@ -1,8 +1,13 @@
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import {
-  createEmptyProject, isTrack,
-  type Connection, type DimensionSpec, type ProjectMeta, type RailObject, type RailProject,
+  createEmptyProject,
+  isTrack,
+  type Connection,
+  type DimensionSpec,
+  type ProjectMeta,
+  type RailObject,
+  type RailProject,
   type TrackGeometry,
 } from '@railcad/domain';
 import type { TrackRef } from '@railcad/geometry-api';
@@ -144,9 +149,34 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   return {
-    meta, objects, connections, selection, revision, loadCount,
-    byId, trackRefs, selectedObjects, dirty, canUndo, canRedo, lastUndoLabel, lastRedoLabel,
-    execute, undo, redo, select, toggleSelect, addTrack, addDimension, updateObject,
-    deleteSelection, deleteIds, updateMeta, load, reset, toProject, markSaved,
+    meta,
+    objects,
+    connections,
+    selection,
+    revision,
+    loadCount,
+    byId,
+    trackRefs,
+    selectedObjects,
+    dirty,
+    canUndo,
+    canRedo,
+    lastUndoLabel,
+    lastRedoLabel,
+    execute,
+    undo,
+    redo,
+    select,
+    toggleSelect,
+    addTrack,
+    addDimension,
+    updateObject,
+    deleteSelection,
+    deleteIds,
+    updateMeta,
+    load,
+    reset,
+    toProject,
+    markSaved,
   };
 });

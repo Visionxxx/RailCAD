@@ -15,10 +15,7 @@
       "type": "track_segment",
       "geometry": {
         "kind": "line",
-        "start": [
-          0,
-          0
-        ],
+        "start": [0, 0],
         "headingRad": 0,
         "lengthM": 140
       }
@@ -28,10 +25,7 @@
       "type": "track_segment",
       "geometry": {
         "kind": "line",
-        "start": [
-          0,
-          5
-        ],
+        "start": [0, 5],
         "headingRad": 0,
         "lengthM": 140
       }
@@ -41,10 +35,7 @@
       "type": "track_segment",
       "geometry": {
         "kind": "line",
-        "start": [
-          0,
-          10
-        ],
+        "start": [0, 10],
         "headingRad": 0,
         "lengthM": 140
       }
@@ -54,10 +45,7 @@
       "type": "track_segment",
       "geometry": {
         "kind": "arc",
-        "start": [
-          140,
-          0
-        ],
+        "start": [140, 0],
         "headingRad": 0,
         "signedRadiusM": 300,
         "sweepRad": 0.15
@@ -77,14 +65,8 @@
       "type": "dimension",
       "dimension": {
         "kind": "distance",
-        "a": [
-          0,
-          0
-        ],
-        "b": [
-          0,
-          10
-        ],
+        "a": [0, 0],
+        "b": [0, 10],
         "offsetM": -4
       }
     }

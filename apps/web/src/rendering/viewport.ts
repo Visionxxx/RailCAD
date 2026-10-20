@@ -69,8 +69,10 @@ export function unionBounds(list: Iterable<Bounds>): Bounds | null {
   for (const b of list) {
     out = out
       ? {
-          minX: Math.min(out.minX, b.minX), minY: Math.min(out.minY, b.minY),
-          maxX: Math.max(out.maxX, b.maxX), maxY: Math.max(out.maxY, b.maxY),
+          minX: Math.min(out.minX, b.minX),
+          minY: Math.min(out.minY, b.minY),
+          maxX: Math.max(out.maxX, b.maxX),
+          maxY: Math.max(out.maxY, b.maxY),
         }
       : { ...b };
   }

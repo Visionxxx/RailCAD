@@ -5,7 +5,12 @@ import { geometryEngine as engine } from '../src/engine';
 import { transformObjects } from '../src/commands/builders';
 import { HISTORY_LIMIT, useProjectStore } from '../src/stores/project';
 
-const line = (y: number, len = 10) => ({ kind: 'line' as const, start: [0, y] as [number, number], headingRad: 0, lengthM: len });
+const line = (y: number, len = 10) => ({
+  kind: 'line' as const,
+  start: [0, y] as [number, number],
+  headingRad: 0,
+  lengthM: len,
+});
 
 function setup() {
   setActivePinia(createPinia());
@@ -82,8 +87,16 @@ describe('prosjektstore og historikk', () => {
       project: { id: 'p', name: 'p', units: 'm', coordinateSystem: { type: 'local_xy' } },
       objects: [
         { id: 'track-001', type: 'track_segment', geometry: line(0, 10) },
-        { id: 'dim-001', type: 'dimension', dimension: { kind: 'length', targetId: 'track-001', offsetM: 1 } },
-        { id: 'dim-002', type: 'dimension', dimension: { kind: 'distance', a: [0, 0], b: [3, 4], offsetM: 1 } },
+        {
+          id: 'dim-001',
+          type: 'dimension',
+          dimension: { kind: 'length', targetId: 'track-001', offsetM: 1 },
+        },
+        {
+          id: 'dim-002',
+          type: 'dimension',
+          dimension: { kind: 'distance', a: [0, 0], b: [3, 4], offsetM: 1 },
+        },
       ],
       connections: [],
     };
@@ -92,17 +105,35 @@ describe('prosjektstore og historikk', () => {
     if (!loaded.ok) return;
     store.load(loaded.project);
     const ids = new Set(['track-001', 'dim-001', 'dim-002']);
-    expect(store.execute(transformObjects(store.objects, ids, engine, { type: 'move', dx: 2, dy: 3 }, 'Flytt'))).toBe(true);
+    expect(
+      store.execute(
+        transformObjects(store.objects, ids, engine, { type: 'move', dx: 2, dy: 3 }, 'Flytt'),
+      ),
+    ).toBe(true);
     expect((store.byId.get('track-001') as any).geometry.start).toEqual([2, 3]);
     expect((store.byId.get('dim-002') as any).dimension).toMatchObject({ a: [2, 3], b: [5, 7] });
     expect((store.byId.get('dim-001') as any).dimension.offsetM).toBe(1);
     // bare et lengdemål valgt → ingenting å flytte
-    expect(transformObjects(store.objects, new Set(['dim-001']), engine, { type: 'move', dx: 1, dy: 1 }, 'Flytt')).toBeNull();
+    expect(
+      transformObjects(
+        store.objects,
+        new Set(['dim-001']),
+        engine,
+        { type: 'move', dx: 1, dy: 1 },
+        'Flytt',
+      ),
+    ).toBeNull();
   });
 
   it('rotasjon om pivot roterer spor og frie mål', () => {
     store.addTrack(line(0, 10));
-    const patch = transformObjects(store.objects, new Set(['track-001']), engine, { type: 'rotate', pivot: [0, 0], angleRad: Math.PI / 2 }, 'Roter');
+    const patch = transformObjects(
+      store.objects,
+      new Set(['track-001']),
+      engine,
+      { type: 'rotate', pivot: [0, 0], angleRad: Math.PI / 2 },
+      'Roter',
+    );
     store.execute(patch);
     const g = (store.byId.get('track-001') as any).geometry;
     expect(g.headingRad).toBeCloseTo(Math.PI / 2, 12);

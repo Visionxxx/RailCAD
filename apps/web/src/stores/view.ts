@@ -34,7 +34,11 @@ export const useViewStore = defineStore('view', () => {
   const showGrid = ref(true);
   const railView = ref(false);
   const snapOn = reactive<Record<SnapKind, boolean>>({
-    endpoint: true, center: true, tangent: true, nearest: true, grid: true,
+    endpoint: true,
+    center: true,
+    tangent: true,
+    nearest: true,
+    grid: true,
   });
   /** Parametere for parallellverktøyet (brukerstyrt – ingen faglig standardverdi). */
   const parallelDistanceM = ref(5);
@@ -77,8 +81,22 @@ export const useViewStore = defineStore('view', () => {
   }
 
   return {
-    view, theme, showGrid, railView, snapOn, parallelDistanceM, parallelSide, cursor,
-    activeSnapKinds, grid, snapToleranceM, pickToleranceM,
-    resize, zoom, pan, fitAll, setTheme,
+    view,
+    theme,
+    showGrid,
+    railView,
+    snapOn,
+    parallelDistanceM,
+    parallelSide,
+    cursor,
+    activeSnapKinds,
+    grid,
+    snapToleranceM,
+    pickToleranceM,
+    resize,
+    zoom,
+    pan,
+    fitAll,
+    setTheme,
   };
 });

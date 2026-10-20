@@ -1,7 +1,18 @@
 import type { ArcGeometry, LineGeometry, TrackGeometry, Vec2 } from '@railcad/domain';
 import type { Bounds, ClosestPoint, Pose } from '@railcad/geometry-api';
 import {
-  add, dist, dot, leftNormal, mod2pi, mul, norm, rotate, rotateAbout, sub, unit, TWO_PI,
+  add,
+  dist,
+  dot,
+  leftNormal,
+  mod2pi,
+  mul,
+  norm,
+  rotate,
+  rotateAbout,
+  sub,
+  unit,
+  TWO_PI,
 } from './vec';
 
 export function length(g: TrackGeometry): number {

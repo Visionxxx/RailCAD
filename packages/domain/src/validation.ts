@@ -77,8 +77,7 @@ export function validateGeometry(g: TrackGeometry): string[] {
 }
 
 export type ProjectValidation =
-  | { ok: true; project: RailProject }
-  | { ok: false; errors: string[] };
+  { ok: true; project: RailProject } | { ok: false; errors: string[] };
 
 function formatPath(path: ReadonlyArray<PropertyKey>): string {
   return path.reduce<string>(
@@ -111,7 +110,8 @@ export function validateProject(raw: unknown): ProjectValidation {
     if (ids.has(o.id)) errors.push(`objects[${i}].id: duplikat ID «${o.id}»`);
     ids.set(o.id, o.type);
     if (o.type === 'track_segment') {
-      for (const msg of validateGeometry(o.geometry)) errors.push(`objects[${i}] (${o.id}): ${msg}`);
+      for (const msg of validateGeometry(o.geometry))
+        errors.push(`objects[${i}] (${o.id}): ${msg}`);
     }
   });
   project.objects.forEach((o, i) => {

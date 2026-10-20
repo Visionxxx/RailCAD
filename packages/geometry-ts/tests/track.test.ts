@@ -4,10 +4,17 @@ import { geometryEngine as e } from '../src';
 
 const EPS = 1e-9;
 const line = (x: number, y: number, h: number, len: number): LineGeometry => ({
-  kind: 'line', start: [x, y], headingRad: h, lengthM: len,
+  kind: 'line',
+  start: [x, y],
+  headingRad: h,
+  lengthM: len,
 });
 const arc = (x: number, y: number, h: number, r: number, sweep: number): ArcGeometry => ({
-  kind: 'arc', start: [x, y], headingRad: h, signedRadiusM: r, sweepRad: sweep,
+  kind: 'arc',
+  start: [x, y],
+  headingRad: h,
+  signedRadiusM: r,
+  sweepRad: sweep,
 });
 
 describe('rett spor', () => {
@@ -153,29 +160,49 @@ describe('snapping', () => {
   });
 
   it('snapper til nærmeste punkt på sporet og til buesentrum', () => {
-    expect(e.snap(tracks, { cursor: [40, 0.3], toleranceM: 0.5, kinds: ['nearest'] })).toMatchObject({
-      kind: 'nearest', point: [40, 0],
+    expect(
+      e.snap(tracks, { cursor: [40, 0.3], toleranceM: 0.5, kinds: ['nearest'] }),
+    ).toMatchObject({
+      kind: 'nearest',
+      point: [40, 0],
     });
-    expect(e.snap(tracks, { cursor: [0.1, 70], toleranceM: 0.5, kinds: ['center'] })).toMatchObject({
-      kind: 'center', point: [0, 70],
-    });
+    expect(e.snap(tracks, { cursor: [0.1, 70], toleranceM: 0.5, kinds: ['center'] })).toMatchObject(
+      {
+        kind: 'center',
+        point: [0, 70],
+      },
+    );
   });
 
   it('gir null utenfor toleransen og respekterer av/på og ekskluderte objekter', () => {
     expect(e.snap(tracks, { cursor: [50, 5], toleranceM: 0.5, kinds: all })).toBeNull();
-    expect(e.snap(tracks, { cursor: [100, 0], toleranceM: 0.5, kinds: ['nearest'] })!.kind).toBe('nearest');
+    expect(e.snap(tracks, { cursor: [100, 0], toleranceM: 0.5, kinds: ['nearest'] })!.kind).toBe(
+      'nearest',
+    );
     expect(e.snap(tracks, { cursor: [100, 0], toleranceM: 0.5, kinds: ['center'] })).toBeNull();
     expect(
-      e.snap(tracks, { cursor: [100, 0], toleranceM: 0.5, kinds: ['endpoint'], excludeIds: new Set(['track-001']) }),
+      e.snap(tracks, {
+        cursor: [100, 0],
+        toleranceM: 0.5,
+        kinds: ['endpoint'],
+        excludeIds: new Set(['track-001']),
+      }),
     ).toBeNull();
   });
 
   it('snapper til rutenett og til tangentpunkt fra referansepunkt', () => {
-    expect(e.snap([], { cursor: [10.2, 4.9], toleranceM: 0.5, kinds: ['grid'], gridStepM: 5 })!.point).toEqual([10, 5]);
+    expect(
+      e.snap([], { cursor: [10.2, 4.9], toleranceM: 0.5, kinds: ['grid'], gridStepM: 5 })!.point,
+    ).toEqual([10, 5]);
     const circle = [{ id: 'c', geometry: arc(0, 0, 0, 10, Math.PI * 1.9) }];
     // Fra (20,10) mot sirkel (sentrum (0,10), r=10): tangentpunkt (10,10)+... verifiser tangentegenskapen.
     const ref: [number, number] = [20, 10];
-    const cand = e.snap(circle, { cursor: [6.0, 18.0], toleranceM: 3, kinds: ['tangent'], reference: ref });
+    const cand = e.snap(circle, {
+      cursor: [6.0, 18.0],
+      toleranceM: 3,
+      kinds: ['tangent'],
+      reference: ref,
+    });
     expect(cand?.kind).toBe('tangent');
     const t = cand!.point;
     const radial = [t[0] - 0, t[1] - 10];
@@ -201,8 +228,13 @@ describe('målsetting', () => {
     expect(l.valueM).toBeCloseTo(5, 12);
     expect(l.line.start[0]).toBeCloseTo(-0.8, 12); // venstre for retning (3,4) er (-0.8, 0.6)
     expect(l.line.start[1]).toBeCloseTo(0.6, 12);
-    const back = e.dimensionLayout({ kind: 'distance', a: [3, 4], b: [0, 0], offsetM: 1 }, resolve)!;
+    const back = e.dimensionLayout(
+      { kind: 'distance', a: [3, 4], b: [0, 0], offsetM: 1 },
+      resolve,
+    )!;
     expect(Math.abs(back.labelAngleRad)).toBeLessThanOrEqual(Math.PI / 2 + EPS);
-    expect(e.dimensionLayout({ kind: 'distance', a: [1, 1], b: [1, 1], offsetM: 1 }, resolve)).toBeNull();
+    expect(
+      e.dimensionLayout({ kind: 'distance', a: [1, 1], b: [1, 1], offsetM: 1 }, resolve),
+    ).toBeNull();
   });
 });

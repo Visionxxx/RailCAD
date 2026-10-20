@@ -29,11 +29,25 @@ function apply() {
 
 <template>
   <div v-if="ui.settingsOpen" class="backdrop" @keydown.esc="ui.settingsOpen = false">
-    <form class="dialog" role="dialog" aria-modal="true" aria-labelledby="set-title" data-testid="settings" @submit.prevent="apply">
+    <form
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="set-title"
+      data-testid="settings"
+      @submit.prevent="apply"
+    >
       <h2 id="set-title">Prosjektinnstillinger</h2>
-      <label>Prosjektnavn <input v-model="name" type="text" data-testid="project-name" required autofocus /></label>
-      <label>Beskrivelse <textarea v-model="description" rows="3" data-testid="project-description" /></label>
-      <p class="muted">Enheter: meter. Koordinatsystem: lokalt XY (flere systemer kommer i senere fase).</p>
+      <label
+        >Prosjektnavn
+        <input v-model="name" type="text" data-testid="project-name" required autofocus
+      /></label>
+      <label
+        >Beskrivelse <textarea v-model="description" rows="3" data-testid="project-description" />
+      </label>
+      <p class="muted">
+        Enheter: meter. Koordinatsystem: lokalt XY (flere systemer kommer i senere fase).
+      </p>
       <div class="actions">
         <button type="button" class="btn secondary" @click="ui.settingsOpen = false">Avbryt</button>
         <button type="submit" class="btn" data-testid="settings-ok">Bruk</button>

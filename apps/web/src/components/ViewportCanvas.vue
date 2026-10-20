@@ -64,7 +64,8 @@ const previewDims = computed(() =>
 );
 
 const worldTransform = computed(
-  () => `matrix(${v.scale} 0 0 ${-v.scale} ${v.width / 2 - v.cx * v.scale} ${v.height / 2 + v.cy * v.scale})`,
+  () =>
+    `matrix(${v.scale} 0 0 ${-v.scale} ${v.width / 2 - v.cx * v.scale} ${v.height / 2 + v.cy * v.scale})`,
 );
 
 const origin = computed(() => worldToScreen(v, [0, 0]));
@@ -80,7 +81,11 @@ const screenEndpoints = computed(() => {
   const grips = gripTracks.value.length === 1;
   for (const t of gripTracks.value) {
     pts.push({ id: `${t.id}-s`, p: worldToScreen(v, t.geometry.start), grip: grips });
-    pts.push({ id: `${t.id}-e`, p: worldToScreen(v, engine.endPose(t.geometry).point), grip: grips });
+    pts.push({
+      id: `${t.id}-e`,
+      p: worldToScreen(v, engine.endPose(t.geometry).point),
+      grip: grips,
+    });
   }
   return pts;
 });
@@ -111,14 +116,19 @@ function pointer(e: PointerEvent | WheelEvent): PointerInfo {
   const found = ctrl.snapAt(world);
   snap.value = found;
   return {
-    button: 'button' in e ? e.button : 0, shift: e.shiftKey, screen, world, snap: found,
+    button: 'button' in e ? e.button : 0,
+    shift: e.shiftKey,
+    screen,
+    world,
+    snap: found,
     point: found ? found.point : world,
   };
 }
 
 function onDown(e: PointerEvent) {
   host.value?.focus({ preventScroll: true });
-  const startPan = e.button === 1 || (e.button === 0 && (spaceHeld.value || ctrl.activeId.value === 'pan'));
+  const startPan =
+    e.button === 1 || (e.button === 0 && (spaceHeld.value || ctrl.activeId.value === 'pan'));
   if (startPan) {
     panning.value = true;
     panButton = e.button;
@@ -174,7 +184,13 @@ function onWheel(e: WheelEvent) {
 
 function typing(e: KeyboardEvent) {
   const el = e.target as HTMLElement | null;
-  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  return (
+    !!el &&
+    (el.tagName === 'INPUT' ||
+      el.tagName === 'TEXTAREA' ||
+      el.tagName === 'SELECT' ||
+      el.isContentEditable)
+  );
 }
 function onKeyDown(e: KeyboardEvent) {
   if (e.code === 'Space' && !typing(e) && !(e.target as HTMLElement | null)?.closest?.('button')) {
@@ -238,10 +254,24 @@ watch(
   >
     <svg :width="v.width" :height="v.height" :viewBox="`0 0 ${v.width} ${v.height}`">
       <defs>
-        <pattern id="pat-minor" :width="minorPx" :height="minorPx" patternUnits="userSpaceOnUse" :x="origin[0]" :y="origin[1]">
+        <pattern
+          id="pat-minor"
+          :width="minorPx"
+          :height="minorPx"
+          patternUnits="userSpaceOnUse"
+          :x="origin[0]"
+          :y="origin[1]"
+        >
           <path class="g-minor" :d="`M0 0V${minorPx}M0 0H${minorPx}`" />
         </pattern>
-        <pattern id="pat-major" :width="majorPx" :height="majorPx" patternUnits="userSpaceOnUse" :x="origin[0]" :y="origin[1]">
+        <pattern
+          id="pat-major"
+          :width="majorPx"
+          :height="majorPx"
+          patternUnits="userSpaceOnUse"
+          :x="origin[0]"
+          :y="origin[1]"
+        >
           <path class="g-major" :d="`M0 0V${majorPx}M0 0H${majorPx}`" />
         </pattern>
       </defs>
@@ -255,23 +285,54 @@ watch(
 
       <!-- Verdenslag: geometri i meter, Y opp. Streker har fast pikselbredde. -->
       <g :transform="worldTransform" data-testid="world">
-        <g v-for="t in visibleTracks" :key="t.id" :class="{ 't-selected': selectedSet.has(t.id) }" :data-track="t.id">
+        <g
+          v-for="t in visibleTracks"
+          :key="t.id"
+          :class="{ 't-selected': selectedSet.has(t.id) }"
+          :data-track="t.id"
+        >
           <path
             v-if="selectedSet.has(t.id) || ctrl.preview.value?.hoverId === t.id"
-            :class="['t-halo', { hover: !selectedSet.has(t.id), danger: ctrl.preview.value?.hoverKind === 'danger' && ctrl.preview.value?.hoverId === t.id }]"
+            :class="[
+              't-halo',
+              {
+                hover: !selectedSet.has(t.id),
+                danger:
+                  ctrl.preview.value?.hoverKind === 'danger' &&
+                  ctrl.preview.value?.hoverId === t.id,
+              },
+            ]"
             :d="trackPath(t.geometry)"
             vector-effect="non-scaling-stroke"
           />
-          <path v-if="showSleepers" class="t-sleepers" :d="trackPath(t.geometry)" :stroke-width="2.6" stroke-dasharray="0.25 0.35" />
+          <path
+            v-if="showSleepers"
+            class="t-sleepers"
+            :d="trackPath(t.geometry)"
+            :stroke-width="2.6"
+            stroke-dasharray="0.25 0.35"
+          />
           <template v-if="showRails">
-            <path v-for="(d, i) in railPaths(t.geometry)" :key="i" class="t-rail" :d="d" vector-effect="non-scaling-stroke" />
+            <path
+              v-for="(d, i) in railPaths(t.geometry)"
+              :key="i"
+              class="t-rail"
+              :d="d"
+              vector-effect="non-scaling-stroke"
+            />
           </template>
           <path class="t-axis" :d="trackPath(t.geometry)" vector-effect="non-scaling-stroke" />
         </g>
 
         <g v-for="d in visibleDims" :key="d.id" :class="{ 'd-selected': selectedSet.has(d.id) }">
           <path class="d-line" :d="trackPath(d.layout.line)" vector-effect="non-scaling-stroke" />
-          <path v-for="(ext, i) in d.layout.extensionLines" :key="i" class="d-ext" :d="`M${ext[0][0]} ${ext[0][1]}L${ext[1][0]} ${ext[1][1]}`" vector-effect="non-scaling-stroke" />
+          <path
+            v-for="(ext, i) in d.layout.extensionLines"
+            :key="i"
+            class="d-ext"
+            :d="`M${ext[0][0]} ${ext[0][1]}L${ext[1][0]} ${ext[1][1]}`"
+            vector-effect="non-scaling-stroke"
+          />
         </g>
 
         <g v-if="ctrl.preview.value">
@@ -291,7 +352,13 @@ watch(
           />
           <template v-for="(pd, i) in previewDims" :key="`pd${i}`">
             <path class="ghost" :d="trackPath(pd.layout.line)" vector-effect="non-scaling-stroke" />
-            <path v-for="(ext, j) in pd.layout.extensionLines" :key="j" class="guide" :d="`M${ext[0][0]} ${ext[0][1]}L${ext[1][0]} ${ext[1][1]}`" vector-effect="non-scaling-stroke" />
+            <path
+              v-for="(ext, j) in pd.layout.extensionLines"
+              :key="j"
+              class="guide"
+              :d="`M${ext[0][0]} ${ext[0][1]}L${ext[1][0]} ${ext[1][1]}`"
+              vector-effect="non-scaling-stroke"
+            />
           </template>
         </g>
       </g>
@@ -305,31 +372,75 @@ watch(
           :transform="`translate(${dimLabel(d.layout).x} ${dimLabel(d.layout).y}) rotate(${dimLabel(d.layout).deg})`"
           dy="-5"
           :data-testid="`dim-label-${d.id}`"
-        >{{ dimLabel(d.layout).text }}</text>
+        >
+          {{ dimLabel(d.layout).text }}
+        </text>
         <text
           v-for="(pd, i) in previewDims"
           :key="`pt${i}`"
           class="d-text"
           :transform="`translate(${dimLabel(pd.layout).x} ${dimLabel(pd.layout).y}) rotate(${dimLabel(pd.layout).deg})`"
           dy="-5"
-        >{{ dimLabel(pd.layout).text }}</text>
+        >
+          {{ dimLabel(pd.layout).text }}
+        </text>
 
         <g v-for="e in screenEndpoints" :key="e.id">
-          <rect v-if="e.grip" class="grip" :x="e.p[0] - 5" :y="e.p[1] - 5" width="10" height="10" data-testid="grip" />
+          <rect
+            v-if="e.grip"
+            class="grip"
+            :x="e.p[0] - 5"
+            :y="e.p[1] - 5"
+            width="10"
+            height="10"
+            data-testid="grip"
+          />
           <rect v-else class="endmark" :x="e.p[0] - 2.5" :y="e.p[1] - 2.5" width="5" height="5" />
         </g>
 
         <g v-if="ctrl.preview.value?.pivot">
-          <circle class="snap-mark" :cx="worldToScreen(v, ctrl.preview.value.pivot)[0]" :cy="worldToScreen(v, ctrl.preview.value.pivot)[1]" r="6" />
+          <circle
+            class="snap-mark"
+            :cx="worldToScreen(v, ctrl.preview.value.pivot)[0]"
+            :cy="worldToScreen(v, ctrl.preview.value.pivot)[1]"
+            r="6"
+          />
         </g>
 
         <g v-if="snap && snapMark" data-testid="snap-marker" :data-kind="snap.kind">
-          <rect v-if="snap.kind === 'endpoint'" class="snap-mark" :x="snapMark[0] - 6" :y="snapMark[1] - 6" width="12" height="12" />
-          <circle v-else-if="snap.kind === 'center'" class="snap-mark" :cx="snapMark[0]" :cy="snapMark[1]" r="6" />
-          <path v-else-if="snap.kind === 'tangent'" class="snap-mark" :d="`M${snapMark[0] - 6} ${snapMark[1] + 7}H${snapMark[0] + 6}M${snapMark[0]} ${snapMark[1] - 1}m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0`" />
-          <path v-else-if="snap.kind === 'nearest'" class="snap-mark" :d="`M${snapMark[0] - 6} ${snapMark[1] - 6}L${snapMark[0] + 6} ${snapMark[1] + 6}M${snapMark[0] + 6} ${snapMark[1] - 6}L${snapMark[0] - 6} ${snapMark[1] + 6}`" />
-          <path v-else class="snap-mark" :d="`M${snapMark[0] - 5} ${snapMark[1]}H${snapMark[0] + 5}M${snapMark[0]} ${snapMark[1] - 5}V${snapMark[1] + 5}`" />
-          <text class="snap-text" :x="snapMark[0] + 10" :y="snapMark[1] - 8">{{ SNAP_LABELS[snap.kind] }}</text>
+          <rect
+            v-if="snap.kind === 'endpoint'"
+            class="snap-mark"
+            :x="snapMark[0] - 6"
+            :y="snapMark[1] - 6"
+            width="12"
+            height="12"
+          />
+          <circle
+            v-else-if="snap.kind === 'center'"
+            class="snap-mark"
+            :cx="snapMark[0]"
+            :cy="snapMark[1]"
+            r="6"
+          />
+          <path
+            v-else-if="snap.kind === 'tangent'"
+            class="snap-mark"
+            :d="`M${snapMark[0] - 6} ${snapMark[1] + 7}H${snapMark[0] + 6}M${snapMark[0]} ${snapMark[1] - 1}m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0`"
+          />
+          <path
+            v-else-if="snap.kind === 'nearest'"
+            class="snap-mark"
+            :d="`M${snapMark[0] - 6} ${snapMark[1] - 6}L${snapMark[0] + 6} ${snapMark[1] + 6}M${snapMark[0] + 6} ${snapMark[1] - 6}L${snapMark[0] - 6} ${snapMark[1] + 6}`"
+          />
+          <path
+            v-else
+            class="snap-mark"
+            :d="`M${snapMark[0] - 5} ${snapMark[1]}H${snapMark[0] + 5}M${snapMark[0]} ${snapMark[1] - 5}V${snapMark[1] + 5}`"
+          />
+          <text class="snap-text" :x="snapMark[0] + 10" :y="snapMark[1] - 8">
+            {{ SNAP_LABELS[snap.kind] }}
+          </text>
         </g>
 
         <g v-if="hudLines.length && cursorScreen" data-testid="hud">
@@ -339,7 +450,9 @@ watch(
             :class="['hud', { invalid: ctrl.preview.value?.hudValid === false }]"
             :x="cursorScreen[0] + 16"
             :y="cursorScreen[1] + 24 + i * 15"
-          >{{ line }}</text>
+          >
+            {{ line }}
+          </text>
         </g>
       </g>
     </svg>
@@ -349,5 +462,7 @@ watch(
 </template>
 
 <style scoped>
-.viewport :deep(.tool-options) { cursor: default; }
+.viewport :deep(.tool-options) {
+  cursor: default;
+}
 </style>

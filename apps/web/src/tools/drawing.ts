@@ -1,7 +1,7 @@
 import type { TrackGeometry, Vec2 } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
 import { fmt, fmtDeg, fmtM, radToDeg } from '../format';
-import { Tool, lineBetween, type KeyInfo } from './tool';
+import { Tool, lineBetween } from './tool';
 import type { PointerInfo } from './types';
 import { isTrack } from '@railcad/domain';
 
@@ -24,7 +24,10 @@ export class LineTool extends Tool {
     }
     const g = lineBetween(this.start, p.point);
     if (!g) {
-      this.env.ui.notify('Sporet er for kort – velg et sluttpunkt lenger fra startpunktet.', 'error');
+      this.env.ui.notify(
+        'Sporet er for kort – velg et sluttpunkt lenger fra startpunktet.',
+        'error',
+      );
       return;
     }
     this.env.project.addTrack(g);
@@ -66,7 +69,8 @@ export class ArcTool extends Tool {
   private fromTrack: string | null = null;
 
   hint() {
-    if (this.stage === 0) return 'Klikk startpunkt. Start i et sporendepunkt for tangentiell fortsettelse.';
+    if (this.stage === 0)
+      return 'Klikk startpunkt. Start i et sporendepunkt for tangentiell fortsettelse.';
     if (this.stage === 1) return 'Klikk for å angi starttangentens retning. Esc avbryter.';
     return 'Klikk sluttpunkt – radius og sveip følger av start, tangent og sluttpunkt.';
   }
@@ -87,7 +91,10 @@ export class ArcTool extends Tool {
     } else if (this.stage === 1 && this.start) {
       const g = lineBetween(this.start, p.point);
       if (!g) {
-        this.env.ui.notify('Retningen er udefinert – klikk et punkt lenger fra startpunktet.', 'error');
+        this.env.ui.notify(
+          'Retningen er udefinert – klikk et punkt lenger fra startpunktet.',
+          'error',
+        );
         return;
       }
       this.heading = g.headingRad;
@@ -95,7 +102,10 @@ export class ArcTool extends Tool {
     } else if (this.stage === 2 && this.start) {
       const arc = this.env.engine.arcFromStartTangentEnd(this.start, this.heading, p.point);
       if (!arc) {
-        this.env.ui.notify('Ugyldig bue: sluttpunktet ligger på tangentlinjen eller gir for stor radius.', 'error');
+        this.env.ui.notify(
+          'Ugyldig bue: sluttpunktet ligger på tangentlinjen eller gir for stor radius.',
+          'error',
+        );
         return;
       }
       this.env.project.addTrack(arc);
@@ -124,20 +134,17 @@ export class ArcTool extends Tool {
     this.env.setPreview({
       ghosts: arc ? [{ geometry: arc, valid: true }] : [],
       guides: [[this.start, tangentEnd]],
-      hud: arc && arc.kind === 'arc'
-        ? [
-            ...(this.fromTrack ? [`Tangentiell fortsettelse fra ${this.fromTrack}`] : []),
-            `R = ${fmtM(Math.abs(arc.signedRadiusM))} (${arc.signedRadiusM > 0 ? 'venstre' : 'høyre'})`,
-            `Δ = ${fmt(radToDeg(arc.sweepRad), 3)}°`,
-            `L = ${fmtM(this.env.engine.length(arc))}`,
-          ]
-        : ['Ugyldig bue'],
+      hud:
+        arc && arc.kind === 'arc'
+          ? [
+              ...(this.fromTrack ? [`Tangentiell fortsettelse fra ${this.fromTrack}`] : []),
+              `R = ${fmtM(Math.abs(arc.signedRadiusM))} (${arc.signedRadiusM > 0 ? 'venstre' : 'høyre'})`,
+              `Δ = ${fmt(radToDeg(arc.sweepRad), 3)}°`,
+              `L = ${fmtM(this.env.engine.length(arc))}`,
+            ]
+          : ['Ugyldig bue'],
       hudValid: !!arc,
     });
-  }
-
-  key(_k: KeyInfo) {
-    return false;
   }
 
   cancel() {

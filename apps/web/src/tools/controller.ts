@@ -5,14 +5,28 @@ import { useProjectStore } from '../stores/project';
 import { useUiStore } from '../stores/ui';
 import { useViewStore } from '../stores/view';
 import { ArcTool, LineTool } from './drawing';
-import { DeleteTool, MeasureDistanceTool, MeasureLengthTool, PanTool, ParallelTool, RotateTool } from './operations';
+import {
+  DeleteTool,
+  MeasureDistanceTool,
+  MeasureLengthTool,
+  PanTool,
+  ParallelTool,
+  RotateTool,
+} from './operations';
 import { SelectTool } from './select';
 import type { KeyInfo, Tool, ToolEnv } from './tool';
 import type { PointerInfo, Preview, ToolId } from './types';
 
 export const TOOL_SHORTCUTS: Record<ToolId, string> = {
-  select: 'V', pan: 'H', line: 'L', arc: 'C', parallel: 'P',
-  'measure-length': 'M', 'measure-distance': 'D', rotate: 'R', delete: 'E',
+  select: 'V',
+  pan: 'H',
+  line: 'L',
+  arc: 'C',
+  parallel: 'P',
+  'measure-length': 'M',
+  'measure-distance': 'D',
+  rotate: 'R',
+  delete: 'E',
 };
 
 /** Samler verktøyene, holder aktivt verktøy og forhåndsvisning, og fordeler pekerhendelser. */
@@ -27,7 +41,10 @@ export function createToolController() {
   const tick = ref(0);
 
   const env: ToolEnv = {
-    project, view, ui, engine: geometryEngine,
+    project,
+    view,
+    ui,
+    engine: geometryEngine,
     setPreview: (p) => {
       preview.value = p;
       tick.value++;

@@ -35,17 +35,39 @@ const menus = computed<MenuDef[]>(() => [
       { label: 'Åpne eksempelprosjekt', run: actions.openDemo, testid: 'menu-demo' },
       { label: 'Lagre', kbd: 'Ctrl+S', run: actions.save, testid: 'menu-save' },
       { label: '', separator: true },
-      { label: 'Prosjektinnstillinger …', run: () => (ui.settingsOpen = true), testid: 'menu-settings' },
+      {
+        label: 'Prosjektinnstillinger …',
+        run: () => (ui.settingsOpen = true),
+        testid: 'menu-settings',
+      },
     ],
   },
   {
     id: 'edit',
     label: 'Rediger',
     items: [
-      { label: project.canUndo ? `Angre ${project.lastUndoLabel.toLowerCase()}` : 'Angre', kbd: 'Ctrl+Z', run: project.undo, disabled: !project.canUndo, testid: 'menu-undo' },
-      { label: project.canRedo ? `Gjør om ${project.lastRedoLabel.toLowerCase()}` : 'Gjør om', kbd: 'Ctrl+Y', run: project.redo, disabled: !project.canRedo, testid: 'menu-redo' },
+      {
+        label: project.canUndo ? `Angre ${project.lastUndoLabel.toLowerCase()}` : 'Angre',
+        kbd: 'Ctrl+Z',
+        run: project.undo,
+        disabled: !project.canUndo,
+        testid: 'menu-undo',
+      },
+      {
+        label: project.canRedo ? `Gjør om ${project.lastRedoLabel.toLowerCase()}` : 'Gjør om',
+        kbd: 'Ctrl+Y',
+        run: project.redo,
+        disabled: !project.canRedo,
+        testid: 'menu-redo',
+      },
       { label: '', separator: true },
-      { label: 'Slett valgte', kbd: 'Del', run: () => project.deleteSelection(), disabled: !project.selection.length, testid: 'menu-delete' },
+      {
+        label: 'Slett valgte',
+        kbd: 'Del',
+        run: () => project.deleteSelection(),
+        disabled: !project.selection.length,
+        testid: 'menu-delete',
+      },
     ],
   },
   {
@@ -54,8 +76,17 @@ const menus = computed<MenuDef[]>(() => [
     items: [
       { label: 'Tilpass visning', kbd: 'F', run: view.fitAll, testid: 'menu-fit' },
       { label: 'Rutenett', checked: view.showGrid, run: () => (view.showGrid = !view.showGrid) },
-      { label: 'Skjematisk skinne-/svillevisning', checked: view.railView, run: () => (view.railView = !view.railView), testid: 'menu-rails' },
-      { label: view.theme === 'dark' ? 'Lyst tema' : 'Mørkt tema', run: () => view.setTheme(view.theme === 'dark' ? 'light' : 'dark'), testid: 'menu-theme' },
+      {
+        label: 'Skjematisk skinne-/svillevisning',
+        checked: view.railView,
+        run: () => (view.railView = !view.railView),
+        testid: 'menu-rails',
+      },
+      {
+        label: view.theme === 'dark' ? 'Lyst tema' : 'Mørkt tema',
+        run: () => view.setTheme(view.theme === 'dark' ? 'light' : 'dark'),
+        testid: 'menu-theme',
+      },
     ],
   },
 ]);
@@ -93,8 +124,17 @@ function choose(item: Item) {
       <div v-if="open === m.id" class="menu-list" role="menu">
         <template v-for="(it, i) in m.items" :key="i">
           <hr v-if="it.separator" />
-          <button v-else role="menuitem" :disabled="it.disabled" :data-testid="it.testid" @click="choose(it)">
-            <span>{{ it.checked !== undefined ? (it.checked ? '✓ ' : ' ') : '' }}{{ it.label }}</span>
+          <button
+            v-else
+            role="menuitem"
+            :disabled="it.disabled"
+            :data-testid="it.testid"
+            @click="choose(it)"
+          >
+            <span
+              >{{ it.checked !== undefined ? (it.checked ? '✓ ' : '\u2003') : ''
+              }}{{ it.label }}</span
+            >
             <span class="kbd">{{ it.kbd }}</span>
           </button>
         </template>
@@ -102,7 +142,8 @@ function choose(item: Item) {
     </div>
     <span class="spacer" />
     <span class="project-title" data-testid="project-title">
-      <b>{{ project.meta.name }}</b><span v-if="project.dirty" title="Ulagrede endringer"> •</span>
+      <b>{{ project.meta.name }}</b
+      ><span v-if="project.dirty" title="Ulagrede endringer"> •</span>
     </span>
   </header>
 </template>

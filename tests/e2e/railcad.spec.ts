@@ -1,7 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import {
-  clickWorld, createLineNumeric, field, menu, openApp, selectTool, setField, viewInfo, worldToPage,
+  clickWorld,
+  createLineNumeric,
+  field,
+  menu,
+  openApp,
+  selectTool,
+  setField,
+  viewInfo,
+  worldToPage,
 } from './helpers';
 
 test('starter uten feil og viser tegneflate, verktøy og statuslinje', async ({ page }) => {
@@ -13,7 +21,9 @@ test('starter uten feil og viser tegneflate, verktøy og statuslinje', async ({ 
   expect(errors).toEqual([]);
 });
 
-test('RC-002/RC-004: tegn rett spor numerisk og endre lengde i egenskapspanelet (scenario B)', async ({ page }) => {
+test('RC-002/RC-004: tegn rett spor numerisk og endre lengde i egenskapspanelet (scenario B)', async ({
+  page,
+}) => {
   const errors = await openApp(page);
   await createLineNumeric(page, { length: '140' });
   await expect(page.getByTestId('object-track-001')).toContainText('140,000 m');
@@ -29,7 +39,9 @@ test('RC-002/RC-004: tegn rett spor numerisk og endre lengde i egenskapspanelet 
   expect(errors).toEqual([]);
 });
 
-test('RC-004: ugyldige verdier gir tydelig feilmelding og endrer ikke modellen', async ({ page }) => {
+test('RC-004: ugyldige verdier gir tydelig feilmelding og endrer ikke modellen', async ({
+  page,
+}) => {
   await openApp(page);
   await createLineNumeric(page, { length: '140' });
   await selectTool(page, 'select');
@@ -46,7 +58,9 @@ test('RC-004: ugyldige verdier gir tydelig feilmelding og endrer ikke modellen',
   await expect(page.getByTestId('object-list').locator('li')).toHaveCount(1);
 });
 
-test('RC-002/RC-005/RC-006: tegn spor med musen med presis snapping og lengdevisning', async ({ page }) => {
+test('RC-002/RC-005/RC-006: tegn spor med musen med presis snapping og lengdevisning', async ({
+  page,
+}) => {
   await openApp(page);
   await selectTool(page, 'line');
   const a = await worldToPage(page, 0, 0);
@@ -128,7 +142,9 @@ test('RC-009/scenario A+B: parallelle spor er uavhengige kopier', async ({ page 
   await expect(page.getByTestId('object-track-003')).toContainText('140,000 m');
 });
 
-test('RC-008: lengdemål følger sporet og er synlig etter lagring og åpning (scenario D)', async ({ page }, info) => {
+test('RC-008: lengdemål følger sporet og er synlig etter lagring og åpning (scenario D)', async ({
+  page,
+}, info) => {
   await openApp(page);
   await createLineNumeric(page, { length: '140' });
   await page.keyboard.press('f');
@@ -146,7 +162,10 @@ test('RC-008: lengdemål følger sporet og er synlig etter lagring og åpning (s
 
   // Lagre
   await page.getByTestId('menu-file').click();
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('menu-save').click()]);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
   const path = info.outputPath('lagret.railcad.json');
   await download.saveAs(path);
   const saved = JSON.parse(readFileSync(path, 'utf8'));
@@ -158,14 +177,20 @@ test('RC-008: lengdemål følger sporet og er synlig etter lagring og åpning (s
   await menu(page, 'file', 'menu-new');
   await expect(page.getByTestId('object-list').locator('li')).toHaveCount(0);
   await page.getByTestId('menu-file').click();
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('menu-open').click()]);
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
   await chooser.setFiles(path);
   await expect(page.getByTestId('object-track-001')).toContainText('150,000 m');
   await expect(page.getByTestId('dim-label-dim-001')).toHaveText('150,000 m');
 
   // Lagre igjen: identisk innhold (ingen tap av geometri)
   await page.getByTestId('menu-file').click();
-  const [again] = await Promise.all([page.waitForEvent('download'), page.getByTestId('menu-save').click()]);
+  const [again] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
   const path2 = info.outputPath('lagret2.railcad.json');
   await again.saveAs(path2);
   expect(JSON.parse(readFileSync(path2, 'utf8'))).toEqual(saved);
@@ -189,23 +214,39 @@ test('RC-007: minst 50 handlinger kan angres og gjøres om', async ({ page }) =>
   await expect(page.getByTestId('object-track-055')).toContainText('64,000 m');
 });
 
-test('RC-001: ugyldig prosjektfil avvises med forklaring og endrer ikke prosjektet', async ({ page }, info) => {
+test('RC-001: ugyldig prosjektfil avvises med forklaring og endrer ikke prosjektet', async ({
+  page,
+}, info) => {
   const { writeFileSync } = await import('node:fs');
   await openApp(page);
   await createLineNumeric(page, { length: '10' });
   await menu(page, 'file', 'menu-save').catch(() => undefined);
   const bad = info.outputPath('ugyldig.json');
-  writeFileSync(bad, JSON.stringify({
-    schemaVersion: '0.1.0',
-    project: { id: 'x', name: 'x', units: 'm', coordinateSystem: { type: 'local_xy' } },
-    objects: [{ id: 't', type: 'track_segment', geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: -4 } }],
-    connections: [],
-  }));
+  writeFileSync(
+    bad,
+    JSON.stringify({
+      schemaVersion: '0.1.0',
+      project: { id: 'x', name: 'x', units: 'm', coordinateSystem: { type: 'local_xy' } },
+      objects: [
+        {
+          id: 't',
+          type: 'track_segment',
+          geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: -4 },
+        },
+      ],
+      connections: [],
+    }),
+  );
   // Prosjektet er ulagret (dirty) → bekreft forkasting først hvis dialogen vises.
   await page.getByTestId('menu-file').click();
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByTestId('menu-open').click();
-  if (await page.getByTestId('dialog-confirm').isVisible().catch(() => false)) {
+  if (
+    await page
+      .getByTestId('dialog-confirm')
+      .isVisible()
+      .catch(() => false)
+  ) {
     await page.getByTestId('dialog-confirm').click();
   }
   const chooser = await chooserPromise;
@@ -226,7 +267,9 @@ test('eksempelprosjekt åpnes med tre parallelle spor à 140 m', async ({ page }
   expect(errors).toEqual([]);
 });
 
-test('zoom rundt markøren, panorering og direkte redigering av endepunkt med musen', async ({ page }) => {
+test('zoom rundt markøren, panorering og direkte redigering av endepunkt med musen', async ({
+  page,
+}) => {
   await openApp(page);
   await createLineNumeric(page, { length: '40' });
   const before = await worldToPage(page, 20, 0);
@@ -265,17 +308,28 @@ test('ytelse: 5000 spor åpnes og zoom forblir responsiv', async ({ page }, info
   const objects = Array.from({ length: 5000 }, (_, i) => ({
     id: `track-${String(i + 1).padStart(4, '0')}`,
     type: 'track_segment',
-    geometry: { kind: i % 5 === 0 ? 'arc' : 'line', start: [(i % 100) * 12, Math.floor(i / 100) * 6], headingRad: 0,
-      ...(i % 5 === 0 ? { signedRadiusM: 80, sweepRad: 0.2 } : { lengthM: 10 }) },
+    geometry: {
+      kind: i % 5 === 0 ? 'arc' : 'line',
+      start: [(i % 100) * 12, Math.floor(i / 100) * 6],
+      headingRad: 0,
+      ...(i % 5 === 0 ? { signedRadiusM: 80, sweepRad: 0.2 } : { lengthM: 10 }),
+    },
   }));
   const file = info.outputPath('stor.json');
-  writeFileSync(file, JSON.stringify({
-    schemaVersion: '0.1.0',
-    project: { id: 'stor', name: 'Stort', units: 'm', coordinateSystem: { type: 'local_xy' } },
-    objects, connections: [],
-  }));
+  writeFileSync(
+    file,
+    JSON.stringify({
+      schemaVersion: '0.1.0',
+      project: { id: 'stor', name: 'Stort', units: 'm', coordinateSystem: { type: 'local_xy' } },
+      objects,
+      connections: [],
+    }),
+  );
   await page.getByTestId('menu-file').click();
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('menu-open').click()]);
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
   await chooser.setFiles(file);
   await expect(page.getByTestId('object-list').locator('li')).toHaveCount(5000);
 
@@ -284,7 +338,15 @@ test('ytelse: 5000 spor åpnes og zoom forblir responsiv', async ({ page }, info
     const r = vp.getBoundingClientRect();
     const t0 = performance.now();
     for (let i = 0; i < 30; i++) {
-      vp.dispatchEvent(new WheelEvent('wheel', { deltaY: i % 2 ? 120 : -120, clientX: r.x + 500, clientY: r.y + 300, bubbles: true, cancelable: true }));
+      vp.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY: i % 2 ? 120 : -120,
+          clientX: r.x + 500,
+          clientY: r.y + 300,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
       await new Promise((res) => requestAnimationFrame(res));
     }
     return (performance.now() - t0) / 30;
@@ -331,18 +393,58 @@ test('flytt (dra), roter (numerisk) og slett med tilknyttet mål – kan angres'
   await expect(page.getByTestId('object-list').locator('li')).toHaveCount(2);
 });
 
-test('RC-003/RC-005: bue tegnet med musen fortsetter tangentielt fra sporendepunkt', async ({ page }) => {
-  await openApp(page);
-  await createLineNumeric(page, { length: '40' });
+test('RC-003/RC-005: bue tegnet med musen fortsetter tangentielt fra sporendepunkt', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await createLineNumeric(page, { length: '20' });
   await selectTool(page, 'arc');
-  await clickWorld(page, 40, 0);
+  await clickWorld(page, 20, 0);
   await expect(page.getByTestId('hint')).toContainText('Klikk sluttpunkt');
-  const p = await worldToPage(page, 60, 10);
+  const p = await worldToPage(page, 30, 10);
   await page.mouse.move(p.x, p.y);
-  await expect(page.getByTestId('hud')).toContainText('R = 25,000 m (venstre)');
+  await expect(page.getByTestId('hud')).toContainText('R = 10,000 m (venstre)'); // kvartsirkel: (10² + 10²) / (2·10)
   await page.mouse.click(p.x, p.y);
-  await expect(page.getByTestId('object-track-002')).toContainText('R 25,0 m');
-  await expect(field(page, 'prop-start-x')).toHaveValue('40,000');
+  await expect(page.getByTestId('object-track-002')).toContainText('R 10,0 m');
+  await expect(field(page, 'prop-start-x')).toHaveValue('20,000');
   await expect(field(page, 'prop-heading')).toHaveValue('0,0000');
-  await expect(page.getByTestId('prop-end')).toHaveText('60,000 / 10,000');
+  await expect(page.getByTestId('prop-end')).toHaveText('30,000 / 10,000');
+  expect(errors).toEqual([]);
+});
+
+test('panorering med midtknapp og rotasjon med tre museklikk (pivot, referanse, ny retning)', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  const before = await worldToPage(page, 0, 0);
+  await page.mouse.move(300, 300);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(340, 280, { steps: 4 });
+  await page.mouse.up({ button: 'middle' });
+  const moved = await worldToPage(page, 0, 0);
+  expect(Math.round(moved.x - before.x)).toBe(40);
+  expect(Math.round(moved.y - before.y)).toBe(-20);
+
+  await selectTool(page, 'rotate');
+  await clickWorld(page, 0, 0); // rotasjonspunkt
+  await clickWorld(page, 10, 0); // referanseretning
+  await clickWorld(page, 0, 10); // ny retning → +90°
+  await selectTool(page, 'select');
+  await page.getByTestId('object-track-001').click();
+  await expect(field(page, 'prop-heading')).toHaveValue('90,0000');
+  await expect(page.getByTestId('prop-end')).toHaveText('0,000 / 20,000');
+  expect(errors).toEqual([]);
+});
+
+test('smal skjerm: layout bryter om uten horisontal sidescroll', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 800 });
+  await openApp(page);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+  await page.screenshot({
+    path: '/tmp/claude-1000/-home-glenn-Dokumenter-Prosjekt-RailCAD/81375bdf-17de-45c0-b9c7-abd774ad38b0/scratchpad/narrow.png',
+  });
 });

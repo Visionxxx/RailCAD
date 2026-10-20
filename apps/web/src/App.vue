@@ -27,12 +27,21 @@ watchEffect(() => {
 });
 
 const byShortcut = new Map(
-  (Object.entries(TOOL_SHORTCUTS) as Array<[ToolId, string]>).map(([id, key]) => [key.toLowerCase(), id]),
+  (Object.entries(TOOL_SHORTCUTS) as Array<[ToolId, string]>).map(([id, key]) => [
+    key.toLowerCase(),
+    id,
+  ]),
 );
 
 function typing(e: KeyboardEvent) {
   const el = e.target as HTMLElement | null;
-  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  return (
+    !!el &&
+    (el.tagName === 'INPUT' ||
+      el.tagName === 'TEXTAREA' ||
+      el.tagName === 'SELECT' ||
+      el.isContentEditable)
+  );
 }
 
 function onKeyDown(e: KeyboardEvent) {

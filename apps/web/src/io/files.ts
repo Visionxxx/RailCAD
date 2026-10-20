@@ -17,7 +17,10 @@ export function parseProjectText(text: string): OpenResult {
 
 export async function readProjectFile(file: File): Promise<OpenResult> {
   if (file.size > MAX_FILE_BYTES) {
-    return { ok: false, errors: [`Filen er for stor (${Math.round(file.size / 1e6)} MB, maks 50 MB).`] };
+    return {
+      ok: false,
+      errors: [`Filen er for stor (${Math.round(file.size / 1e6)} MB, maks 50 MB).`],
+    };
   }
   return parseProjectText(await file.text());
 }

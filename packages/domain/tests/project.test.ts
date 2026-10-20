@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  createEmptyProject, loadProject, nextId, serializeProject, validateGeometry, validateProject,
+  createEmptyProject,
+  loadProject,
+  nextId,
+  serializeProject,
+  validateGeometry,
+  validateProject,
   type RailProject,
 } from '../src';
 
@@ -8,9 +13,21 @@ const demo = (): RailProject => ({
   schemaVersion: '0.1.0',
   project: { id: 'p', name: 'Demo', units: 'm', coordinateSystem: { type: 'local_xy' } },
   objects: [
-    { id: 'track-001', type: 'track_segment', geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: 140 } },
-    { id: 'track-002', type: 'track_segment', geometry: { kind: 'arc', start: [0, 10], headingRad: 0, signedRadiusM: 300, sweepRad: 0.15 } },
-    { id: 'dim-001', type: 'dimension', dimension: { kind: 'length', targetId: 'track-001', offsetM: 2 } },
+    {
+      id: 'track-001',
+      type: 'track_segment',
+      geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: 140 },
+    },
+    {
+      id: 'track-002',
+      type: 'track_segment',
+      geometry: { kind: 'arc', start: [0, 10], headingRad: 0, signedRadiusM: 300, sweepRad: 0.15 },
+    },
+    {
+      id: 'dim-001',
+      type: 'dimension',
+      dimension: { kind: 'length', targetId: 'track-001', offsetM: 2 },
+    },
   ],
   connections: [],
 });
@@ -39,7 +56,15 @@ describe('prosjektvalidering', () => {
     ['duplisert ID', (p: any) => (p.objects[1].id = 'track-001'), 'duplikat'],
     ['mål mot ukjent spor', (p: any) => (p.objects[2].dimension.targetId = 'nope'), 'ukjent'],
     ['tekst i stedet for tall', (p: any) => (p.objects[0].geometry.lengthM = '140'), 'lengthM'],
-    ['kobling til ukjent objekt', (p: any) => p.connections.push({ a: { objectId: 'x', port: 'start' }, b: { objectId: 'track-001', port: 'end' } }), 'connections'],
+    [
+      'kobling til ukjent objekt',
+      (p: any) =>
+        p.connections.push({
+          a: { objectId: 'x', port: 'start' },
+          b: { objectId: 'track-001', port: 'end' },
+        }),
+      'connections',
+    ],
   ])('avviser: %s', (_name, mutate, needle) => {
     const p: any = demo();
     mutate(p);
@@ -58,9 +83,21 @@ describe('prosjektvalidering', () => {
 
 describe('geometriinvarianter og ID-er', () => {
   it('validerer enkeltgeometrier', () => {
-    expect(validateGeometry({ kind: 'line', start: [0, 0], headingRad: 0, lengthM: 1 })).toEqual([]);
-    expect(validateGeometry({ kind: 'line', start: [0, 0], headingRad: NaN, lengthM: 1 })).not.toEqual([]);
-    expect(validateGeometry({ kind: 'arc', start: [0, 0], headingRad: 0, signedRadiusM: -50, sweepRad: 1 })).toEqual([]);
+    expect(validateGeometry({ kind: 'line', start: [0, 0], headingRad: 0, lengthM: 1 })).toEqual(
+      [],
+    );
+    expect(
+      validateGeometry({ kind: 'line', start: [0, 0], headingRad: NaN, lengthM: 1 }),
+    ).not.toEqual([]);
+    expect(
+      validateGeometry({
+        kind: 'arc',
+        start: [0, 0],
+        headingRad: 0,
+        signedRadiusM: -50,
+        sweepRad: 1,
+      }),
+    ).toEqual([]);
   });
 
   it('genererer deterministiske, unike ID-er', () => {

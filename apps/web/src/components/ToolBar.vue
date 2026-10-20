@@ -7,14 +7,30 @@ const ctrl = useTools();
 // SVG-baner (24×24) – enkle, lesbare symboler for hvert verktøy.
 const tools: Array<{ id: ToolId; label: string; paths: string[]; gap?: boolean }> = [
   { id: 'select', label: 'Marker', paths: ['M5 3l12 8-5.5 1.2L9 18z'] },
-  { id: 'pan', label: 'Panorer', paths: ['M12 3v18M3 12h18M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5'], gap: true },
+  {
+    id: 'pan',
+    label: 'Panorer',
+    paths: [
+      'M12 3v18M3 12h18M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5',
+    ],
+    gap: true,
+  },
   { id: 'line', label: 'Rett spor', paths: ['M4 19L20 5', 'M4 19h.01M20 5h.01'] },
   { id: 'arc', label: 'Sirkelkurve', paths: ['M4 20C4 11 11 4 20 4'], gap: false },
   { id: 'parallel', label: 'Parallelt spor', paths: ['M3 9h18M3 15h18'] },
   { id: 'rotate', label: 'Roter', paths: ['M20 12a8 8 0 1 1-2.3-5.7', 'M20 4v4h-4'], gap: true },
-  { id: 'measure-length', label: 'Mål lengde', paths: ['M3 12h18M3 8v8M21 8v8M7 12l2-2M7 12l2 2M17 12l-2-2M17 12l-2 2'] },
+  {
+    id: 'measure-length',
+    label: 'Mål lengde',
+    paths: ['M3 12h18M3 8v8M21 8v8M7 12l2-2M7 12l2 2M17 12l-2-2M17 12l-2 2'],
+  },
   { id: 'measure-distance', label: 'Mål avstand', paths: ['M5 19L19 5', 'M5 15v4h4M19 9V5h-4'] },
-  { id: 'delete', label: 'Slett', paths: ['M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13M10 11v6M14 11v6'], gap: true },
+  {
+    id: 'delete',
+    label: 'Slett',
+    paths: ['M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13M10 11v6M14 11v6'],
+    gap: true,
+  },
 ];
 </script>
 
@@ -29,7 +45,9 @@ const tools: Array<{ id: ToolId; label: string; paths: string[]; gap?: boolean }
         :data-testid="`tool-${t.id}`"
         @click="ctrl.setTool(t.id)"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path v-for="(d, i) in t.paths" :key="i" :d="d" /></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path v-for="(d, i) in t.paths" :key="i" :d="d" />
+        </svg>
         <span class="key" aria-hidden="true">{{ TOOL_SHORTCUTS[t.id] }}</span>
       </button>
     </template>

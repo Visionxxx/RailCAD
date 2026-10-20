@@ -1,6 +1,13 @@
 import {
-  idPrefix, isDimension, isTrack, nextId,
-  type Connection, type DimensionSpec, type RailObject, type TrackGeometry, type Vec2,
+  idPrefix,
+  isDimension,
+  isTrack,
+  nextId,
+  type Connection,
+  type DimensionSpec,
+  type RailObject,
+  type TrackGeometry,
+  type Vec2,
 } from '@railcad/domain';
 import type { GeometryEngine } from '@railcad/geometry-api';
 import type { Patch } from './patch';
@@ -11,7 +18,10 @@ export function createTrack(
   objects: readonly RailObject[],
   geometry: TrackGeometry,
 ): { patch: Patch; id: string } {
-  const id = nextId(idPrefix('track_segment'), objects.map((o) => o.id));
+  const id = nextId(
+    idPrefix('track_segment'),
+    objects.map((o) => o.id),
+  );
   const object: RailObject = { id, type: 'track_segment', geometry };
   return {
     id,
@@ -26,11 +36,17 @@ export function createDimension(
   objects: readonly RailObject[],
   dimension: DimensionSpec,
 ): { patch: Patch; id: string } {
-  const id = nextId(idPrefix('dimension'), objects.map((o) => o.id));
+  const id = nextId(
+    idPrefix('dimension'),
+    objects.map((o) => o.id),
+  );
   const object: RailObject = { id, type: 'dimension', dimension };
   return {
     id,
-    patch: { label: 'Nytt mål', objects: { [id]: { before: null, after: object, index: objects.length } } },
+    patch: {
+      label: 'Nytt mål',
+      objects: { [id]: { before: null, after: object, index: objects.length } },
+    },
   };
 }
 
@@ -87,7 +103,8 @@ export function transformObjects(
   const movePoint = (p: Vec2): Vec2 =>
     op.type === 'move'
       ? [p[0] + op.dx, p[1] + op.dy]
-      : engine.rotate({ kind: 'line', start: p, headingRad: 0, lengthM: 1 }, op.pivot, op.angleRad).start;
+      : engine.rotate({ kind: 'line', start: p, headingRad: 0, lengthM: 1 }, op.pivot, op.angleRad)
+          .start;
   const replacements = new Map<string, RailObject>();
   for (const o of objects) {
     if (!ids.has(o.id)) continue;

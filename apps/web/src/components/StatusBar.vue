@@ -33,6 +33,8 @@ const cursorText = computed(() =>
         {{ SNAP_LABELS[k] }}
       </button>
     </span>
-    <span class="disclaimer hide-sm" title="Regelverkskontroll er ikke implementert">Skisse – ikke regelverkskontrollert</span>
+    <span class="disclaimer hide-sm" title="Regelverkskontroll er ikke implementert"
+      >Skisse – ikke regelverkskontrollert</span
+    >
   </footer>
 </template>

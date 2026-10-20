@@ -22,7 +22,8 @@ export function useActions() {
 
   function showOpenErrors(result: Extract<OpenResult, { ok: false }>) {
     const shown = result.errors.slice(0, 12);
-    if (result.errors.length > shown.length) shown.push(`… og ${result.errors.length - shown.length} til`);
+    if (result.errors.length > shown.length)
+      shown.push(`… og ${result.errors.length - shown.length} til`);
     ui.showDialog({ title: 'Kunne ikke åpne prosjektet', lines: shown });
   }
 

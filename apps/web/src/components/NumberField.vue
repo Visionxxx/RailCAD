@@ -53,7 +53,9 @@ function revert() {
 
 <template>
   <div class="field">
-    <label :for="id">{{ label }}<template v-if="unit"> ({{ unit }})</template></label>
+    <label :for="id"
+      >{{ label }}<template v-if="unit"> ({{ unit }})</template></label
+    >
     <input
       :id="id"
       v-model="text"

@@ -55,7 +55,12 @@ export class SelectTool extends Tool {
     }
     if (!project.selection.includes(hit.id)) project.select([hit.id]);
     const ids = [...project.selection];
-    this.mode = { kind: 'pending', screen: p.screen, base: this.basePoint(hit.id, hit.point, view.pickToleranceM), ids };
+    this.mode = {
+      kind: 'pending',
+      screen: p.screen,
+      base: this.basePoint(hit.id, hit.point, view.pickToleranceM),
+      ids,
+    };
     this.snapExclude = new Set(ids);
   }
 
@@ -68,7 +73,8 @@ export class SelectTool extends Tool {
       return;
     }
     if (m.kind === 'pending') {
-      if (Math.hypot(p.screen[0] - m.screen[0], p.screen[1] - m.screen[1]) < DRAG_THRESHOLD_PX) return;
+      if (Math.hypot(p.screen[0] - m.screen[0], p.screen[1] - m.screen[1]) < DRAG_THRESHOLD_PX)
+        return;
       this.mode = { kind: 'moving', base: m.base, ids: m.ids, delta: [0, 0] };
     }
     if (this.mode.kind === 'moving') {
@@ -79,7 +85,10 @@ export class SelectTool extends Tool {
       const ghosts: Ghost[] = [];
       for (const o of this.env.project.objects) {
         if (ids.has(o.id) && isTrack(o)) {
-          ghosts.push({ geometry: this.env.engine.translate(o.geometry, delta[0], delta[1]), valid: true });
+          ghosts.push({
+            geometry: this.env.engine.translate(o.geometry, delta[0], delta[1]),
+            valid: true,
+          });
         }
       }
       this.env.setPreview({
@@ -105,10 +114,16 @@ export class SelectTool extends Tool {
       const [dx, dy] = m.delta;
       if (dx !== 0 || dy !== 0) {
         const patch = transformObjects(
-          this.env.project.objects, new Set(m.ids), this.env.engine, { type: 'move', dx, dy }, 'Flytt',
+          this.env.project.objects,
+          new Set(m.ids),
+          this.env.engine,
+          { type: 'move', dx, dy },
+          'Flytt',
         );
         if (!this.env.project.execute(patch)) {
-          this.env.ui.notify('Lengdemål følger sporet og kan ikke flyttes alene – bruk Forskyvning i egenskapspanelet.');
+          this.env.ui.notify(
+            'Lengdemål følger sporet og kan ikke flyttes alene – bruk Forskyvning i egenskapspanelet.',
+          );
         }
       }
     } else if (m.kind === 'grip') {
@@ -116,11 +131,18 @@ export class SelectTool extends Tool {
         const o = this.env.project.byId.get(m.id);
         if (o && isTrack(o)) {
           this.env.project.execute(
-            replaceObjects(this.env.project.objects, new Map([[o.id, { ...o, geometry: m.next }]]), 'Rediger endepunkt'),
+            replaceObjects(
+              this.env.project.objects,
+              new Map([[o.id, { ...o, geometry: m.next }]]),
+              'Rediger endepunkt',
+            ),
           );
         }
       } else {
-        this.env.ui.notify('Endepunktet ga ugyldig geometri (for kort spor eller ugyldig bue).', 'error');
+        this.env.ui.notify(
+          'Endepunktet ga ugyldig geometri (for kort spor eller ugyldig bue).',
+          'error',
+        );
       }
     }
     this.reset();
@@ -201,4 +223,3 @@ export class SelectTool extends Tool {
     return { ...g, sweepRad: sweep };
   }
 }
-

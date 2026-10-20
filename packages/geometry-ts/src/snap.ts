@@ -42,8 +42,10 @@ export function snap(tracks: Iterable<TrackRef>, q: SnapQuery): SnapResult | nul
     if (g.kind === 'arc' && on.has('center')) consider('center', arcCenter(g), t.id);
     const b = bounds(g);
     if (
-      q.cursor[0] < b.minX - tol || q.cursor[0] > b.maxX + tol ||
-      q.cursor[1] < b.minY - tol || q.cursor[1] > b.maxY + tol
+      q.cursor[0] < b.minX - tol ||
+      q.cursor[0] > b.maxX + tol ||
+      q.cursor[1] < b.minY - tol ||
+      q.cursor[1] > b.maxY + tol
     ) {
       continue;
     }
