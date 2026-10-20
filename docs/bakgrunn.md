@@ -31,10 +31,11 @@ Bakgrunner lagres i prosjektfilen (`backgrounds`, valgfritt felt – filer uten 
 - Ødelagte entiteter (f.eks. LINE uten sluttpunkt) hoppes over og rapporteres; resten leses.
 - Blokker utvides med grense (maks 400 000 elementer og et arbeidstak) – «DXF-bomber» med nøstede blokker eller enorme matriser avvises med klar feilmelding i stedet for å fryse fanen.
 - Entiteter på lag `0` i en blokk arver lagnavnet til INSERT-en. Matrisemellomrom måles i INSERT-ens rotasjonsramme uten skalering.
-- Speilede buer (ekstrusjon 0,0,−1) speiles riktig. (Speilede sirkler/polylinjer med negativ ekstrusjon støttes ikke ennå.)
+- Speilede entiteter (ekstrusjon 0,0,−1) speiles riktig: buer, sirkler og polylinjer.
+- PDF med flere sider: du velger side ved import.
 
 ## Begrensninger
 
-- Bare side 1 av en PDF. Ingen georeferering (koordinatsystem/EPSG) – bakgrunnen plasseres i det lokale XY-systemet.
+- Én PDF-side per bakgrunn (importer på nytt for flere). Ingen georeferering (koordinatsystem/EPSG) – bakgrunnen plasseres i det lokale XY-systemet.
 - DXF: ingen HATCH-fyll, DIMENSION, bilder eller 3D; tekst gjengis enkelt (en font, ingen justering).
 - Veldig store DXF-er (> 400 000 elementer) avvises. Store bilder øker prosjektfilens størrelse.

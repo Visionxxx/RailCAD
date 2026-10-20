@@ -31,3 +31,5 @@ JSON, lagret som `*.railcad.json`. Alle lengder i meter, alle vinkler i radianer
 **Validering ved åpning** (`@railcad/domain` → `loadProject`): struktur og talltyper (zod), geometriske invarianter (positiv lengde, radius ≠ 0, sveip i (0, 2π)), unike ID-er, målreferanser og koblingsreferanser. Ukjente felt **bevares**; ukjent `schemaVersion` avvises med forklaring. Migreringer legges i `migrate.ts`.
 
 **Bakgrunner** (valgfritt toppnivåfelt `backgrounds`, se `docs/bakgrunn.md`): `{kind:"dxf"|"image", id, name, visible, opacity, placement:{origin, scaleMPerUnit, rotationRad, scaleConfirmed}, …}`. Felt for DXF: `layers`, `prims`, `sourceUnits`, `extents`. Felt for bilde: `source`, `dataUrl`, `widthPx`, `heightPx`. Feltet er additivt – `schemaVersion` er uendret.
+
+**Lås og lag** (valgfrie felt): `locked: true` på et objekt, `layerId` på et objekt og toppnivåfeltet `layers: [{id, name, visible, locked}]` (standardlaget har id `standard` og er implisitt – listen skrives bare når lagoppsettet avviker fra standard). Objekter på skjulte lag tegnes ikke og kan ikke velges eller snappes mot; låste objekter/lag kan ikke endres.

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useActions } from '../actions';
 import { useProjectStore } from '../stores/project';
 import { useUiStore } from '../stores/ui';
@@ -85,6 +85,28 @@ const menus = computed<MenuDef[]>(() => [
       },
       { label: '', separator: true },
       {
+        label: 'Kopier',
+        kbd: 'Ctrl+C',
+        run: actions.copy,
+        disabled: !project.selection.length,
+        testid: 'menu-copy',
+      },
+      {
+        label: 'Lim inn',
+        kbd: 'Ctrl+V',
+        run: actions.paste,
+        disabled: !project.clipboard,
+        testid: 'menu-paste',
+      },
+      {
+        label: 'Dupliser',
+        kbd: 'Ctrl+D',
+        run: actions.duplicate,
+        disabled: !project.selection.length,
+        testid: 'menu-duplicate',
+      },
+      { label: '', separator: true },
+      {
         label: 'Slett valgte',
         kbd: 'Del',
         run: () => project.deleteSelection(),
@@ -125,6 +147,22 @@ const menus = computed<MenuDef[]>(() => [
     ],
   },
 ]);
+
+const renaming = ref(false);
+const nameText = ref('');
+const nameInput = ref<HTMLInputElement | null>(null);
+async function startRename() {
+  nameText.value = project.meta.name;
+  renaming.value = true;
+  await nextTick();
+  nameInput.value?.select();
+}
+function commitName() {
+  if (!renaming.value) return;
+  renaming.value = false;
+  const name = nameText.value.trim();
+  if (name && name !== project.meta.name) project.updateMeta({ name });
+}
 
 const open = ref<string | null>(null);
 const root = ref<HTMLElement | null>(null);
@@ -209,7 +247,23 @@ function choose(item: Item) {
       </button>
     </span>
     <span class="project-title" data-testid="project-title">
-      <b>{{ project.meta.name }}</b
+      <input
+        v-if="renaming"
+        ref="nameInput"
+        v-model="nameText"
+        class="title-input"
+        aria-label="Prosjektnavn"
+        data-testid="project-title-input"
+        @keydown.enter.prevent="commitName"
+        @keydown.esc.stop.prevent="renaming = false"
+        @blur="commitName"
+      />
+      <b
+        v-else
+        title="Dobbeltklikk for å endre navn"
+        data-testid="project-title-name"
+        @dblclick="startRename"
+        >{{ project.meta.name }}</b
       ><span v-if="project.dirty" title="Ulagrede endringer"> •</span>
     </span>
   </header>

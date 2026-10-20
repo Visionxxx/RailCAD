@@ -530,3 +530,109 @@ describe('sporkryss i prosjektstore', () => {
     expect(store.crossingIssues.some((x) => x.kind === 'crossing')).toBe(true);
   });
 });
+
+describe('lås, lag og kopiér/lim inn', () => {
+  let store: ReturnType<typeof useProjectStore>;
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+
+  it('låste objekter flyttes og slettes ikke, men andre i samme valg gjør', () => {
+    store.addTrack(line(0, 10)); // track-001
+    store.addTrack(line(5, 10)); // track-002
+    store.setLocked(['track-001'], true);
+    expect(store.lockedIds.has('track-001')).toBe(true);
+    store.execute(
+      transformObjects(
+        store.objects,
+        new Set(['track-001', 'track-002']),
+        engine,
+        { type: 'move', dx: 1, dy: 1 },
+        'Flytt',
+        store.lockedIds,
+      ),
+    );
+    expect((store.byId.get('track-001') as any).geometry.start).toEqual([0, 0]);
+    expect((store.byId.get('track-002') as any).geometry.start).toEqual([1, 6]);
+    expect(store.deleteIds(['track-001'])).toBe(false);
+    expect(store.objects).toHaveLength(2);
+    expect(store.deleteIds(['track-001', 'track-002'])).toBe(true); // bare det ulåste slettes
+    expect(store.objects.map((o) => o.id)).toEqual(['track-001']);
+    store.setLocked(['track-001'], false);
+    expect('locked' in store.byId.get('track-001')!).toBe(false);
+  });
+
+  it('lag: nye objekter havner på aktivt lag; skjulte lag filtreres; låste lag låser; sletting flytter til standard', () => {
+    const lag = store.addLayer('Verksted')!;
+    expect(store.activeLayerId).toBe(lag);
+    store.addTrack(line(0, 10)); // på «Verksted»
+    store.activeLayerId = 'standard';
+    store.addTrack(line(5, 10)); // standard
+    expect((store.byId.get('track-001') as any).layerId).toBe(lag);
+    expect((store.byId.get('track-002') as any).layerId).toBeUndefined();
+
+    store.updateLayer(lag, (l) => ({ ...l, visible: false }), 'Skjul lag');
+    expect(store.hiddenIds.has('track-001')).toBe(true);
+    expect(store.visibleObjects.map((o) => o.id)).toEqual(['track-002']);
+    expect(store.trackRefs.map((r) => r.id)).toEqual(['track-002']); // ikke snappbar
+    store.updateLayer(lag, (l) => ({ ...l, visible: true, locked: true }), 'Lås lag');
+    expect(store.lockedIds.has('track-001')).toBe(true);
+
+    expect(store.removeLayer(lag)).toBe(true);
+    expect((store.byId.get('track-001') as any).layerId).toBeUndefined();
+    store.undo(); // laget og tilordningen tilbake i ett steg
+    expect((store.byId.get('track-001') as any).layerId).toBe(lag);
+    expect(store.removeLayer('standard')).toBe(false);
+  });
+
+  it('skjulte objekter fjernes fra valget; lag lagres bare når de avviker fra standardoppsettet', () => {
+    expect(store.toProject().layers).toBeUndefined();
+    const lag = store.addLayer('A')!;
+    store.addTrack(line(0, 10));
+    store.updateLayer(lag, (l) => ({ ...l, visible: false }), 'Skjul lag');
+    expect(store.selection).toEqual([]);
+    const saved = store.toProject();
+    expect(saved.layers).toHaveLength(2);
+    store.reset();
+    store.load(saved);
+    expect(store.layers.map((l) => l.name)).toEqual(['Standard', 'A']);
+    expect(store.hiddenIds.has('track-001')).toBe(true);
+  });
+
+  it('kopiér/lim inn: nye ID-er, forskyvning, interne koblinger og mål følger med; mål uten spor utelates', () => {
+    store.addTrack(line(0, 10)); // track-001
+    store.addTrackFromPort(
+      { kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 },
+      { objectId: 'track-001', port: 'end' },
+    ); // track-002 koblet
+    store.addDimension({ kind: 'length', targetId: 'track-002', offsetM: 2 }); // dim-001
+    store.addDimension({ kind: 'distance', a: [0, 0], b: [10, 0], offsetM: 1 }); // dim-002
+    store.select(['track-001', 'track-002', 'dim-001', 'dim-002']);
+    expect(store.copySelection()).toBe(4);
+    const ids = store.pasteClipboard([100, 50]);
+    expect(ids).toEqual(['track-003', 'track-004', 'dim-003', 'dim-004']);
+    const t3 = store.byId.get('track-003') as any;
+    const t4 = store.byId.get('track-004') as any;
+    // midten av de kopierte objektene havner i (100, 50)
+    expect(t4.geometry.start[0] - t3.geometry.start[0]).toBe(10);
+    expect((store.byId.get('dim-003') as any).dimension.targetId).toBe('track-004');
+    expect(store.connections).toHaveLength(2); // original + kopi
+    expect(store.connections[1]).toEqual({
+      a: { objectId: 'track-003', port: 'end' },
+      b: { objectId: 'track-004', port: 'start' },
+    });
+    expect(store.connectionResults.every((r) => r.status === 'ok')).toBe(true);
+    store.undo(); // alt limt inn som ÉN handling
+    expect(store.objects).toHaveLength(4);
+    expect(store.connections).toHaveLength(1);
+
+    // lengdemål uten kopiert spor tas ikke med; lim inn uten posisjon forskyver 5 m; låsing arves ikke
+    store.setLocked(['track-001'], true);
+    store.select(['track-001', 'dim-001']);
+    expect(store.copySelection()).toBe(1);
+    const [id] = store.pasteClipboard();
+    expect((store.byId.get(id!) as any).geometry.start).toEqual([5, 5]);
+    expect(store.byId.get(id!)!.locked).toBeUndefined();
+  });
+});

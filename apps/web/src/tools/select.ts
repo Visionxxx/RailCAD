@@ -56,7 +56,7 @@ export class SelectTool extends Tool {
       return;
     }
 
-    const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM);
+    const hit = pickObject(project.visibleObjects, project.byId, p.world, view.pickToleranceM);
     if (!hit) {
       // Tom flate: start valgboks. Et rent klikk (uten dra) fjerner valget i `up`.
       this.mode = { kind: 'box', screen: p.screen, a: p.world, shift: p.shift, moved: false };
@@ -67,7 +67,14 @@ export class SelectTool extends Tool {
       return;
     }
     if (!project.selection.includes(hit.id)) project.select([hit.id]);
-    const ids = [...project.selection];
+    // Låste objekter kan velges, men ikke flyttes.
+    const ids = project.selection.filter((id) => !project.lockedIds.has(id));
+    if (!ids.length) {
+      this.env.ui.notify(
+        'Objektet er låst. Lås det opp i egenskapspanelet (eller på laget) for å flytte det.',
+      );
+      return;
+    }
     this.mode = {
       kind: 'pending',
       screen: p.screen,
@@ -81,7 +88,7 @@ export class SelectTool extends Tool {
     const m = this.mode;
     if (m.kind === 'idle') {
       const { project, view } = this.env;
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM);
+      const hit = pickObject(project.visibleObjects, project.byId, p.world, view.pickToleranceM);
       this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id } : null);
       return;
     }
@@ -143,7 +150,13 @@ export class SelectTool extends Tool {
       const { project, engine } = this.env;
       if (m.moved) {
         const rect = rectFromCorners(m.a, p.world);
-        const hit = objectsInRect(project.objects, project.byId, rect, p.world[0] < m.a[0], engine);
+        const hit = objectsInRect(
+          project.visibleObjects,
+          project.byId,
+          rect,
+          p.world[0] < m.a[0],
+          engine,
+        );
         project.select(m.shift ? [...new Set([...project.selection, ...hit])] : hit);
       } else if (!m.shift) {
         project.select([]);
@@ -160,6 +173,7 @@ export class SelectTool extends Tool {
           this.env.engine,
           { type: 'move', dx, dy },
           'Flytt',
+          this.env.project.lockedIds,
         );
         if (!this.env.project.execute(patch)) {
           this.env.ui.notify(
@@ -228,7 +242,7 @@ export class SelectTool extends Tool {
     const sel = this.env.project.selectedObjects;
     if (sel.length !== 1) return null;
     const o = sel[0] as RailObject;
-    if (!isTrack(o)) return null;
+    if (!isTrack(o) || this.env.project.lockedIds.has(o.id)) return null; // låste spor har ingen grep
     const end = this.env.engine.endPose(o.geometry).point;
     const dEnd = Math.hypot(end[0] - world[0], end[1] - world[1]);
     const dStart = Math.hypot(o.geometry.start[0] - world[0], o.geometry.start[1] - world[1]);

@@ -277,3 +277,26 @@ describe('sporkryss i prosjektfil', () => {
     expect(!r.ok && r.errors.join()).toContain('sporkryss');
   });
 });
+
+describe('lag og låsing i prosjektfil', () => {
+  it('godtar lag, locked og layerId; avviser ukjent lag og duplikat', () => {
+    const p: any = demo();
+    p.layers = [
+      { id: 'standard', name: 'Standard', visible: true, locked: false },
+      { id: 'lag-001', name: 'A', visible: false, locked: true },
+    ];
+    p.objects[0].layerId = 'lag-001';
+    p.objects[0].locked = true;
+    expect(validateProject(p).ok).toBe(true);
+    const bad: any = demo();
+    bad.objects[0].layerId = 'finnes-ikke';
+    const r = validateProject(bad);
+    expect(!r.ok && r.errors.join()).toContain('ukjent lag');
+    const dup: any = demo();
+    dup.layers = [
+      { id: 'x', name: 'A', visible: true, locked: false },
+      { id: 'x', name: 'B', visible: true, locked: false },
+    ];
+    expect(validateProject(dup).ok).toBe(false);
+  });
+});

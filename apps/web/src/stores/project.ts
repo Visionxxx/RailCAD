@@ -2,6 +2,9 @@ import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import {
   createEmptyProject,
+  DEFAULT_LAYER_ID,
+  nextId,
+  type ProjectLayer,
   type Background,
   isTrack,
   isTurnout,
@@ -25,6 +28,14 @@ import {
 import { applyPatch, type Patch } from '../commands/patch';
 import {
   addBackgroundPatch,
+  addLayerPatch,
+  copyObjects,
+  pasteObjects,
+  removeLayerPatch,
+  setLayerPatch,
+  setLockedPatch,
+  updateLayerPatch,
+  type Clipboard,
   removeBackgroundPatch,
   updateBackgroundPatch,
   connectMany,
@@ -40,11 +51,27 @@ import {
   replaceObjects,
 } from '../commands/builders';
 import { geometryEngine as engine } from '../engine';
+import { useUiStore } from './ui';
 import { cachedCrossingLayout } from '../rendering/crossings';
+import { objectBounds } from '../rendering/objectBounds';
 import { cachedTurnoutLayout } from '../rendering/turnouts';
 
 /** Spesifikasjonen krever minst 50 reverserbare handlinger. */
 export const HISTORY_LIMIT = 200;
+
+const defaultLayer = (): ProjectLayer => ({
+  id: DEFAULT_LAYER_ID,
+  name: 'Standard',
+  visible: true,
+  locked: false,
+});
+
+/** Sørger for at standardlaget finnes (først i listen). */
+function normalizeLayers(list: readonly ProjectLayer[] | undefined): ProjectLayer[] {
+  const rest = (list ?? []).filter((l) => l.id !== DEFAULT_LAYER_ID);
+  const def = (list ?? []).find((l) => l.id === DEFAULT_LAYER_ID) ?? defaultLayer();
+  return [def, ...rest];
+}
 
 export const useProjectStore = defineStore('project', () => {
   const meta = ref<ProjectMeta>(createEmptyProject().project);
@@ -52,6 +79,10 @@ export const useProjectStore = defineStore('project', () => {
   const connections = shallowRef<Connection[]>([]);
   const backgrounds = shallowRef<Background[]>([]);
   const crossingAcks = shallowRef<string[]>([]);
+  const layers = shallowRef<ProjectLayer[]>([defaultLayer()]);
+  /** Nye objekter legges på dette laget. */
+  const activeLayerId = ref(DEFAULT_LAYER_ID);
+  const clipboard = shallowRef<Clipboard | null>(null);
   const selection = shallowRef<string[]>([]);
   const undoStack = shallowRef<Patch[]>([]);
   const redoStack = shallowRef<Patch[]>([]);
@@ -70,10 +101,35 @@ export const useProjectStore = defineStore('project', () => {
   const loadCount = ref(0);
 
   const byId = computed(() => new Map(objects.value.map((o) => [o.id, o] as const)));
+  const layerById = computed(() => new Map(layers.value.map((l) => [l.id, l] as const)));
+  /** Objekter på skjulte lag: ikke tegnet, ikke valgbare, ikke snappbare. */
+  const hiddenIds = computed(
+    () =>
+      new Set(
+        objects.value
+          .filter((o) => layerById.value.get(o.layerId ?? DEFAULT_LAYER_ID)?.visible === false)
+          .map((o) => o.id),
+      ),
+  );
+  /** Objekter som ikke kan endres: egen lås eller låst lag. */
+  const lockedIds = computed(
+    () =>
+      new Set(
+        objects.value
+          .filter(
+            (o) => o.locked || layerById.value.get(o.layerId ?? DEFAULT_LAYER_ID)?.locked === true,
+          )
+          .map((o) => o.id),
+      ),
+  );
+  /** Objekter som kan velges/plukkes (ikke på skjulte lag). */
+  const visibleObjects = computed(() =>
+    hiddenIds.value.size ? objects.value.filter((o) => !hiddenIds.value.has(o.id)) : objects.value,
+  );
   /** Alle akser som kan snappes mot: spor og sporvekslenes segmenter (`<id>#<n>`). */
   const trackRefs = computed<TrackRef[]>(() => {
     const out: TrackRef[] = [];
-    for (const o of objects.value) {
+    for (const o of visibleObjects.value) {
       if (isTrack(o)) out.push({ id: o.id, geometry: o.geometry });
       else if (isTurnout(o)) {
         cachedTurnoutLayout(o)?.segments.forEach((g, i) =>
@@ -175,6 +231,11 @@ export const useProjectStore = defineStore('project', () => {
   const openCrossingCount = computed(
     () => crossingIssues.value.filter((x) => !x.acknowledged).length,
   );
+  /** Skrives bare i filen når lagene avviker fra standardoppsettet (en synlig, ulåst «Standard»). */
+  function layersCustomised(): boolean {
+    const d = layers.value[0];
+    return layers.value.length > 1 || !d || !d.visible || d.locked || d.name !== 'Standard';
+  }
   /** Bekreftelser som fortsatt gjelder to eksisterende objekter. */
   function liveAcks(): string[] {
     return crossingAcks.value.filter((k) => k.split('|').every((id) => byId.value.has(id)));
@@ -182,7 +243,7 @@ export const useProjectStore = defineStore('project', () => {
   const lastRedoLabel = computed(() => redoStack.value.at(-1)?.label ?? '');
 
   function pruneSelection() {
-    const kept = selection.value.filter((id) => byId.value.has(id));
+    const kept = selection.value.filter((id) => byId.value.has(id) && !hiddenIds.value.has(id));
     if (kept.length !== selection.value.length) selection.value = kept;
   }
 
@@ -191,11 +252,15 @@ export const useProjectStore = defineStore('project', () => {
     connections: Connection[];
     backgrounds: Background[];
     crossingAcks: string[];
+    layers: ProjectLayer[];
   }) {
     objects.value = next.objects;
     connections.value = next.connections;
     backgrounds.value = next.backgrounds;
     crossingAcks.value = next.crossingAcks;
+    layers.value = next.layers;
+    if (!layers.value.some((l) => l.id === activeLayerId.value))
+      activeLayerId.value = DEFAULT_LAYER_ID;
     revision.value++;
     pruneSelection();
   }
@@ -210,6 +275,7 @@ export const useProjectStore = defineStore('project', () => {
           connections: connections.value,
           backgrounds: backgrounds.value,
           crossingAcks: crossingAcks.value,
+          layers: layers.value,
         },
         patch,
         'do',
@@ -230,6 +296,7 @@ export const useProjectStore = defineStore('project', () => {
           connections: connections.value,
           backgrounds: backgrounds.value,
           crossingAcks: crossingAcks.value,
+          layers: layers.value,
         },
         patch,
         'undo',
@@ -250,6 +317,7 @@ export const useProjectStore = defineStore('project', () => {
           connections: connections.value,
           backgrounds: backgrounds.value,
           crossingAcks: crossingAcks.value,
+          layers: layers.value,
         },
         patch,
         'do',
@@ -269,16 +337,27 @@ export const useProjectStore = defineStore('project', () => {
       : [...selection.value, id];
   }
 
+  /** Nye objekter havner på det aktive laget. */
+  function onActiveLayer(patch: Patch): Patch {
+    if (activeLayerId.value === DEFAULT_LAYER_ID) return patch;
+    for (const e of Object.values(patch.objects)) {
+      if (e.before === null && e.after && !e.after.layerId) {
+        e.after = { ...e.after, layerId: activeLayerId.value } as RailObject;
+      }
+    }
+    return patch;
+  }
+
   function addTrack(geometry: TrackGeometry): string {
     const { patch, id } = createTrack(objects.value, geometry);
-    execute(patch);
+    execute(onActiveLayer(patch));
     selection.value = [id];
     return id;
   }
 
   function addDimension(spec: DimensionSpec): string {
     const { patch, id } = createDimension(objects.value, spec);
-    execute(patch);
+    execute(onActiveLayer(patch));
     selection.value = [id];
     return id;
   }
@@ -301,14 +380,14 @@ export const useProjectStore = defineStore('project', () => {
   /** Nytt spor fra en eksisterende port; sporet og koblingen angres samlet. */
   function addTrackFromPort(geometry: TrackGeometry, anchor: PortRef): string {
     const { patch, id } = createTrackConnected(objects.value, connections.value, geometry, anchor);
-    execute(patch);
+    execute(onActiveLayer(patch));
     selection.value = [id];
     return id;
   }
 
   function addTurnout(placement: TurnoutPlacement, anchor?: PortRef): string {
     const { patch, id } = createTurnout(objects.value, connections.value, placement, anchor);
-    execute(patch);
+    execute(onActiveLayer(patch));
     selection.value = [id];
     return id;
   }
@@ -326,7 +405,7 @@ export const useProjectStore = defineStore('project', () => {
 
   function addCrossing(placement: CrossingPlacement, anchor?: PortRef): string {
     const { patch, id } = createCrossing(objects.value, connections.value, placement, anchor);
-    execute(patch);
+    execute(onActiveLayer(patch));
     selection.value = [id];
     return id;
   }
@@ -339,7 +418,102 @@ export const useProjectStore = defineStore('project', () => {
     return deleteIds(selection.value);
   }
   function deleteIds(ids: string[]): boolean {
-    return execute(deleteObjects(objects.value, connections.value, ids));
+    const locked = ids.filter((id) => lockedIds.value.has(id)).length;
+    const done = execute(deleteObjects(objects.value, connections.value, ids, lockedIds.value));
+    if (locked) {
+      useUiStore().notify(
+        done
+          ? `${locked} låste objekter ble ikke slettet.`
+          : locked === 1
+            ? 'Objektet er låst og kan ikke slettes. Lås det opp først.'
+            : 'Objektene er låst og kan ikke slettes. Lås dem opp først.',
+        'error',
+      );
+    }
+    return done;
+  }
+
+  /** Låser/låser opp objekter (egen lås – laget påvirkes ikke). */
+  function setLocked(ids: string[], locked: boolean): boolean {
+    return execute(setLockedPatch(objects.value, new Set(ids), locked));
+  }
+
+  function addLayer(name: string): string | null {
+    const clean = name.trim().slice(0, 60);
+    if (!clean) return null;
+    const id = nextId(
+      'lag',
+      layers.value.map((l) => l.id),
+    );
+    execute(addLayerPatch(layers.value, { id, name: clean, visible: true, locked: false }));
+    activeLayerId.value = id;
+    return id;
+  }
+  function updateLayer(id: string, change: (l: ProjectLayer) => ProjectLayer, label: string) {
+    const ok = execute(updateLayerPatch(layers.value, id, change, label));
+    pruneSelection(); // objekter på et lag som skjules kan ikke lenger være valgt
+    return ok;
+  }
+  function removeLayer(id: string): boolean {
+    const ok = execute(removeLayerPatch(layers.value, objects.value, id));
+    if (activeLayerId.value === id) activeLayerId.value = DEFAULT_LAYER_ID;
+    return ok;
+  }
+  /** Flytter objekter til et lag. Låste objekter flyttes ikke. */
+  function setLayerFor(ids: string[], layerId: string): boolean {
+    return execute(setLayerPatch(objects.value, new Set(ids), layerId, lockedIds.value));
+  }
+
+  /** Kopierer valgte objekter (og koblinger mellom dem) til utklippstavlen i programmet. */
+  function copySelection(): number {
+    const clip = copyObjects(objects.value, connections.value, new Set(selection.value));
+    clipboard.value = clip;
+    return clip?.objects.length ?? 0;
+  }
+  /**
+   * Limer inn utklippet slik at midten av objektene havner i `at` (verdenskoordinat), ellers
+   * forskjøvet 5 m. Nye ID-er; koblinger mellom de limte objektene bevares.
+   */
+  function pasteClipboard(at?: readonly [number, number]): string[] {
+    const clip = clipboard.value;
+    if (!clip) return [];
+    let delta: [number, number] = [5, 5];
+    if (at) {
+      const pts: number[][] = [];
+      for (const o of clip.objects) {
+        const b = objectBounds(o);
+        if (b) pts.push([b.minX, b.minY, b.maxX, b.maxY]);
+      }
+      if (pts.length) {
+        const cx =
+          (Math.min(...pts.map((p) => p[0] as number)) +
+            Math.max(...pts.map((p) => p[2] as number))) /
+          2;
+        const cy =
+          (Math.min(...pts.map((p) => p[1] as number)) +
+            Math.max(...pts.map((p) => p[3] as number))) /
+          2;
+        delta = [at[0] - cx, at[1] - cy];
+      }
+    }
+    const { patch, ids } = pasteObjects(
+      objects.value,
+      connections.value,
+      clip,
+      delta,
+      engine,
+      (o) => {
+        const original = o.layerId ?? DEFAULT_LAYER_ID;
+        const target = layerById.value.get(original);
+        return target ? original : activeLayerId.value;
+      },
+    );
+    if (execute(patch)) selection.value = ids;
+    return ids;
+  }
+  function duplicateSelection(): string[] {
+    if (!copySelection()) return [];
+    return pasteClipboard();
   }
 
   function updateMeta(patch: Partial<Pick<ProjectMeta, 'name' | 'description'>>) {
@@ -354,6 +528,8 @@ export const useProjectStore = defineStore('project', () => {
     connections.value = project.connections;
     backgrounds.value = project.backgrounds ?? [];
     crossingAcks.value = project.acknowledgedCrossings ?? [];
+    layers.value = normalizeLayers(project.layers);
+    activeLayerId.value = DEFAULT_LAYER_ID;
     selection.value = [];
     undoStack.value = [];
     redoStack.value = [];
@@ -378,6 +554,7 @@ export const useProjectStore = defineStore('project', () => {
       // Valgfritt felt: utelates når det ikke finnes bakgrunner (filene forblir like som før).
       ...(backgrounds.value.length ? { backgrounds: [...backgrounds.value] } : {}),
       ...(liveAcks().length ? { acknowledgedCrossings: liveAcks() } : {}),
+      ...(layersCustomised() ? { layers: [...layers.value] } : {}),
     };
   }
 
@@ -414,6 +591,21 @@ export const useProjectStore = defineStore('project', () => {
     openCrossingCount,
     crossingAcks,
     toggleCrossingAck,
+    layers,
+    activeLayerId,
+    layerById,
+    hiddenIds,
+    lockedIds,
+    visibleObjects,
+    clipboard,
+    setLocked,
+    addLayer,
+    updateLayer,
+    removeLayer,
+    setLayerFor,
+    copySelection,
+    pasteClipboard,
+    duplicateSelection,
     selectedObjects,
     dirty,
     canUndo,

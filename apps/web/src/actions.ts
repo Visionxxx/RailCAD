@@ -127,6 +127,29 @@ export function useActions() {
     }
   }
 
+  /** Kopierer valgte objekter til programmets utklippstavle. */
+  function copy() {
+    const n = project.copySelection();
+    ui.notify(n ? `Kopierte ${n} objekt${n > 1 ? 'er' : ''}.` : 'Velg objekter å kopiere først.');
+  }
+  /** Limer inn der markøren er (ellers forskjøvet 5 m). Nye ID-er; koblinger mellom de limte bevares. */
+  function paste() {
+    if (!project.clipboard) {
+      ui.notify('Utklippstavlen er tom. Kopier objekter med Ctrl+C først.');
+      return;
+    }
+    const at = viewStore.cursor ?? undefined;
+    const ids = project.pasteClipboard(at);
+    if (ids.length) ui.showTab('properties');
+  }
+  function duplicate() {
+    if (!project.selection.length) {
+      ui.notify('Velg objekter å duplisere først.');
+      return;
+    }
+    project.duplicateSelection();
+  }
+
   /** Hurtigtaster og tips (Hjelp-menyen, «?»). */
   function showHelp() {
     ui.showDialog({
@@ -135,7 +158,7 @@ export function useActions() {
         'Verktøy: V marker · H panorer · L rett spor · C sirkelkurve · P parallelt spor · T sporveksel · X sporkryss · K koble · R roter · M mål lengde · D mål avstand · E slett.',
         'Mus: hjul = zoom rundt markøren · midtknapp eller Mellomrom + dra = panorer · klikk = velg · Skift + klikk = flervalg · dra et objekt = flytt · dra et endepunkt = rediger.',
         'Valgboks: dra på tom flate. Mot høyre = objekter helt innenfor, mot venstre = alt boksen berører. Skift legger til i valget.',
-        'Tastatur: Esc avbryter · Del sletter · Ctrl+Z angre · Ctrl+Y gjør om · Ctrl+S lagre · Ctrl+O åpne · F tilpass visning · ? denne hjelpen.',
+        'Tastatur: Esc avbryter · Del sletter · Ctrl+C/V kopier og lim inn · Ctrl+D dupliser · Ctrl+Z angre · Ctrl+Y gjør om · Ctrl+S lagre · Ctrl+O åpne · F tilpass visning · ? denne hjelpen.',
         'Rett spor: hold Skift for å låse retningen til hele 15°. Alle tallfelt tar komma eller punktum; pil opp/ned justerer (Skift ×10, Alt ×0,1).',
         'Snapping slås av/på i bunnlinjen. Tegneskjemaene øverst i tegneflaten lar deg angi koordinater, retning og lengde numerisk.',
         'Husk: planene er skisser – ikke regelverkskontrollert. Sporveksler er delvis verifisert (akser avledet fra TRV-hovedmål).',
@@ -144,6 +167,9 @@ export function useActions() {
   }
 
   return {
+    copy,
+    paste,
+    duplicate,
     showHelp,
     importBackground,
     importBackgroundFrom,

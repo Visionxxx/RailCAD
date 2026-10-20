@@ -70,11 +70,13 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Sporkryss (brukerdefinert, ikke verifisert):** `domain` (`crossing`-objekt), `geometry-ts/crossing.ts`, `tools/crossing.ts`, DXF-lag `RAILCAD_SPORKRYSS`. Tester: enhet `crossing.test.ts` (4) + domene/DXF/store; e2e (3). Uten åpne norske produktmål er lengden brukerdefinert.
 
+- **Brukerforbedringer (kopiér/lim inn, lås, lag, tittelendring)** og **DXF-bakgrunn:** speilede sirkler/polylinjer, PDF-sidevalg. Tester: store (4), DXF (3), domene (1), e2e (4+1).
+
 ### Kjente åpne punkter
 
 - Sporkryss og kryssveksler mangler i biblioteket (ingen åpne måltabeller; se `docs/kryssing.md`, `docs/henvendelse-leverandor.md`).
 
 - Sporveksler venter på KO-tegninger (se `docs/henvendelse-bane-nor.md`). Tangenttoleranse for koblinger er en foreløpig testverdi.
 - Speilede sirkler/polylinjer (negativ ekstrusjon) i DXF-bakgrunn støttes ikke; bare buer.
-- Ikke implementert (ikke i kravtabellen): objektlåsing, lag-administrasjon, kopiér/lim inn, redigering av prosjektnavn direkte i tittelen.
+- Ikke implementert: sporkryss/kryssveksel med verifiserte mål, høyder.
 - Bare side 1 av PDF; ingen georeferering.

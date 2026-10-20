@@ -1,4 +1,4 @@
-import type { Background, Connection, RailObject } from '@railcad/domain';
+import type { Background, Connection, ProjectLayer, RailObject } from '@railcad/domain';
 
 /**
  * En redigering som data: hvert berørt objekt har før/etter-tilstand og posisjon i
@@ -13,6 +13,8 @@ export interface Patch {
   backgrounds?: { before: Background[]; after: Background[] };
   /** Bekreftede kryssinger (`idA|idB`). */
   crossingAcks?: { before: string[]; after: string[] };
+  /** Lagliste (inkl. standardlaget). */
+  layers?: { before: ProjectLayer[]; after: ProjectLayer[] };
 }
 
 export interface ModelState {
@@ -20,6 +22,7 @@ export interface ModelState {
   connections: Connection[];
   backgrounds: Background[];
   crossingAcks: string[];
+  layers: ProjectLayer[];
 }
 
 export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'undo'): ModelState {
@@ -58,5 +61,9 @@ export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'u
   if (patch.crossingAcks) {
     crossingAcks = direction === 'do' ? patch.crossingAcks.after : patch.crossingAcks.before;
   }
-  return { objects: result, connections, backgrounds, crossingAcks };
+  let layers = state.layers;
+  if (patch.layers) {
+    layers = direction === 'do' ? patch.layers.after : patch.layers.before;
+  }
+  return { objects: result, connections, backgrounds, crossingAcks, layers };
 }

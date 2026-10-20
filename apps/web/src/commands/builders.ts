@@ -17,6 +17,7 @@ import {
 } from '@railcad/domain';
 import type { GeometryEngine } from '@railcad/geometry-api';
 import type { Patch } from './patch';
+import { DEFAULT_LAYER_ID, type ProjectLayer } from '@railcad/domain';
 
 /** Rene funksjoner som bygger `Patch` fra gjeldende modell. Ingen tilstand, ingen Vue. */
 
@@ -78,8 +79,10 @@ export function deleteObjects(
   objects: readonly RailObject[],
   connections: readonly Connection[],
   ids: Iterable<string>,
+  /** Låste objekter (effektivt) – slettes ikke. */
+  skip?: ReadonlySet<string>,
 ): Patch | null {
-  const doomed = new Set(ids);
+  const doomed = new Set([...ids].filter((id) => !skip?.has(id)));
   for (const o of objects) {
     if (isDimension(o) && o.dimension.kind === 'length' && doomed.has(o.dimension.targetId)) {
       doomed.add(o.id);
@@ -105,6 +108,8 @@ export function transformObjects(
   engine: GeometryEngine,
   op: { type: 'move'; dx: number; dy: number } | { type: 'rotate'; pivot: Vec2; angleRad: number },
   label: string,
+  /** Låste objekter (effektivt) – flyttes/roteres ikke. */
+  skip?: ReadonlySet<string>,
 ): Patch | null {
   const movePoint = (p: Vec2): Vec2 =>
     op.type === 'move'
@@ -113,7 +118,7 @@ export function transformObjects(
           .start;
   const replacements = new Map<string, RailObject>();
   for (const o of objects) {
-    if (!ids.has(o.id)) continue;
+    if (!ids.has(o.id) || skip?.has(o.id)) continue;
     if (isTrack(o)) {
       const geometry =
         op.type === 'move'
@@ -331,4 +336,176 @@ export function createCrossing(
     };
   }
   return { patch, id };
+}
+
+// ---------- Lås og lag ----------
+
+/** Setter eller fjerner `locked` på objekter. */
+export function setLockedPatch(
+  objects: readonly RailObject[],
+  ids: ReadonlySet<string>,
+  locked: boolean,
+): Patch | null {
+  const replacements = new Map<string, RailObject>();
+  for (const o of objects) {
+    if (!ids.has(o.id) || !!o.locked === locked) continue;
+    const next = { ...o, locked } as RailObject;
+    if (!locked) delete next.locked;
+    replacements.set(o.id, next);
+  }
+  return replaceObjects(objects, replacements, locked ? 'Lås objekter' : 'Lås opp objekter');
+}
+
+/** Flytter objekter til et lag (standardlaget = uten `layerId`). Låste objekter hoppes over. */
+export function setLayerPatch(
+  objects: readonly RailObject[],
+  ids: ReadonlySet<string>,
+  layerId: string,
+  skip?: ReadonlySet<string>,
+): Patch | null {
+  const replacements = new Map<string, RailObject>();
+  for (const o of objects) {
+    if (!ids.has(o.id) || skip?.has(o.id)) continue;
+    if ((o.layerId ?? DEFAULT_LAYER_ID) === layerId) continue;
+    const next = { ...o } as RailObject;
+    if (layerId === DEFAULT_LAYER_ID) delete next.layerId;
+    else next.layerId = layerId;
+    replacements.set(o.id, next);
+  }
+  return replaceObjects(objects, replacements, 'Flytt til lag');
+}
+
+export function addLayerPatch(layers: readonly ProjectLayer[], layer: ProjectLayer): Patch {
+  return {
+    label: 'Nytt lag',
+    objects: {},
+    layers: { before: [...layers], after: [...layers, layer] },
+  };
+}
+
+export function updateLayerPatch(
+  layers: readonly ProjectLayer[],
+  id: string,
+  change: (l: ProjectLayer) => ProjectLayer,
+  label: string,
+): Patch | null {
+  const i = layers.findIndex((l) => l.id === id);
+  if (i < 0) return null;
+  const next = change(layers[i] as ProjectLayer);
+  if (next === layers[i]) return null;
+  const after = layers.slice();
+  after[i] = next;
+  return { label, objects: {}, layers: { before: [...layers], after } };
+}
+
+/** Sletter et lag; objektene på laget flyttes til standardlaget i samme angrebare handling. */
+export function removeLayerPatch(
+  layers: readonly ProjectLayer[],
+  objects: readonly RailObject[],
+  id: string,
+): Patch | null {
+  if (id === DEFAULT_LAYER_ID || !layers.some((l) => l.id === id)) return null;
+  const moved = setLayerPatch(
+    objects,
+    new Set(objects.filter((o) => o.layerId === id).map((o) => o.id)),
+    DEFAULT_LAYER_ID,
+  );
+  return {
+    label: 'Slett lag',
+    objects: moved?.objects ?? {},
+    layers: { before: [...layers], after: layers.filter((l) => l.id !== id) },
+  };
+}
+
+// ---------- Kopiér / lim inn ----------
+
+export interface Clipboard {
+  objects: RailObject[];
+  connections: Connection[];
+}
+
+/** Utklipp av valgte objekter: lengdemål uten kopiert mål-spor tas ikke med, koblinger bare mellom kopierte. */
+export function copyObjects(
+  objects: readonly RailObject[],
+  connections: readonly Connection[],
+  ids: ReadonlySet<string>,
+): Clipboard | null {
+  const picked = objects.filter((o) => ids.has(o.id));
+  const pickedIds = new Set(picked.map((o) => o.id));
+  const keep = picked.filter(
+    (o) =>
+      !(isDimension(o) && o.dimension.kind === 'length' && !pickedIds.has(o.dimension.targetId)),
+  );
+  if (!keep.length) return null;
+  const keptIds = new Set(keep.map((o) => o.id));
+  return {
+    objects: keep,
+    connections: connections.filter((c) => keptIds.has(c.a.objectId) && keptIds.has(c.b.objectId)),
+  };
+}
+
+/**
+ * Limer inn utklippet med nye ID-er, flyttet med (dx, dy). Koblinger mellom de limte objektene
+ * følger med, lengdemål peker på de nye sporene, og låsing fjernes. Ett angrebart trinn.
+ */
+export function pasteObjects(
+  objects: readonly RailObject[],
+  connections: readonly Connection[],
+  clip: Clipboard,
+  delta: Vec2,
+  engine: GeometryEngine,
+  layerFor: (original: RailObject) => string,
+): { patch: Patch; ids: string[] } {
+  const existing = objects.map((o) => o.id);
+  const idMap = new Map<string, string>();
+  for (const o of clip.objects) {
+    const id = nextId(idPrefix(o.type), existing);
+    existing.push(id);
+    idMap.set(o.id, id);
+  }
+  const [dx, dy] = delta;
+  const move = (p: Vec2): Vec2 => [p[0] + dx, p[1] + dy];
+  const entries: Patch['objects'] = {};
+  let index = objects.length;
+  const created: RailObject[] = [];
+  for (const o of clip.objects) {
+    const id = idMap.get(o.id) as string;
+    let copy: RailObject;
+    if (isTrack(o)) copy = { ...o, id, geometry: engine.translate(o.geometry, dx, dy) };
+    else if (isTurnout(o))
+      copy = { ...o, id, turnout: { ...o.turnout, position: move(o.turnout.position) } };
+    else if (isCrossing(o))
+      copy = { ...o, id, crossing: { ...o.crossing, position: move(o.crossing.position) } };
+    else if (o.dimension.kind === 'length') {
+      copy = {
+        ...o,
+        id,
+        dimension: { ...o.dimension, targetId: idMap.get(o.dimension.targetId) as string },
+      };
+    } else {
+      copy = {
+        ...o,
+        id,
+        dimension: { ...o.dimension, a: move(o.dimension.a), b: move(o.dimension.b) },
+      };
+    }
+    delete copy.locked;
+    const layer = layerFor(o);
+    if (layer === DEFAULT_LAYER_ID) delete copy.layerId;
+    else copy.layerId = layer;
+    created.push(copy);
+    entries[id] = { before: null, after: copy, index: index++ };
+  }
+  const newConns: Connection[] = clip.connections.map((c) => ({
+    a: { objectId: idMap.get(c.a.objectId) as string, port: c.a.port },
+    b: { objectId: idMap.get(c.b.objectId) as string, port: c.b.port },
+  }));
+  const patch: Patch = {
+    label: created.length === 1 ? 'Lim inn' : `Lim inn ${created.length} objekter`,
+    objects: entries,
+  };
+  if (newConns.length) {
+    patch.connections = { before: [...connections], after: [...connections, ...newConns] };
+  }
+  return { patch, ids: created.map((o) => o.id) };
 }

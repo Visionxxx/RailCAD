@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import {
   CROSSING_PORTS,
+  DEFAULT_LAYER_ID,
   TRACK_PORTS,
   TURNOUT_PORTS,
   getTurnoutType,
@@ -28,6 +29,31 @@ import { useProjectStore } from '../stores/project';
 const project = useProjectStore();
 
 const selected = computed(() => project.selectedObjects);
+/** Enkeltvalg er låst (eget lås eller låst lag): feltene deaktiveres. */
+const isLocked = computed(
+  () => selected.value.length === 1 && project.lockedIds.has(selected.value[0]!.id),
+);
+const ownLocked = computed(
+  () => selected.value.length > 0 && selected.value.every((o) => o.locked),
+);
+const commonLayer = computed(() => {
+  const ids = new Set(selected.value.map((o) => o.layerId ?? DEFAULT_LAYER_ID));
+  return ids.size === 1 ? [...ids][0]! : '';
+});
+function toggleLocked(e: Event) {
+  project.setLocked(
+    selected.value.map((o) => o.id),
+    (e.target as HTMLInputElement).checked,
+  );
+}
+function chooseLayer(e: Event) {
+  const layerId = (e.target as HTMLSelectElement).value;
+  if (layerId)
+    project.setLayerFor(
+      selected.value.map((o) => o.id),
+      layerId,
+    );
+}
 const track = computed<TrackSegment | null>(() => {
   const o = selected.value.length === 1 ? selected.value[0] : undefined;
   return o && isTrack(o) ? o : null;
@@ -334,6 +360,7 @@ const dimBy = dimPoint('b', 1);
 
       <NumberField
         id="prop-start-x"
+        :disabled="isLocked"
         label="Start X"
         unit="m"
         :model-value="geom.start[0]"
@@ -342,6 +369,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-start-y"
+        :disabled="isLocked"
         label="Start Y"
         unit="m"
         :model-value="geom.start[1]"
@@ -350,6 +378,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-heading"
+        :disabled="isLocked"
         label="Retning"
         unit="°"
         :decimals="4"
@@ -361,6 +390,7 @@ const dimBy = dimPoint('b', 1);
       <NumberField
         v-if="line"
         id="prop-length"
+        :disabled="isLocked"
         label="Lengde"
         unit="m"
         :model-value="line.lengthM"
@@ -371,6 +401,7 @@ const dimBy = dimPoint('b', 1);
       <template v-if="arc">
         <NumberField
           id="prop-radius"
+          :disabled="isLocked"
           label="Radius"
           unit="m"
           :model-value="Math.abs(arc.signedRadiusM)"
@@ -391,6 +422,7 @@ const dimBy = dimPoint('b', 1);
         </div>
         <NumberField
           id="prop-sweep"
+          :disabled="isLocked"
           label="Sveipvinkel"
           unit="°"
           :decimals="4"
@@ -400,6 +432,7 @@ const dimBy = dimPoint('b', 1);
         />
         <NumberField
           id="prop-arclength"
+          :disabled="isLocked"
           label="Buelengde"
           unit="m"
           :model-value="totalLength"
@@ -461,6 +494,7 @@ const dimBy = dimPoint('b', 1);
       </p>
       <NumberField
         id="prop-start-x"
+        :disabled="isLocked"
         label="M X"
         unit="m"
         :model-value="crossing.crossing.position[0]"
@@ -468,6 +502,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-start-y"
+        :disabled="isLocked"
         label="M Y"
         unit="m"
         :model-value="crossing.crossing.position[1]"
@@ -475,6 +510,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-heading"
+        :disabled="isLocked"
         label="Retning A"
         unit="°"
         :decimals="4"
@@ -483,6 +519,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-ratio"
+        :disabled="isLocked"
         label="Forhold 1:n, n"
         :decimals="2"
         :model-value="crossing.crossing.ratioN"
@@ -491,6 +528,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-half"
+        :disabled="isLocked"
         label="Lengde M→ende"
         unit="m"
         :model-value="crossing.crossing.halfLengthM"
@@ -555,6 +593,7 @@ const dimBy = dimPoint('b', 1);
       </div>
       <NumberField
         id="prop-start-x"
+        :disabled="isLocked"
         label="SS X"
         unit="m"
         :model-value="turnout.turnout.position[0]"
@@ -562,6 +601,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-start-y"
+        :disabled="isLocked"
         label="SS Y"
         unit="m"
         :model-value="turnout.turnout.position[1]"
@@ -569,6 +609,7 @@ const dimBy = dimPoint('b', 1);
       />
       <NumberField
         id="prop-heading"
+        :disabled="isLocked"
         label="Retning"
         unit="°"
         :decimals="4"
@@ -611,6 +652,7 @@ const dimBy = dimPoint('b', 1);
       <template v-if="dimension.dimension.kind === 'distance'">
         <NumberField
           id="prop-ax"
+          :disabled="isLocked"
           label="A X"
           unit="m"
           :model-value="dimension.dimension.a[0]"
@@ -619,6 +661,7 @@ const dimBy = dimPoint('b', 1);
         />
         <NumberField
           id="prop-ay"
+          :disabled="isLocked"
           label="A Y"
           unit="m"
           :model-value="dimension.dimension.a[1]"
@@ -627,6 +670,7 @@ const dimBy = dimPoint('b', 1);
         />
         <NumberField
           id="prop-bx"
+          :disabled="isLocked"
           label="B X"
           unit="m"
           :model-value="dimension.dimension.b[0]"
@@ -635,6 +679,7 @@ const dimBy = dimPoint('b', 1);
         />
         <NumberField
           id="prop-by"
+          :disabled="isLocked"
           label="B Y"
           unit="m"
           :model-value="dimension.dimension.b[1]"
@@ -644,6 +689,7 @@ const dimBy = dimPoint('b', 1);
       </template>
       <NumberField
         id="prop-dim-offset"
+        :disabled="isLocked"
         label="Forskyvning"
         unit="m"
         :model-value="dimension.dimension.offsetM"
@@ -660,5 +706,34 @@ const dimBy = dimPoint('b', 1);
         </button>
       </div>
     </template>
+    <div v-if="selected.length" class="object-state" data-testid="object-state">
+      <div class="field">
+        <label for="prop-locked">Låst</label>
+        <input
+          id="prop-locked"
+          type="checkbox"
+          :checked="ownLocked"
+          data-testid="prop-locked"
+          @change="toggleLocked"
+        />
+      </div>
+      <div class="field">
+        <label for="prop-layer">Lag</label>
+        <select
+          id="prop-layer"
+          :value="commonLayer"
+          :disabled="isLocked"
+          data-testid="prop-layer"
+          @change="chooseLayer"
+        >
+          <option v-if="!commonLayer" value="" disabled>(blandet)</option>
+          <option v-for="l in project.layers" :key="l.id" :value="l.id">{{ l.name }}</option>
+        </select>
+      </div>
+      <p v-if="isLocked" class="muted" style="font-size: 11px" data-testid="locked-note">
+        {{ ownLocked ? 'Objektet er låst.' : 'Objektet ligger på et låst lag.' }} Felt er
+        skrivebeskyttet.
+      </p>
+    </div>
   </section>
 </template>

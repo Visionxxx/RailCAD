@@ -48,6 +48,16 @@ function pick(id: string, e: MouseEvent) {
           <span>{{ o.id }}</span>
           <span class="muted">{{ kindLabel(o) }}</span>
           <span class="sum">{{ summary(o) }}</span>
+          <span v-if="project.lockedIds.has(o.id)" title="Låst" :data-testid="`object-lock-${o.id}`"
+            >🔒</span
+          >
+          <span
+            v-if="project.hiddenIds.has(o.id)"
+            class="muted"
+            title="På skjult lag"
+            :data-testid="`object-hidden-${o.id}`"
+            >skjult</span
+          >
         </button>
       </li>
     </ul>

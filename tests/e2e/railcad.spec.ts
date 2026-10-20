@@ -1449,3 +1449,122 @@ test('PDF med flere sider: sidevalg ved import, og avbryt gir ingen bakgrunn', a
   await expect(page.getByTestId('bg-row-bg-001')).toContainText('PDF');
   expect(errors).toEqual([]);
 });
+
+// ---------- Kopiér/lim inn, lås, lag, tittel ----------
+test('kopiér og lim inn med Ctrl+C/V (ved markøren), og dupliser fra menyen', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await page.keyboard.press('Control+c');
+  await expect(page.getByTestId('toast').last()).toContainText('Kopierte 1 objekt');
+  const target = await worldToPage(page, 10, 20); // markørposisjon = midten av det limte objektet
+  await page.mouse.move(target.x, target.y);
+  await page.keyboard.press('Control+v');
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('2');
+  await expect(page.getByTestId('prop-id')).toHaveText('track-002');
+  await expect(field(page, 'prop-start-x')).toHaveValue('0,000'); // midt (10,20) → start (0,20)
+  const y = Number((await field(page, 'prop-start-y').inputValue()).replace(',', '.'));
+  expect(Math.abs(y - 20)).toBeLessThan(0.2);
+
+  await page.getByTestId('menu-edit').click();
+  await page.getByTestId('menu-duplicate').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('3');
+  await expect(field(page, 'prop-start-x')).toHaveValue('5,000'); // forskjøvet 5 m
+  await page.getByTestId('undo-btn').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('2'); // ett angresteg per innliming
+});
+
+test('låsing: låst objekt kan ikke flyttes, redigeres eller slettes før det låses opp', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await page.getByTestId('prop-locked').check();
+  await expect(field(page, 'prop-length')).toBeDisabled();
+  await expect(page.getByTestId('locked-note')).toContainText('Objektet er låst');
+
+  await selectTool(page, 'select');
+  const from = await worldToPage(page, 10, 0);
+  const to = await worldToPage(page, 10, 6);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('toast').last()).toContainText('låst');
+  await expect(field(page, 'prop-start-y')).toHaveValue('0,000');
+
+  await page.getByTestId('delete-selected').click();
+  await expect(page.getByTestId('toast').last()).toContainText('låst');
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('1');
+
+  await openTab(page, 'objects');
+  await expect(page.getByTestId('object-lock-track-001')).toBeVisible();
+  await selectInList(page, 'track-001');
+  await page.getByTestId('prop-locked').uncheck();
+  await expect(field(page, 'prop-length')).toBeEnabled();
+  await page.getByTestId('delete-selected').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+});
+
+test('lag: nye objekter på aktivt lag, skjul og lås lag, slett lag, og lagring bevarer lagene', async ({
+  page,
+}, info) => {
+  const errors = await openApp(page);
+  await openTab(page, 'objects');
+  await page.getByTestId('layer-new-name').fill('Verksted');
+  await page.getByTestId('layer-add').click();
+  await expect(page.getByTestId('layer-row-lag-001')).toBeVisible();
+  await createLineNumeric(page, { length: '20' }); // havner på «Verksted»
+  await openTab(page, 'objects');
+  await expect(page.getByTestId('layer-count-lag-001')).toHaveText('1');
+  await expect(page.getByTestId('layer-count-standard')).toHaveText('0');
+  await expect(page.getByTestId('prop-layer'))
+    .toHaveValue('lag-001')
+    .catch(() => undefined);
+
+  await page.getByTestId('layer-visible-lag-001').uncheck();
+  await expect(page.locator('[data-track="track-001"]')).toHaveCount(0);
+  await expect(page.getByTestId('object-hidden-track-001')).toBeVisible();
+  await page.getByTestId('layer-visible-lag-001').check();
+  await expect(page.locator('[data-track="track-001"]')).toHaveCount(1);
+
+  await page.getByTestId('layer-locked-lag-001').check();
+  await selectInList(page, 'track-001');
+  await expect(page.getByTestId('locked-note')).toContainText('låst lag');
+  await expect(field(page, 'prop-length')).toBeDisabled();
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('lag.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.layers.map((l: { name: string }) => l.name)).toEqual(['Standard', 'Verksted']);
+  expect(saved.layers[1]).toMatchObject({ visible: true, locked: true });
+  expect(saved.objects[0].layerId).toBe('lag-001');
+
+  await openTab(page, 'objects');
+  await page.getByTestId('layer-remove-lag-001').click();
+  await expect(page.getByTestId('layer-row-lag-001')).toHaveCount(0);
+  await expect(page.getByTestId('layer-count-standard')).toHaveText('1');
+  await selectInList(page, 'track-001');
+  await expect(field(page, 'prop-length')).toBeEnabled(); // ikke lenger på låst lag
+  expect(errors).toEqual([]);
+});
+
+test('prosjektnavn kan endres ved dobbeltklikk på tittelen (Enter lagrer, Esc avbryter)', async ({
+  page,
+}) => {
+  await openApp(page);
+  await page.getByTestId('project-title-name').dblclick();
+  await page.getByTestId('project-title-input').fill('Hensetting Øst');
+  await page.getByTestId('project-title-input').press('Escape');
+  await expect(page.getByTestId('project-title')).toContainText('Nytt prosjekt');
+
+  await page.getByTestId('project-title-name').dblclick();
+  await page.getByTestId('project-title-input').fill('Hensetting Øst');
+  await page.getByTestId('project-title-input').press('Enter');
+  await expect(page.getByTestId('project-title')).toContainText('Hensetting Øst');
+  await expect(page.getByTestId('project-title')).toContainText('•'); // navneendring er ulagret
+});

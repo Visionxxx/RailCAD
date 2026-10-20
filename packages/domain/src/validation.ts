@@ -3,6 +3,7 @@ import { BACKGROUND_LIMITS, type DxfPrim } from './background';
 import { getTurnoutType } from './turnout-catalog';
 import {
   CROSSING_PORTS,
+  DEFAULT_LAYER_ID,
   TRACK_PORTS,
   TURNOUT_PORTS,
   type RailProject,
@@ -66,13 +67,23 @@ const dimensionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('distance'), a: vec2, b: vec2, offsetM: finite }).passthrough(),
 ]);
 
+const objectCommon = {
+  locked: z.boolean().optional(),
+  layerId: idString.optional(),
+};
 const objectSchema = z.discriminatedUnion('type', [
   z
-    .object({ id: idString, type: z.literal('track_segment'), geometry: geometrySchema })
+    .object({
+      id: idString,
+      type: z.literal('track_segment'),
+      geometry: geometrySchema,
+      ...objectCommon,
+    })
     .passthrough(),
   z
     .object({
       id: idString,
+      ...objectCommon,
       type: z.literal('turnout'),
       turnout: z
         .object({
@@ -88,6 +99,7 @@ const objectSchema = z.discriminatedUnion('type', [
   z
     .object({
       id: idString,
+      ...objectCommon,
       type: z.literal('crossing'),
       crossing: z
         .object({
@@ -106,7 +118,12 @@ const objectSchema = z.discriminatedUnion('type', [
     })
     .passthrough(),
   z
-    .object({ id: idString, type: z.literal('dimension'), dimension: dimensionSchema })
+    .object({
+      id: idString,
+      type: z.literal('dimension'),
+      dimension: dimensionSchema,
+      ...objectCommon,
+    })
     .passthrough(),
 ]);
 
@@ -168,6 +185,18 @@ const projectSchema = z
     objects: z.array(objectSchema),
     connections: z.array(z.object({ a: endpointRef, b: endpointRef }).passthrough()),
     backgrounds: z.array(backgroundSchema).optional(),
+    layers: z
+      .array(
+        z
+          .object({
+            id: idString,
+            name: z.string().min(1).max(60),
+            visible: z.boolean(),
+            locked: z.boolean(),
+          })
+          .passthrough(),
+      )
+      .optional(),
     acknowledgedCrossings: z
       .array(z.string().regex(/^[A-Za-z0-9_.-]+\|[A-Za-z0-9_.-]+$/, 'forventet «idA|idB»'))
       .optional(),
@@ -305,6 +334,18 @@ export function validateProject(raw: unknown): ProjectValidation {
     }
     if (d.kind === 'distance' && d.a[0] === d.b[0] && d.a[1] === d.b[1]) {
       errors.push(`objects[${i}] (${o.id}): punktene i målet er sammenfallende`);
+    }
+  });
+  const layerIds = new Set<string>([DEFAULT_LAYER_ID]);
+  (project.layers ?? []).forEach((l, i) => {
+    if (l.id !== DEFAULT_LAYER_ID && layerIds.has(l.id)) {
+      errors.push(`layers[${i}].id: duplikat ID «${l.id}»`);
+    }
+    layerIds.add(l.id);
+  });
+  project.objects.forEach((o, i) => {
+    if (o.layerId && !layerIds.has(o.layerId)) {
+      errors.push(`objects[${i}] (${o.id}): viser til ukjent lag «${o.layerId}»`);
     }
   });
   const bgIds = new Set<string>();

@@ -27,6 +27,10 @@ export type TrackGeometry = LineGeometry | ArcGeometry;
 
 export interface TrackSegment {
   id: string;
+  /** Låst objekt kan ikke flyttes, roteres, redigeres eller slettes før det låses opp. */
+  locked?: boolean;
+  /** Lag (se `ProjectLayer`). Mangler = standardlaget. */
+  layerId?: string;
   type: 'track_segment';
   geometry: TrackGeometry;
 }
@@ -52,6 +56,10 @@ export type DimensionSpec = LengthDimension | DistanceDimension;
 
 export interface DimensionObject {
   id: string;
+  /** Låst objekt kan ikke flyttes, roteres, redigeres eller slettes før det låses opp. */
+  locked?: boolean;
+  /** Lag (se `ProjectLayer`). Mangler = standardlaget. */
+  layerId?: string;
   type: 'dimension';
   dimension: DimensionSpec;
 }
@@ -73,6 +81,10 @@ export interface TurnoutPlacement {
 
 export interface TurnoutObject {
   id: string;
+  /** Låst objekt kan ikke flyttes, roteres, redigeres eller slettes før det låses opp. */
+  locked?: boolean;
+  /** Lag (se `ProjectLayer`). Mangler = standardlaget. */
+  layerId?: string;
   type: 'turnout';
   turnout: TurnoutPlacement;
 }
@@ -95,6 +107,10 @@ export interface CrossingPlacement {
 
 export interface CrossingObject {
   id: string;
+  /** Låst objekt kan ikke flyttes, roteres, redigeres eller slettes før det låses opp. */
+  locked?: boolean;
+  /** Lag (se `ProjectLayer`). Mangler = standardlaget. */
+  layerId?: string;
   type: 'crossing';
   crossing: CrossingPlacement;
 }
@@ -121,6 +137,17 @@ export interface Connection {
   b: { objectId: string; port: PortName };
 }
 
+/** Laget alle objekter uten eksplisitt `layerId` ligger på. Finnes alltid. */
+export const DEFAULT_LAYER_ID = 'standard';
+
+export interface ProjectLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  /** Objekter på et låst lag kan ikke endres. */
+  locked: boolean;
+}
+
 export interface ProjectMeta {
   id: string;
   name: string;
@@ -141,6 +168,8 @@ export interface RailProject {
    * (sortert). Valgfritt felt.
    */
   acknowledgedCrossings?: string[];
+  /** Lag utover standardlaget (og evt. endringer i standardlagets synlighet/lås). Valgfritt. */
+  layers?: ProjectLayer[];
 }
 
 export function isTrack(o: RailObject): o is TrackSegment {

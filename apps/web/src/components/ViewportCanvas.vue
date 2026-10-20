@@ -58,7 +58,7 @@ interface Drawable {
 const visibleTracks = computed<Drawable[]>(() => {
   const rect = worldRect.value;
   const out: Drawable[] = [];
-  for (const o of project.objects) {
+  for (const o of project.visibleObjects) {
     if (isTrack(o)) {
       if (intersects(cachedBounds(o.geometry), rect))
         out.push({ id: o.id, geometries: [o.geometry] });
@@ -79,7 +79,7 @@ const LABEL_MIN_SCALE = 4;
 const visibleTurnoutLabels = computed(() => {
   const rect = worldRect.value;
   const out: Array<{ id: string; text: string; x: number; y: number }> = [];
-  for (const o of project.objects) {
+  for (const o of project.visibleObjects) {
     if (isCrossing(o)) {
       if (!intersects(crossingBounds(o), rect)) continue;
       if (v.scale < LABEL_MIN_SCALE && !selectedSet.value.has(o.id)) continue;
@@ -115,7 +115,7 @@ interface DimDraw {
 }
 const dimLayouts = computed<DimDraw[]>(() => {
   const out: DimDraw[] = [];
-  for (const o of project.objects) {
+  for (const o of project.visibleObjects) {
     if (!isDimension(o)) continue;
     const layout = engine.dimensionLayout(o.dimension, resolveGeometry);
     if (layout) out.push({ id: o.id, layout });
@@ -228,6 +228,8 @@ const crossingMarks = computed(() => {
     .map((x, i) => ({ x, i }))
     .filter(
       ({ x }) =>
+        !project.hiddenIds.has(x.a) &&
+        !project.hiddenIds.has(x.b) &&
         x.point[0] >= rect.minX &&
         x.point[0] <= rect.maxX &&
         x.point[1] >= rect.minY &&

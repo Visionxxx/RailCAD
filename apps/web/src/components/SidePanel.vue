@@ -4,6 +4,7 @@ import { useProjectStore } from '../stores/project';
 import { useUiStore, type SideTab } from '../stores/ui';
 import BackgroundPanel from './BackgroundPanel.vue';
 import ConnectionsPanel from './ConnectionsPanel.vue';
+import LayersPanel from './LayersPanel.vue';
 import ObjectList from './ObjectList.vue';
 import PropertiesPanel from './PropertiesPanel.vue';
 
@@ -117,7 +118,10 @@ async function onKey(e: KeyboardEvent, index: number) {
       :data-testid="`tabpanel-${t.id}`"
     >
       <PropertiesPanel v-if="t.id === 'properties'" />
-      <ObjectList v-else-if="t.id === 'objects'" />
+      <template v-else-if="t.id === 'objects'">
+        <LayersPanel />
+        <ObjectList />
+      </template>
       <ConnectionsPanel v-else-if="t.id === 'connections'" />
       <BackgroundPanel v-else />
     </div>

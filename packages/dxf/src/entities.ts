@@ -27,6 +27,19 @@ export type DxfEntity =
 
 export const TEXT_HEIGHT_M = 1.5;
 
+/** Lagnavn i DXF er ASCII (store bokstaver, tall, understrek). */
+export function dxfLayerSuffix(name: string): string {
+  const fold = name
+    .replace(/[æÆ]/g, 'AE')
+    .replace(/[øØ]/g, 'O')
+    .replace(/[åÅ]/g, 'AA')
+    .normalize('NFKD')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+  return fold || 'LAG';
+}
+
 const deg = (rad: number) => ((((rad * 180) / Math.PI) % 360) + 360) % 360;
 
 /** Én aksegeometri som DXF-entiteter. Høyrekurver skrives med buens ender byttet om (DXF-buer er alltid CCW). */
@@ -65,15 +78,21 @@ export function buildEntities(project: RailProject, engine: GeometryEngine): Dxf
     project.objects.filter(isTrack).map((o) => [o.id, o.geometry] as const),
   );
   const allPoints: Vec2[] = [];
+  const layerNames = new Map((project.layers ?? []).map((l) => [l.id, l.name] as const));
+  /** DXF-lag = objekttypens lag, pluss «_<LAGNAVN>» hvis objektet ligger på et eget prosjektlag. */
+  const lay = (base: string, o: { layerId?: string }) => {
+    const name = o.layerId ? layerNames.get(o.layerId) : undefined;
+    return name && o.layerId !== 'standard' ? `${base}_${dxfLayerSuffix(name)}` : base;
+  };
 
   for (const o of project.objects) {
     if (isTrack(o)) {
-      out.push(...geometryEntities(o.geometry, LAYERS.track.name, engine));
+      out.push(...geometryEntities(o.geometry, lay(LAYERS.track.name, o), engine));
       allPoints.push(o.geometry.start);
     } else if (isCrossing(o)) {
       const layout = engine.crossingLayout(o.crossing);
       for (const seg of layout.segments) {
-        out.push(...geometryEntities(seg, LAYERS.crossing.name, engine));
+        out.push(...geometryEntities(seg, lay(LAYERS.crossing.name, o), engine));
       }
       out.push({
         kind: 'text',
@@ -89,7 +108,7 @@ export function buildEntities(project: RailProject, engine: GeometryEngine): Dxf
       if (!type) continue;
       const layout = engine.turnoutLayout(type, o.turnout);
       for (const seg of layout.segments)
-        out.push(...geometryEntities(seg, LAYERS.turnout.name, engine));
+        out.push(...geometryEntities(seg, lay(LAYERS.turnout.name, o), engine));
       out.push({
         kind: 'text',
         layer: LAYERS.text.name,
@@ -102,14 +121,14 @@ export function buildEntities(project: RailProject, engine: GeometryEngine): Dxf
     } else if (isDimension(o)) {
       const layout = engine.dimensionLayout(o.dimension, (id) => geometryById.get(id));
       if (!layout) continue;
-      out.push(...geometryEntities(layout.line, LAYERS.dimension.name, engine));
+      out.push(...geometryEntities(layout.line, lay(LAYERS.dimension.name, o), engine));
       for (const [a, b] of layout.extensionLines) {
-        out.push({ kind: 'line', layer: LAYERS.dimension.name, a, b });
+        out.push({ kind: 'line', layer: lay(LAYERS.dimension.name, o), a, b });
       }
       const n = layout.labelAngleRad + Math.PI / 2;
       out.push({
         kind: 'text',
-        layer: LAYERS.dimension.name,
+        layer: lay(LAYERS.dimension.name, o),
         height: TEXT_HEIGHT_M,
         at: [layout.labelPoint[0] + Math.cos(n) * 0.5, layout.labelPoint[1] + Math.sin(n) * 0.5],
         rotationDeg: deg(layout.labelAngleRad),

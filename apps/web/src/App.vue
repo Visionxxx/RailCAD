@@ -49,6 +49,15 @@ function onKeyDown(e: KeyboardEvent) {
   } else if (mod && k === 'y') {
     e.preventDefault();
     project.redo();
+  } else if (mod && k === 'c') {
+    e.preventDefault();
+    actions.copy();
+  } else if (mod && k === 'v') {
+    e.preventDefault();
+    actions.paste();
+  } else if (mod && k === 'd') {
+    e.preventDefault(); // nettleserens «bokmerk siden»
+    actions.duplicate();
   } else if (mod && k === 's') {
     e.preventDefault();
     actions.save();

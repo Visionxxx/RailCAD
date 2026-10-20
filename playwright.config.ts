@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: [['list']],
-  use: { baseURL: 'http://localhost:5173', trace: 'retain-on-failure' },
+  use: { baseURL: 'http://localhost:5199', trace: 'retain-on-failure' },
   projects: [
     {
       name: 'chromium',
@@ -13,9 +13,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: true,
+    command: 'npx vite --port 5199 --strictPort',
+    cwd: 'apps/web',
+    url: 'http://localhost:5199',
+    // Alltid egen server på egen port: en eldre, langlevende dev-server kan ha utdatert tilstand.
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

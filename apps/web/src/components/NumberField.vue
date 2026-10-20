@@ -9,10 +9,11 @@ const props = withDefaults(
     modelValue: number;
     decimals?: number;
     unit?: string;
+    disabled?: boolean;
     /** Returnerer feilmelding, eller null hvis verdien er gyldig. */
     validate?: (n: number) => string | null;
   }>(),
-  { decimals: 3, unit: '', validate: undefined },
+  { decimals: 3, unit: '', validate: undefined, disabled: false },
 );
 const emit = defineEmits<{ commit: [value: number] }>();
 
@@ -73,6 +74,7 @@ function revert() {
       inputmode="decimal"
       autocomplete="off"
       :data-testid="id"
+      :disabled="disabled"
       :aria-invalid="error ? 'true' : 'false'"
       :aria-describedby="error ? `${id}-err` : undefined"
       @keydown.enter.prevent="commit"

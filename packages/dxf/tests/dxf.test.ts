@@ -193,3 +193,34 @@ describe('DXF-eksport av sporkryss', () => {
     expect(exportDxf(p, engine, 'R12')).toContain('RAILCAD_SPORKRYSS');
   });
 });
+
+describe('DXF-eksport: prosjektlag', () => {
+  it('objekter på egne lag får lagnavn «<typelag>_<NAVN>» og lagene deklareres', () => {
+    const p = {
+      ...project([
+        {
+          id: 'track-001',
+          type: 'track_segment',
+          layerId: 'lag-001',
+          geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: 10 },
+        },
+        {
+          id: 'track-002',
+          type: 'track_segment',
+          geometry: { kind: 'line', start: [0, 5], headingRad: 0, lengthM: 10 },
+        },
+      ] as any),
+      layers: [
+        { id: 'standard', name: 'Standard', visible: true, locked: false },
+        { id: 'lag-001', name: 'Østre verksted', visible: true, locked: false },
+      ],
+    };
+    const ents = buildEntities(p, engine);
+    expect(ents[0]).toMatchObject({ layer: 'RAILCAD_SPORAKSE_OSTRE_VERKSTED' });
+    expect(ents[1]).toMatchObject({ layer: 'RAILCAD_SPORAKSE' });
+    for (const v of ['R12', 'R2007'] as const) {
+      const text = exportDxf(p, engine, v);
+      expect(text).toContain('RAILCAD_SPORAKSE_OSTRE_VERKSTED');
+    }
+  });
+});

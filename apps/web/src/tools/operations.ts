@@ -27,13 +27,13 @@ export class DeleteTool extends Tool {
   }
   move(p: PointerInfo) {
     const { project, view } = this.env;
-    const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM);
+    const hit = pickObject(project.visibleObjects, project.byId, p.world, view.pickToleranceM);
     this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id, hoverKind: 'danger' } : null);
   }
   down(p: PointerInfo) {
     if (p.button !== 0) return;
     const { project, view } = this.env;
-    const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM);
+    const hit = pickObject(project.visibleObjects, project.byId, p.world, view.pickToleranceM);
     if (hit) project.deleteIds([hit.id]);
     this.env.setPreview(null);
   }
@@ -54,8 +54,12 @@ export class ParallelTool extends Tool {
   move(p: PointerInfo) {
     const { project, view } = this.env;
     if (!this.refId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
-        isTrack(o),
+      const hit = pickObject(
+        project.visibleObjects,
+        project.byId,
+        p.world,
+        view.pickToleranceM,
+        (o) => isTrack(o),
       );
       this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id } : null);
       return;
@@ -67,8 +71,12 @@ export class ParallelTool extends Tool {
     if (p.button !== 0) return;
     const { project, view, ui } = this.env;
     if (!this.refId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
-        isTrack(o),
+      const hit = pickObject(
+        project.visibleObjects,
+        project.byId,
+        p.world,
+        view.pickToleranceM,
+        (o) => isTrack(o),
       );
       if (!hit) return;
       const o = project.byId.get(hit.id);
@@ -161,8 +169,12 @@ export class MeasureLengthTool extends Tool {
   move(p: PointerInfo) {
     const { project, view } = this.env;
     if (!this.targetId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
-        isTrack(o),
+      const hit = pickObject(
+        project.visibleObjects,
+        project.byId,
+        p.world,
+        view.pickToleranceM,
+        (o) => isTrack(o),
       );
       this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id } : null);
       return;
@@ -181,8 +193,12 @@ export class MeasureLengthTool extends Tool {
     if (p.button !== 0) return;
     const { project, view } = this.env;
     if (!this.targetId) {
-      const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM, (o) =>
-        isTrack(o),
+      const hit = pickObject(
+        project.visibleObjects,
+        project.byId,
+        p.world,
+        view.pickToleranceM,
+        (o) => isTrack(o),
       );
       if (hit) this.targetId = hit.id;
       return;
@@ -385,6 +401,7 @@ export class RotateTool extends Tool {
       this.env.engine,
       { type: 'rotate', pivot: this.pivot as Vec2, angleRad: angle },
       'Roter',
+      this.env.project.lockedIds,
     );
     if (!this.env.project.execute(patch)) {
       this.env.ui.notify('Ingenting å rotere – lengdemål følger sporet.');

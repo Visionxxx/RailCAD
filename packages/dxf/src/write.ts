@@ -103,10 +103,13 @@ export function writeR12(
  * DXF R2007 (AC1021) via @tarikjabiri/dxf (komplett tabell-/blokkstruktur). UTF-8, så norske tegn
  * skrives direkte. Enhet: meter.
  */
-export function writeR2007(entities: readonly DxfEntity[]): string {
+export function writeR2007(
+  entities: readonly DxfEntity[],
+  layers: ReadonlyArray<{ name: string; color: number }> = Object.values(LAYERS),
+): string {
   const w = new DxfWriter();
   w.setUnits(Units.Meters);
-  for (const l of Object.values(LAYERS)) w.addLayer(l.name, l.color, 'CONTINUOUS');
+  for (const l of layers) w.addLayer(l.name, l.color, 'CONTINUOUS');
   for (const e of entities) {
     if (e.kind === 'line') {
       w.addLine(point3d(e.a[0], e.a[1]), point3d(e.b[0], e.b[1]), { layerName: e.layer });
