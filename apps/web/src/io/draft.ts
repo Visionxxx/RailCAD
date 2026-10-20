@@ -59,6 +59,14 @@ export function readDraft(): Draft | null {
   }
 }
 
+/**
+ * Fjerner kladden bare hvis den fortsatt er den vi viste (samme tidsstempel). En annen fane kan
+ * ha skrevet en nyere kladd siden – den skal ikke slettes av en «Forkast» i denne fanen.
+ */
+export function clearDraftIfUnchanged(savedAt: string) {
+  if (readDraft()?.savedAt === savedAt) clearDraft();
+}
+
 export function clearDraft() {
   try {
     localStorage.removeItem(KEY);

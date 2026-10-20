@@ -143,3 +143,38 @@ describe('automatisk sikkerhetskopi (kladd)', () => {
     expect(encodeDraft(big)).toBeNull();
   });
 });
+
+describe('kladd og flere faner', () => {
+  it('«Forkast» sletter bare kladden som ble vist, ikke en nyere fra en annen fane', async () => {
+    const store: Record<string, string> = {};
+    (globalThis as any).localStorage = {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => void (store[k] = v),
+      removeItem: (k: string) => void delete store[k],
+    };
+    const { clearDraftIfUnchanged, readDraft } = await import('../src/io/draft');
+    const first = encodeDraft(project(), new Date('2026-10-20T10:00:00Z'))!;
+    store['railcad.draft'] = first;
+    const shown = readDraft()!;
+    // En annen fane skriver en nyere kladd mens dialogen vises
+    store['railcad.draft'] = encodeDraft(project(), new Date('2026-10-20T10:05:00Z'))!;
+    clearDraftIfUnchanged(shown.savedAt);
+    expect(readDraft()?.savedAt).toBe('2026-10-20T10:05:00.000Z'); // bevart
+    clearDraftIfUnchanged('2026-10-20T10:05:00.000Z');
+    expect(readDraft()).toBeNull(); // uendret kladd fjernes
+    delete (globalThis as any).localStorage;
+  });
+});
+
+function project(): RailProject {
+  return {
+    ...createEmptyProject('Prøve'),
+    objects: [
+      {
+        id: 'track-001',
+        type: 'track_segment',
+        geometry: { kind: 'line', start: [0, 0], headingRad: 0, lengthM: 5 },
+      },
+    ],
+  };
+}

@@ -1,7 +1,7 @@
 import { watch } from 'vue';
 import { useProjectStore } from '../stores/project';
 import { useUiStore } from '../stores/ui';
-import { clearDraft, readDraft, writeDraft } from './draft';
+import { clearDraft, clearDraftIfUnchanged, readDraft, writeDraft } from './draft';
 
 const DEBOUNCE_MS = 1500;
 
@@ -62,7 +62,7 @@ export function useAutosave() {
         project.touch(); // gjenopprettet arbeid er fortsatt ulagret
         ui.notify('Gjenopprettet ulagret arbeid.');
       },
-      onCancel: clearDraft,
+      onCancel: () => clearDraftIfUnchanged(draft.savedAt),
     });
   }
 
