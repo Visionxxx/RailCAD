@@ -29,6 +29,11 @@ const tools: Array<{ id: ToolId; label: string; paths: string[]; gap?: boolean }
     label: 'Sporveksel',
     paths: ['M3 12h18', 'M8 12c4 0 6-5 13-5'],
   },
+  {
+    id: 'crossing',
+    label: 'Sporkryss',
+    paths: ['M4 6l16 12M4 18L20 6'],
+  },
   { id: 'rotate', label: 'Roter', paths: ['M20 12a8 8 0 1 1-2.3-5.7', 'M20 4v4h-4'] },
   {
     id: 'measure-length',

@@ -6,9 +6,11 @@ import {
   TURNOUT_CATALOG,
   TURNOUT_CATALOG_REVISION,
   getTurnoutType,
+  isCrossing,
   isTurnout,
 } from '@railcad/domain';
 import { cachedBounds } from '../rendering/paths';
+import { crossingBounds } from '../rendering/crossings';
 import { turnoutBounds } from '../rendering/turnouts';
 import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, parseNumber } from '../format';
@@ -41,6 +43,41 @@ function createTurnoutNumeric() {
   const created = project.byId.get(id);
   const b = created && isTurnout(created) ? turnoutBounds(created) : null;
   if (b) view.reveal(b);
+}
+const crossingForm = reactive({ x: '0', y: '0', heading: '0', ratio: '9', half: '17' });
+function syncCrossingParams() {
+  const r = parseNumber(crossingForm.ratio);
+  const h = parseNumber(crossingForm.half);
+  if (r !== null && r >= 1.5 && r <= 100) view.crossingRatioN = r;
+  if (h !== null && h > 0 && h <= 1e4) view.crossingHalfLengthM = h;
+}
+function createCrossingNumeric() {
+  const v = readAll(crossingForm, {
+    x: 'X (M)',
+    y: 'Y (M)',
+    heading: 'Retning',
+    ratio: 'Forhold 1:n',
+    half: 'Lengde fra M',
+  });
+  if (!v) return;
+  if (!(v.ratio! >= 1.5 && v.ratio! <= 100)) {
+    error.value = 'Krysningsforholdet 1:n må ha n mellom 1,5 og 100.';
+    return;
+  }
+  if (!(v.half! > 0 && v.half! <= 1e4)) {
+    error.value = 'Lengden fra M til enden må være mellom 0 og 10 000 m.';
+    return;
+  }
+  error.value = '';
+  syncCrossingParams();
+  const id = project.addCrossing({
+    position: [v.x!, v.y!],
+    headingRad: degToRad(v.heading!),
+    ratioN: v.ratio!,
+    halfLengthM: v.half!,
+  });
+  const created = project.byId.get(id);
+  if (created && isCrossing(created)) view.reveal(crossingBounds(created));
 }
 const parallelText = ref(fmt(view.parallelDistanceM));
 const rotateText = ref('');
@@ -357,6 +394,49 @@ function applyRotation() {
         inputmode="decimal"
     /></label>
     <button class="btn" type="submit" data-testid="bg-apply-scale">Bruk</button>
+    <div v-if="error" class="err" role="alert">{{ error }}</div>
+  </form>
+
+  <form
+    v-else-if="toolId === 'crossing'"
+    class="tool-options"
+    data-testid="options-crossing"
+    @submit.prevent="createCrossingNumeric"
+    @pointerdown.stop
+  >
+    <span class="title">Sporkryss</span>
+    <label
+      >Forhold 1:n<input
+        v-model="crossingForm.ratio"
+        data-testid="crossing-ratio"
+        inputmode="decimal"
+        @change="syncCrossingParams"
+    /></label>
+    <label
+      >Lengde M→ende (m)<input
+        v-model="crossingForm.half"
+        data-testid="crossing-half"
+        inputmode="decimal"
+        @change="syncCrossingParams"
+    /></label>
+    <label
+      >M X (m)<input v-model="crossingForm.x" data-testid="crossing-x" inputmode="decimal"
+    /></label>
+    <label
+      >M Y (m)<input v-model="crossingForm.y" data-testid="crossing-y" inputmode="decimal"
+    /></label>
+    <label
+      >Retning A (°)<input
+        v-model="crossingForm.heading"
+        data-testid="crossing-heading"
+        inputmode="decimal"
+    /></label>
+    <button class="btn" type="submit" data-testid="create-crossing">Opprett</button>
+    <div class="muted" style="flex-basis: 100%; font-size: 12px" data-testid="crossing-note">
+      <b style="color: var(--warn)">Brukerdefinert – ikke verifisert.</b> Åpne norske produktmål
+      finnes ikke; hent lengden fra leverandørtegning. Spor B ligger atan(1/n) mot klokka fra spor
+      A.
+    </div>
     <div v-if="error" class="err" role="alert">{{ error }}</div>
   </form>
 </template>

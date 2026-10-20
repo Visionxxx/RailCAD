@@ -1,5 +1,6 @@
 import {
   getTurnoutType,
+  isCrossing,
   isDimension,
   isTrack,
   isTurnout,
@@ -13,6 +14,7 @@ import type { GeometryEngine } from '@railcad/geometry-api';
 export const LAYERS = {
   track: { name: 'RAILCAD_SPORAKSE', color: 7, label: 'Sporakser' },
   turnout: { name: 'RAILCAD_SPORVEKSEL', color: 4, label: 'Sporveksler (delvis verifisert)' },
+  crossing: { name: 'RAILCAD_SPORKRYSS', color: 6, label: 'Sporkryss (ikke verifisert)' },
   dimension: { name: 'RAILCAD_MAAL', color: 2, label: 'Mål' },
   text: { name: 'RAILCAD_TEKST', color: 8, label: 'Tekst' },
 } as const;
@@ -68,6 +70,20 @@ export function buildEntities(project: RailProject, engine: GeometryEngine): Dxf
     if (isTrack(o)) {
       out.push(...geometryEntities(o.geometry, LAYERS.track.name, engine));
       allPoints.push(o.geometry.start);
+    } else if (isCrossing(o)) {
+      const layout = engine.crossingLayout(o.crossing);
+      for (const seg of layout.segments) {
+        out.push(...geometryEntities(seg, LAYERS.crossing.name, engine));
+      }
+      out.push({
+        kind: 'text',
+        layer: LAYERS.text.name,
+        height: TEXT_HEIGHT_M,
+        at: [o.crossing.position[0], o.crossing.position[1] + TEXT_HEIGHT_M],
+        rotationDeg: deg(o.crossing.headingRad),
+        value: `${o.id}: sporkryss 1:${o.crossing.ratioN} - brukerdefinert, ikke verifisert`,
+      });
+      allPoints.push(o.crossing.position);
     } else if (isTurnout(o)) {
       const type = getTurnoutType(o.turnout.catalogId);
       if (!type) continue;

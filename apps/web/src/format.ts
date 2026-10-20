@@ -37,5 +37,9 @@ const PORT_LABELS: Record<string, string> = {
   stem_in: 'stamspor inn',
   stem_out: 'stamspor ut',
   diverging_out: 'avvik ut',
+  a_start: 'spor A start',
+  a_end: 'spor A slutt',
+  b_start: 'spor B start',
+  b_end: 'spor B slutt',
 };
 export const portLabel = (port: string): string => PORT_LABELS[port] ?? port;

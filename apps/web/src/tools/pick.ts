@@ -1,6 +1,14 @@
-import { isDimension, isTrack, isTurnout, type RailObject, type Vec2 } from '@railcad/domain';
+import {
+  isCrossing,
+  isDimension,
+  isTrack,
+  isTurnout,
+  type RailObject,
+  type Vec2,
+} from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
 import { cachedBounds } from '../rendering/paths';
+import { cachedCrossingLayout, crossingBounds } from '../rendering/crossings';
 import { cachedTurnoutLayout, turnoutBounds } from '../rendering/turnouts';
 
 export interface Pick {
@@ -36,6 +44,20 @@ export function pickObject(
       }
       const c = engine.closestPoint(o.geometry, world);
       take(o.id, c.point, c.distanceM);
+    } else if (isCrossing(o)) {
+      const b = crossingBounds(o);
+      if (
+        world[0] < b.minX - tolM ||
+        world[0] > b.maxX + tolM ||
+        world[1] < b.minY - tolM ||
+        world[1] > b.maxY + tolM
+      ) {
+        continue;
+      }
+      for (const seg of cachedCrossingLayout(o).segments) {
+        const c = engine.closestPoint(seg, world);
+        take(o.id, c.point, c.distanceM);
+      }
     } else if (isTurnout(o)) {
       const b = turnoutBounds(o);
       if (

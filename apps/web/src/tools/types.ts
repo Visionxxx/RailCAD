@@ -50,5 +50,6 @@ export type ToolId =
   | 'delete'
   | 'connect'
   | 'turnout'
+  | 'crossing'
   | 'bg-scale'
   | 'bg-move';

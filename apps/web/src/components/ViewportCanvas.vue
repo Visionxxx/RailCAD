@@ -3,6 +3,7 @@ import { isTypingTarget } from '../dom';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch, nextTick } from 'vue';
 import {
   getTurnoutType,
+  isCrossing,
   isDimension,
   isTrack,
   isTurnout,
@@ -12,9 +13,10 @@ import {
 } from '@railcad/domain';
 import type { DimensionLayout, SnapResult } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
-import { fmtM } from '../format';
+import { fmt, fmtM } from '../format';
 import { cachedBounds, railPaths, trackPath } from '../rendering/paths';
 import { backgroundMatrix, backgroundWorldCorners, type Background } from '@railcad/domain';
+import { cachedCrossingLayout, crossingBounds } from '../rendering/crossings';
 import { cachedTurnoutLayout, turnoutBounds } from '../rendering/turnouts';
 import {
   aciColor,
@@ -60,6 +62,10 @@ const visibleTracks = computed<Drawable[]>(() => {
     if (isTrack(o)) {
       if (intersects(cachedBounds(o.geometry), rect))
         out.push({ id: o.id, geometries: [o.geometry] });
+    } else if (isCrossing(o)) {
+      if (intersects(crossingBounds(o), rect)) {
+        out.push({ id: o.id, geometries: cachedCrossingLayout(o).segments });
+      }
     } else if (isTurnout(o)) {
       const b = turnoutBounds(o);
       const layout = cachedTurnoutLayout(o);
@@ -74,6 +80,18 @@ const visibleTurnoutLabels = computed(() => {
   const rect = worldRect.value;
   const out: Array<{ id: string; text: string; x: number; y: number }> = [];
   for (const o of project.objects) {
+    if (isCrossing(o)) {
+      if (!intersects(crossingBounds(o), rect)) continue;
+      if (v.scale < LABEL_MIN_SCALE && !selectedSet.value.has(o.id)) continue;
+      const [x, y] = worldToScreen(v, o.crossing.position);
+      out.push({
+        id: o.id,
+        text: `Sporkryss 1:${fmt(o.crossing.ratioN, 1)} – ikke verifisert`,
+        x,
+        y,
+      });
+      continue;
+    }
     if (!isTurnout(o)) continue;
     const b = turnoutBounds(o);
     if (!b || !intersects(b, rect)) continue;

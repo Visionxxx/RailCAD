@@ -68,6 +68,8 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Kryssende spor** (advarsel, ikke vurdert mot regelverk): `geometry-ts/intersect.ts`, `ConnectionsPanel.vue`, `docs/kryssing.md`. Tester: enhet `intersect.test.ts` (14) + store (3); e2e (2). Eksempelplanene gir 0 treff.
 
+- **Sporkryss (brukerdefinert, ikke verifisert):** `domain` (`crossing`-objekt), `geometry-ts/crossing.ts`, `tools/crossing.ts`, DXF-lag `RAILCAD_SPORKRYSS`. Tester: enhet `crossing.test.ts` (4) + domene/DXF/store; e2e (3). Uten åpne norske produktmål er lengden brukerdefinert.
+
 ### Kjente åpne punkter
 
 - Sporkryss og kryssveksler mangler i biblioteket (ingen åpne måltabeller; se `docs/kryssing.md`, `docs/henvendelse-leverandor.md`).

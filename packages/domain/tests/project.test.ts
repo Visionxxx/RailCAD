@@ -242,3 +242,38 @@ describe('ID-tegnsett', () => {
     if (!r.ok) expect(r.errors.join('\n')).toContain('ID kan bare inneholde');
   });
 });
+
+describe('sporkryss i prosjektfil', () => {
+  const withCrossing = (crossing: Record<string, unknown>, connections: unknown[] = []) => {
+    const p: any = demo();
+    p.objects.push({ id: 'crossing-001', type: 'crossing', crossing });
+    p.connections = connections;
+    return validateProject(p);
+  };
+  const ok = { position: [50, 5], headingRad: 0, ratioN: 9, halfLengthM: 17 };
+
+  it('godtar gyldig sporkryss og koblinger til A/B-porter', () => {
+    expect(withCrossing(ok).ok).toBe(true);
+    const c = [
+      {
+        a: { objectId: 'track-001', port: 'end' },
+        b: { objectId: 'crossing-001', port: 'a_start' },
+      },
+    ];
+    expect(withCrossing(ok, c).ok).toBe(true);
+  });
+  it('avviser ugyldig forhold/lengde og feil portnavn', () => {
+    expect(withCrossing({ ...ok, ratioN: 1 }).ok).toBe(false);
+    expect(withCrossing({ ...ok, ratioN: 500 }).ok).toBe(false);
+    expect(withCrossing({ ...ok, halfLengthM: 0 }).ok).toBe(false);
+    expect(withCrossing({ ...ok, halfLengthM: 1e6 }).ok).toBe(false);
+    const wrong = [
+      {
+        a: { objectId: 'track-001', port: 'end' },
+        b: { objectId: 'crossing-001', port: 'stem_in' },
+      },
+    ];
+    const r = withCrossing(ok, wrong);
+    expect(!r.ok && r.errors.join()).toContain('sporkryss');
+  });
+});

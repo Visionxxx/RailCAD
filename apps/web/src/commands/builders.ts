@@ -4,6 +4,8 @@ import {
   isDimension,
   isTrack,
   isTurnout,
+  isCrossing,
+  type CrossingPlacement,
   nextId,
   type Connection,
   type DimensionSpec,
@@ -118,6 +120,15 @@ export function transformObjects(
           ? engine.translate(o.geometry, op.dx, op.dy)
           : engine.rotate(o.geometry, op.pivot, op.angleRad);
       replacements.set(o.id, { ...o, geometry });
+    } else if (isCrossing(o)) {
+      replacements.set(o.id, {
+        ...o,
+        crossing: {
+          ...o.crossing,
+          position: movePoint(o.crossing.position),
+          headingRad: o.crossing.headingRad + (op.type === 'rotate' ? op.angleRad : 0),
+        },
+      });
     } else if (isTurnout(o)) {
       replacements.set(o.id, {
         ...o,
@@ -295,4 +306,29 @@ export function toggleCrossingAckPatch(acks: readonly string[], key: string): Pa
       after: has ? acks.filter((k) => k !== key) : [...acks, key],
     },
   };
+}
+
+/** Plasserer et sporkryss. Med `anchor` kobles spor A sin start (a_start) til en eksisterende port. */
+export function createCrossing(
+  objects: readonly RailObject[],
+  connections: readonly Connection[],
+  placement: CrossingPlacement,
+  anchor?: { objectId: string; port: PortName },
+): { patch: Patch; id: string } {
+  const id = nextId(
+    'crossing',
+    objects.map((o) => o.id),
+  );
+  const object: RailObject = { id, type: 'crossing', crossing: placement };
+  const patch: Patch = {
+    label: 'Plasser sporkryss',
+    objects: { [id]: { before: null, after: object, index: objects.length } },
+  };
+  if (anchor) {
+    patch.connections = {
+      before: [...connections],
+      after: [...connections, { a: anchor, b: { objectId: id, port: 'a_start' } }],
+    };
+  }
+  return { patch, id };
 }

@@ -5,6 +5,8 @@ import {
   type Background,
   isTrack,
   isTurnout,
+  isCrossing,
+  type CrossingPlacement,
   type Connection,
   type DimensionSpec,
   type ProjectMeta,
@@ -30,6 +32,7 @@ import {
   connectPorts,
   createDimension,
   createTrack,
+  createCrossing,
   createTrackConnected,
   createTurnout,
   deleteObjects,
@@ -37,6 +40,7 @@ import {
   replaceObjects,
 } from '../commands/builders';
 import { geometryEngine as engine } from '../engine';
+import { cachedCrossingLayout } from '../rendering/crossings';
 import { cachedTurnoutLayout } from '../rendering/turnouts';
 
 /** Spesifikasjonen krever minst 50 reverserbare handlinger. */
@@ -75,6 +79,10 @@ export const useProjectStore = defineStore('project', () => {
         cachedTurnoutLayout(o)?.segments.forEach((g, i) =>
           out.push({ id: `${o.id}#${i}`, geometry: g }),
         );
+      } else if (isCrossing(o)) {
+        cachedCrossingLayout(o).segments.forEach((g, i) =>
+          out.push({ id: `${o.id}#${i}`, geometry: g }),
+        );
       }
     }
     return out;
@@ -100,6 +108,10 @@ export const useProjectStore = defineStore('project', () => {
       if (isTrack(o)) {
         for (const port of ['start', 'end'] as const) {
           m.set(portKey(o.id, port), engine.portPose(o.geometry, port));
+        }
+      } else if (isCrossing(o)) {
+        for (const [port, pose] of Object.entries(cachedCrossingLayout(o).ports)) {
+          m.set(`${o.id}:${port}`, pose);
         }
       } else if (isTurnout(o)) {
         const layout = cachedTurnoutLayout(o);
@@ -148,7 +160,8 @@ export const useProjectStore = defineStore('project', () => {
       else if (isTurnout(o)) {
         const layout = cachedTurnoutLayout(o);
         if (layout) items.push({ id: o.id, segments: layout.segments });
-      }
+      } else if (isCrossing(o))
+        items.push({ id: o.id, segments: cachedCrossingLayout(o).segments });
     }
     return engine.findIntersections(items);
   });
@@ -311,6 +324,13 @@ export const useProjectStore = defineStore('project', () => {
     return execute(removeBackgroundPatch(backgrounds.value, id));
   }
 
+  function addCrossing(placement: CrossingPlacement, anchor?: PortRef): string {
+    const { patch, id } = createCrossing(objects.value, connections.value, placement, anchor);
+    execute(patch);
+    selection.value = [id];
+    return id;
+  }
+
   function updateObject(next: RailObject, label: string): boolean {
     return execute(replaceObjects(objects.value, new Map([[next.id, next]]), label));
   }
@@ -413,6 +433,7 @@ export const useProjectStore = defineStore('project', () => {
     removeConnection,
     addTrackFromPort,
     addTurnout,
+    addCrossing,
     addBackground,
     updateBackground,
     removeBackground,

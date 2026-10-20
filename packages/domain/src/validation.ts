@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { BACKGROUND_LIMITS, type DxfPrim } from './background';
 import { getTurnoutType } from './turnout-catalog';
-import { TRACK_PORTS, TURNOUT_PORTS, type RailProject, type TrackGeometry } from './types';
+import {
+  CROSSING_PORTS,
+  TRACK_PORTS,
+  TURNOUT_PORTS,
+  type RailProject,
+  type TrackGeometry,
+} from './types';
 
 /** Gjeldende filformatversjon. Endres kun sammen med en migrering i `migrate.ts`. */
 export const CURRENT_SCHEMA_VERSION = '0.1.0';
@@ -27,7 +33,17 @@ const idString = z
     /^[A-Za-z0-9_.-]+$/,
     'ID kan bare inneholde bokstaver (a–z), tall, punktum, understrek og bindestrek',
   );
-const portSchema = z.enum(['start', 'end', 'stem_in', 'stem_out', 'diverging_out']);
+const portSchema = z.enum([
+  'start',
+  'end',
+  'stem_in',
+  'stem_out',
+  'diverging_out',
+  'a_start',
+  'a_end',
+  'b_start',
+  'b_end',
+]);
 const endpointRef = z.object({ objectId: idString, port: portSchema }).passthrough();
 
 const geometrySchema = z.discriminatedUnion('kind', [
@@ -65,6 +81,26 @@ const objectSchema = z.discriminatedUnion('type', [
           position: vec2,
           headingRad: finite,
           hand: z.enum(['left', 'right']),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      id: idString,
+      type: z.literal('crossing'),
+      crossing: z
+        .object({
+          position: vec2,
+          headingRad: finite,
+          ratioN: finite.refine(
+            (n) => n >= 1.5 && n <= 100,
+            'krysningsforholdet 1:n må ha n mellom 1,5 og 100',
+          ),
+          halfLengthM: finite.refine(
+            (n) => n > 0 && n <= 1e4,
+            'lengden fra M til enden må være mellom 0 og 10 000 m',
+          ),
         })
         .passthrough(),
     })
@@ -284,13 +320,14 @@ export function validateProject(raw: unknown): ProjectValidation {
   project.connections.forEach((c, i) => {
     for (const end of [c.a, c.b]) {
       const kind = ids.get(end.objectId);
-      if (kind !== 'track_segment' && kind !== 'turnout') {
+      if (kind !== 'track_segment' && kind !== 'turnout' && kind !== 'crossing') {
         errors.push(`connections[${i}]: viser til ukjent sporobjekt «${end.objectId}»`);
       } else {
-        const allowed: readonly string[] = kind === 'turnout' ? TURNOUT_PORTS : TRACK_PORTS;
+        const allowed: readonly string[] =
+          kind === 'turnout' ? TURNOUT_PORTS : kind === 'crossing' ? CROSSING_PORTS : TRACK_PORTS;
         if (!allowed.includes(end.port)) {
           errors.push(
-            `connections[${i}]: porten «${end.port}» finnes ikke på ${kind === 'turnout' ? 'sporveksel' : 'spor'} «${end.objectId}»`,
+            `connections[${i}]: porten «${end.port}» finnes ikke på ${kind === 'turnout' ? 'sporveksel' : kind === 'crossing' ? 'sporkryss' : 'spor'} «${end.objectId}»`,
           );
         }
       }

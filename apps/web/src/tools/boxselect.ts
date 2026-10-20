@@ -1,4 +1,5 @@
 import {
+  isCrossing,
   isDimension,
   isTrack,
   isTurnout,
@@ -8,6 +9,7 @@ import {
 } from '@railcad/domain';
 import type { Bounds, GeometryEngine } from '@railcad/geometry-api';
 import { cachedBounds } from '../rendering/paths';
+import { cachedCrossingLayout } from '../rendering/crossings';
 import { cachedTurnoutLayout } from '../rendering/turnouts';
 
 /** Aksejustert rektangel i verdenskoordinater fra to motstående hjørner. */
@@ -87,6 +89,9 @@ export function objectsInRect(
   for (const o of objects) {
     if (isTrack(o)) {
       if (hitsGeometry(o.geometry)) ids.push(o.id);
+    } else if (isCrossing(o)) {
+      const segs = cachedCrossingLayout(o).segments;
+      if (crossing ? segs.some(hitsGeometry) : segs.every(hitsGeometry)) ids.push(o.id);
     } else if (isTurnout(o)) {
       const segs = cachedTurnoutLayout(o)?.segments ?? [];
       if (segs.length && (crossing ? segs.some(hitsGeometry) : segs.every(hitsGeometry)))

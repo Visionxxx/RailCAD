@@ -20,6 +20,16 @@ Ende mot ende regnes ikke (det er en mulig kobling – se Koblinger). Markering 
 
 **Planskilt:** Knappen bekrefter at kryssingen er bevisst (bro/tunnel). Bekreftelsen lagres i prosjektfilen (`acknowledgedCrossings`, objekt-ID-par) og kan angres. Høydegeometri finnes ikke i modellen ennå (P2).
 
+## Sporkryss-objektet (brukerdefinert)
+
+Siden åpne norske produktmål ikke finnes, kan du plassere et **sporkryss** (diamantkryss, RR) med verktøyet _Sporkryss (X)_:
+
+- To rette akser som krysser i M. Spor A har retning `headingRad`; spor B ligger `α = atan(1/n)` mot klokka fra A (`n` fra forholdet 1:n, 1,5 ≤ n ≤ 100).
+- Lengden fra M til hver ende (`halfLengthM`, ≤ 10 000 m) **angir du selv** – hent den fra leverandørtegning. Programmet foreslår ingen verdi som «riktig».
+- Fire porter (`a_start`, `a_end`, `b_start`, `b_end`) som kan kobles til spor og sporveksler som alt annet, med tangentkontroll.
+- Objektet merkes **«ikke verifisert»** i panel, på tegneflaten og i DXF (eget lag `RAILCAD_SPORKRYSS`).
+- Kryssets egne to akser flagges ikke som kryssing; andre spor som krysser dem flagges som vanlig.
+
 ## Kilder til kryss-/kryssvekseldata (søk 2026-10-20)
 
 Ingen åpne måltabeller funnet:

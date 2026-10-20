@@ -55,6 +55,9 @@ export const useViewStore = defineStore('view', () => {
   const turnoutTypeId = ref('trv-60E1-1:9-R300-EVF');
   /** Valgt bakgrunn i bakgrunnspanelet (for skalering/flytting). */
   const activeBackgroundId = ref<string | null>(null);
+  /** Sporkryss: krysningsforhold 1:n og lengde fra M til hver ende (brukerdefinert – ingen åpne norske mål). */
+  const crossingRatioN = ref(9);
+  const crossingHalfLengthM = ref(17);
   const turnoutHand = ref<'left' | 'right'>('left');
   /** Markørposisjon i verdenskoordinater (rå, ikke snappet). */
   const cursor = ref<readonly [number, number] | null>(null);
@@ -129,6 +132,8 @@ export const useViewStore = defineStore('view', () => {
     parallelSide,
     turnoutTypeId,
     turnoutHand,
+    crossingRatioN,
+    crossingHalfLengthM,
     activeBackgroundId,
     cursor,
     activeSnapKinds,

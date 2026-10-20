@@ -1,6 +1,7 @@
 import { TOLERANCES, type GeometryEngine } from '@railcad/geometry-api';
 import { dimensionLayout } from './dimension';
 import { snap } from './snap';
+import { crossingLayout } from './crossing';
 import { findIntersections } from './intersect';
 import { evaluateConnections, findCoincidentFreePorts } from './topology';
 import { turnoutLayout } from './turnout';
@@ -48,4 +49,5 @@ export const geometryEngine: GeometryEngine = {
   dimensionLayout,
   turnoutLayout,
   findIntersections,
+  crossingLayout,
 };

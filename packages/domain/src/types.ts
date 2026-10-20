@@ -77,15 +77,40 @@ export interface TurnoutObject {
   turnout: TurnoutPlacement;
 }
 
-export type RailObject = TrackSegment | DimensionObject | TurnoutObject;
+/**
+ * Sporkryss (diamantkryss, RR): to rette akser som krysser hverandre i M. Geometrien er KUN
+ * krysningsvinkelen og lengdene – produktmål (kryssets faktiske lengde) finnes ikke som åpne
+ * norske data, så `halfLengthM` er brukerdefinert og objektet er alltid «ikke verifisert».
+ */
+export interface CrossingPlacement {
+  /** Matematisk midtpunkt M (skjæringspunktet mellom aksene). */
+  position: Vec2;
+  /** Retning på spor A. Spor B ligger `atan(1/ratioN)` mot klokka fra A. */
+  headingRad: number;
+  /** n i krysningsforholdet 1:n (tan α = 1/n). */
+  ratioN: number;
+  /** Lengde fra M til hver ende av begge aksene, meter. */
+  halfLengthM: number;
+}
+
+export interface CrossingObject {
+  id: string;
+  type: 'crossing';
+  crossing: CrossingPlacement;
+}
+
+export type RailObject = TrackSegment | DimensionObject | TurnoutObject | CrossingObject;
 
 export type TrackPortName = 'start' | 'end';
 /** Stamspor inn (SS), stamspor ut (bakkant), avvikende spor ut (bakkant). */
 export type TurnoutPortName = 'stem_in' | 'stem_out' | 'diverging_out';
-export type PortName = TrackPortName | TurnoutPortName;
+/** Sporkryss: ender på spor A og spor B (A går i retning `headingRad`, B i retning `headingRad + α`). */
+export type CrossingPortName = 'a_start' | 'a_end' | 'b_start' | 'b_end';
+export type PortName = TrackPortName | TurnoutPortName | CrossingPortName;
 
 export const TRACK_PORTS: readonly TrackPortName[] = ['start', 'end'];
 export const TURNOUT_PORTS: readonly TurnoutPortName[] = ['stem_in', 'stem_out', 'diverging_out'];
+export const CROSSING_PORTS: readonly CrossingPortName[] = ['a_start', 'a_end', 'b_start', 'b_end'];
 
 /**
  * Eksplisitt topologisk kobling mellom to sporendepunkter.
@@ -128,4 +153,8 @@ export function isDimension(o: RailObject): o is DimensionObject {
 
 export function isTurnout(o: RailObject): o is TurnoutObject {
   return o.type === 'turnout';
+}
+
+export function isCrossing(o: RailObject): o is CrossingObject {
+  return o.type === 'crossing';
 }

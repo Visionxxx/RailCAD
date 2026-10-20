@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import {
+  CROSSING_PORTS,
   TRACK_PORTS,
   TURNOUT_PORTS,
   getTurnoutType,
+  isCrossing,
   isDimension,
   isTrack,
   isTurnout,
   validateGeometry,
+  type CrossingObject,
+  type CrossingPlacement,
   type DimensionObject,
   type TrackGeometry,
   type TrackSegment,
@@ -103,16 +107,18 @@ const overview = computed(() => {
   let trackCount = 0;
   let totalLengthM = 0;
   let turnouts = 0;
+  let crossings = 0;
   let dims = 0;
   for (const o of project.objects) {
     if (isTrack(o)) {
       trackCount++;
       totalLengthM += engine.length(o.geometry);
     } else if (isTurnout(o)) turnouts++;
+    else if (isCrossing(o)) crossings++;
     else dims++;
   }
   const issues = project.connectionResults.filter((r) => r.status !== 'ok').length;
-  return { trackCount, totalLengthM, turnouts, dims, issues };
+  return { trackCount, totalLengthM, turnouts, crossings, dims, issues };
 });
 
 // --- Sporveksel ---
@@ -148,11 +154,46 @@ function setTurnoutHand(e: Event) {
   project.updateObject({ ...o, turnout: { ...o.turnout, hand } }, 'Endre vekselretning');
 }
 
+// --- Sporkryss ---
+const crossing = computed<CrossingObject | null>(() => {
+  const o = selected.value.length === 1 ? selected.value[0] : undefined;
+  return o && isCrossing(o) ? o : null;
+});
+function editCrossing(
+  label: string,
+  make: (p: CrossingPlacement, n: number) => CrossingPlacement,
+  validate?: (n: number) => string | null,
+) {
+  return {
+    validate,
+    commit: (n: number) => {
+      const o = crossing.value;
+      if (o) project.updateObject({ ...o, crossing: make(o.crossing, n) }, label);
+    },
+  };
+}
+const cX = editCrossing('Flytt sporkryss', (p, n) => ({ ...p, position: [n, p.position[1]] }));
+const cY = editCrossing('Flytt sporkryss', (p, n) => ({ ...p, position: [p.position[0], n] }));
+const cHeading = editCrossing('Roter sporkryss', (p, n) => ({ ...p, headingRad: degToRad(n) }));
+const cRatio = editCrossing(
+  'Endre krysningsforhold',
+  (p, n) => ({ ...p, ratioN: n }),
+  (n) => (n >= 1.5 && n <= 100 ? null : 'Forholdet 1:n må ha n mellom 1,5 og 100.'),
+);
+const cHalf = editCrossing(
+  'Endre sporkryss-lengde',
+  (p, n) => ({ ...p, halfLengthM: n }),
+  (n) => (n > 0 && n <= 1e4 ? null : 'Lengden må være mellom 0 og 10 000 m.'),
+);
+const crossingAngleDeg = computed(() =>
+  crossing.value ? radToDeg(Math.atan(1 / crossing.value.crossing.ratioN)) : 0,
+);
+
 // --- Koblinger ---
 const portInfo = computed(() => {
-  const o = track.value ?? turnout.value;
+  const o = track.value ?? turnout.value ?? crossing.value;
   if (!o) return [];
-  const ports = track.value ? TRACK_PORTS : TURNOUT_PORTS;
+  const ports = track.value ? TRACK_PORTS : crossing.value ? CROSSING_PORTS : TURNOUT_PORTS;
   return ports.map((port) => {
     const r = project.connectionResults.find(
       (x) =>
@@ -239,6 +280,10 @@ const dimBy = dimPoint('b', 1);
       </div>
       <div class="field ro">
         <label>Sporveksler</label><output data-testid="ov-turnouts">{{ overview.turnouts }}</output>
+      </div>
+      <div class="field ro">
+        <label>Sporkryss</label
+        ><output data-testid="ov-crossing-objects">{{ overview.crossings }}</output>
       </div>
       <div class="field ro">
         <label>Mål</label><output>{{ overview.dims }}</output>
@@ -382,6 +427,83 @@ const dimBy = dimPoint('b', 1);
       </div>
       <div class="field ro">
         <label>Regelverk</label><output><span class="badge">ikke vurdert</span></output>
+      </div>
+      <div class="row-actions">
+        <button
+          class="btn secondary"
+          data-testid="delete-selected"
+          @click="project.deleteSelection()"
+        >
+          Slett
+        </button>
+      </div>
+    </template>
+
+    <template v-else-if="crossing">
+      <div class="field ro">
+        <label>Objekt-ID</label><output data-testid="prop-id">{{ crossing.id }}</output>
+      </div>
+      <div class="field ro">
+        <label>Type</label
+        ><output data-testid="prop-crossing-type">Sporkryss (diamantkryss)</output>
+      </div>
+      <div class="field ro">
+        <label>Verifisering</label
+        ><output
+          ><span class="badge" style="color: var(--warn)" data-testid="prop-verification"
+            >Ikke verifisert</span
+          ></output
+        >
+      </div>
+      <p class="muted" style="font-size: 11px; margin: 0 0 8px">
+        Brukerdefinert geometri: to rette akser som krysser i M med vinkel atan(1/n). Lengden er
+        ikke et produktmål. Ikke for godkjent prosjektering.
+      </p>
+      <NumberField
+        id="prop-start-x"
+        label="M X"
+        unit="m"
+        :model-value="crossing.crossing.position[0]"
+        @commit="cX.commit"
+      />
+      <NumberField
+        id="prop-start-y"
+        label="M Y"
+        unit="m"
+        :model-value="crossing.crossing.position[1]"
+        @commit="cY.commit"
+      />
+      <NumberField
+        id="prop-heading"
+        label="Retning A"
+        unit="°"
+        :decimals="4"
+        :model-value="radToDeg(crossing.crossing.headingRad)"
+        @commit="cHeading.commit"
+      />
+      <NumberField
+        id="prop-ratio"
+        label="Forhold 1:n, n"
+        :decimals="2"
+        :model-value="crossing.crossing.ratioN"
+        :validate="cRatio.validate"
+        @commit="cRatio.commit"
+      />
+      <NumberField
+        id="prop-half"
+        label="Lengde M→ende"
+        unit="m"
+        :model-value="crossing.crossing.halfLengthM"
+        :validate="cHalf.validate"
+        @commit="cHalf.commit"
+      />
+      <div class="field ro">
+        <label>Krysningsvinkel</label
+        ><output data-testid="prop-angle">{{ fmt(crossingAngleDeg, 3) }}°</output>
+      </div>
+      <div v-for="p in portInfo" :key="p.port" class="field ro">
+        <label>Kobling {{ portLabel(p.port) }}</label>
+        <output :data-testid="`prop-port-${p.port}`" :class="p.cls">{{ p.text }}</output>
       </div>
       <div class="row-actions">
         <button

@@ -174,3 +174,22 @@ describe('DXF-filer', () => {
     expect(text).toContain('Kjøreveg Ålesund');
   });
 });
+
+describe('DXF-eksport av sporkryss', () => {
+  it('skriver begge aksene på eget lag og en «ikke verifisert»-tekst', () => {
+    const p = project([
+      {
+        id: 'crossing-001',
+        type: 'crossing',
+        crossing: { position: [100, 50], headingRad: 0, ratioN: 9, halfLengthM: 17 },
+      },
+    ]);
+    const ents = buildEntities(p, engine);
+    const onLayer = ents.filter((e) => e.layer === LAYERS.crossing.name);
+    expect(onLayer).toHaveLength(2);
+    expect(onLayer.every((e) => e.kind === 'line')).toBe(true);
+    const text = ents.find((e) => e.kind === 'text' && e.value.includes('sporkryss'));
+    expect(text && text.kind === 'text' && text.value).toContain('ikke verifisert');
+    expect(exportDxf(p, engine, 'R12')).toContain('RAILCAD_SPORKRYSS');
+  });
+});

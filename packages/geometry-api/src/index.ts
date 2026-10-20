@@ -3,6 +3,8 @@ import type {
   DimensionSpec,
   PortName,
   TrackGeometry,
+  CrossingPlacement,
+  CrossingPortName,
   TurnoutPlacement,
   TurnoutPortName,
   TurnoutType,
@@ -90,6 +92,12 @@ export interface TurnoutLayout {
   /** Aksene som rette/buede segmenter i prosjektkoordinater: stamspor, avviksbue og evt. rett avvik. */
   segments: TrackGeometry[];
   ports: Record<TurnoutPortName, Pose>;
+}
+
+export interface CrossingLayout {
+  /** Spor A og spor B som rette akser gjennom M (prosjektkoordinater). */
+  segments: TrackGeometry[];
+  ports: Record<CrossingPortName, Pose>;
 }
 
 export interface PortRef {
@@ -195,6 +203,8 @@ export interface GeometryEngine {
     ports: ReadonlyMap<string, Pose>,
     connections: readonly Connection[],
   ): PortPair[];
+  /** Sporkryss (diamantkryss): to rette akser som krysser i M med vinkel atan(1/n). */
+  crossingLayout(placement: CrossingPlacement): CrossingLayout;
   /** Finner steder der akser fra ulike objekter krysser, berører eller overlapper hverandre. */
   findIntersections(items: readonly IntersectionItem[]): Intersection[];
   /**

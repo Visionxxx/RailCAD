@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { getTurnoutType, isTrack, isTurnout, type RailObject } from '@railcad/domain';
+import { getTurnoutType, isCrossing, isTrack, isTurnout, type RailObject } from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
-import { fmtM } from '../format';
+import { fmt, fmtM } from '../format';
 import { useProjectStore } from '../stores/project';
 
 const project = useProjectStore();
@@ -13,6 +13,8 @@ function summary(o: RailObject): string {
       ? len
       : `R ${fmtM(Math.abs(o.geometry.signedRadiusM), 1)} · ${len}`;
   }
+  if (isCrossing(o))
+    return `1:${fmt(o.crossing.ratioN, 1)} · ${fmtM(2 * o.crossing.halfLengthM, 1)}`;
   if (isTurnout(o)) return getTurnoutType(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
   const t = project.byId.get(o.dimension.kind === 'length' ? o.dimension.targetId : '');
   const layout = engine.dimensionLayout(o.dimension, () =>
@@ -22,6 +24,7 @@ function summary(o: RailObject): string {
 }
 function kindLabel(o: RailObject): string {
   if (isTrack(o)) return o.geometry.kind === 'line' ? 'Rett' : 'Kurve';
+  if (isCrossing(o)) return 'Sporkryss';
   if (isTurnout(o)) return o.turnout.hand === 'left' ? 'Veksel v.' : 'Veksel h.';
   return o.dimension.kind === 'length' ? 'Lengdemål' : 'Avstandsmål';
 }

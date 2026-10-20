@@ -458,3 +458,75 @@ describe('kryssende spor', () => {
     expect(store.toProject().acknowledgedCrossings).toEqual(['track-001|track-002']);
   });
 });
+
+describe('sporkryss i prosjektstore', () => {
+  let store: ReturnType<typeof useProjectStore>;
+  const placement = (x = 0) => ({
+    position: [x, 0] as [number, number],
+    headingRad: 0,
+    ratioN: 9,
+    halfLengthM: 17,
+  });
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+
+  it('har fire porter, snappbare akser og teller ikke som mål', () => {
+    const id = store.addCrossing(placement());
+    expect(id).toBe('crossing-001');
+    expect([...store.portPoses.keys()].sort()).toEqual([
+      'crossing-001:a_end',
+      'crossing-001:a_start',
+      'crossing-001:b_end',
+      'crossing-001:b_start',
+    ]);
+    expect(store.trackRefs.map((r) => r.id)).toEqual(['crossing-001#0', 'crossing-001#1']);
+    expect(store.freePorts).toHaveLength(4);
+    expect(store.crossingIssues).toEqual([]); // kryssets egne akser flagges ikke
+  });
+
+  it('plassering fra port kobler spor A og kan angres samlet; kontrollen er OK', () => {
+    store.addTrack(line(0, 20)); // track-001 slutter i (20,0)
+    store.addCrossing(
+      { position: [37, 0], headingRad: 0, ratioN: 9, halfLengthM: 17 },
+      { objectId: 'track-001', port: 'end' },
+    );
+    expect(store.connections).toEqual([
+      {
+        a: { objectId: 'track-001', port: 'end' },
+        b: { objectId: 'crossing-001', port: 'a_start' },
+      },
+    ]);
+    expect(store.connectionResults[0]?.status).toBe('ok'); // a_start ligger i (20,0) og peker bakover
+    store.undo();
+    expect(store.objects).toHaveLength(1);
+    expect(store.connections).toEqual([]);
+  });
+
+  it('flytting og rotasjon endrer plassering; spor som krysser kryss-aksene flagges', () => {
+    store.addCrossing(placement());
+    store.execute(
+      transformObjects(
+        store.objects,
+        new Set(['crossing-001']),
+        engine,
+        { type: 'move', dx: 5, dy: 3 },
+        'Flytt',
+      ),
+    );
+    expect((store.byId.get('crossing-001') as any).crossing.position).toEqual([5, 3]);
+    store.execute(
+      transformObjects(
+        store.objects,
+        new Set(['crossing-001']),
+        engine,
+        { type: 'rotate', pivot: [5, 3], angleRad: 1 },
+        'Roter',
+      ),
+    );
+    expect((store.byId.get('crossing-001') as any).crossing.headingRad).toBeCloseTo(1, 12);
+    store.addTrack({ kind: 'line', start: [5, -20], headingRad: Math.PI / 2, lengthM: 40 });
+    expect(store.crossingIssues.some((x) => x.kind === 'crossing')).toBe(true);
+  });
+});

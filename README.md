@@ -102,7 +102,7 @@ Se `docs/` for filformat og beslutninger.
 - **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
 - **Bakgrunn:** bare side 1 av PDF, ingen georeferering, DXF uten HATCH/DIMENSION.
 - **Ingen lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
-- Kryssende spor oppdages, men sporkryss/kryssveksler finnes ikke i biblioteket (mangler verifiserte data), og høyder finnes ikke i modellen.
+- **Sporkryss** er brukerdefinert (to rette akser, vinkel atan(1/n), lengde angitt av deg) og alltid «ikke verifisert». Kryssveksler (YRV/KRV) og sovitet sporkryss (SRR) finnes ikke. Høyder finnes ikke i modellen.
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
 - Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.

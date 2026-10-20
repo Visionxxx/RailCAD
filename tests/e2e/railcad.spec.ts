@@ -1316,3 +1316,116 @@ test('spisse krysningsvinkler vises også som forhold 1:n', async ({ page }) => 
   await openTab(page, 'connections');
   await expect(page.getByTestId('cross-row-0')).toContainText('6,3° (1:9,0)');
 });
+
+// ---------- Sporkryss (brukerdefinert, ikke verifisert) ----------
+async function placeCrossing(
+  page: import('@playwright/test').Page,
+  v: { ratio?: string; half?: string; x?: string; y?: string; heading?: string } = {},
+) {
+  await selectTool(page, 'crossing');
+  const f = page.getByTestId('options-crossing');
+  await f.getByTestId('crossing-ratio').fill(v.ratio ?? '9');
+  await f.getByTestId('crossing-half').fill(v.half ?? '17');
+  await f.getByTestId('crossing-x').fill(v.x ?? '0');
+  await f.getByTestId('crossing-y').fill(v.y ?? '0');
+  await f.getByTestId('crossing-heading').fill(v.heading ?? '0');
+  await page.getByTestId('create-crossing').click();
+}
+
+test('sporkryss: opprettes med forhold og lengde, merkes ikke verifisert, og kan redigeres', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await selectTool(page, 'crossing');
+  await expect(page.getByTestId('crossing-note')).toContainText('ikke verifisert');
+  await placeCrossing(page, { ratio: '9', half: '17' });
+
+  await expect(page.getByTestId('object-crossing-001')).toContainText('1:9,0');
+  await expect(page.getByTestId('prop-crossing-type')).toContainText('Sporkryss');
+  await expect(page.getByTestId('prop-verification')).toHaveText('Ikke verifisert');
+  await expect(page.getByTestId('turnout-label-crossing-001')).toContainText('ikke verifisert');
+  await expect(page.getByTestId('prop-angle')).toHaveText('6,340°');
+  for (const p of ['a_start', 'a_end', 'b_start', 'b_end']) {
+    await expect(page.getByTestId(`prop-port-${p}`)).toHaveText('ledig');
+  }
+
+  await setField(page, 'prop-ratio', '12');
+  await expect(page.getByTestId('prop-angle')).toHaveText('4,764°');
+  await setField(page, 'prop-ratio', '1');
+  await expect(page.getByRole('alert').first()).toContainText('må ha n mellom');
+  await expect(field(page, 'prop-ratio')).toHaveValue('1');
+  await setField(page, 'prop-half', '0');
+  await expect(page.locator('#prop-half-err')).toContainText('mellom 0 og 10 000');
+
+  await selectTool(page, 'crossing');
+  await page.getByTestId('crossing-ratio').fill('1');
+  await page.getByTestId('create-crossing').click();
+  await expect(page.getByTestId('options-crossing').getByRole('alert')).toContainText('1,5 og 100');
+  expect(errors).toEqual([]);
+});
+
+test('sporkryss: plasseres på sporendepunkt og kobles, spor på begge sider gir ingen kryssadvarsel', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { x: '-60', length: '40' }); // slutter i (-20,0)
+  await selectTool(page, 'crossing');
+  await clickWorld(page, -20, 0);
+  await expect(page.getByTestId('object-crossing-001')).toBeAttached();
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+  await expect(page.getByTestId('prop-port-a_start')).toContainText('track-001 slutt · OK');
+
+  // Spor i forlengelsen ut fra a_end (M = (-3,0), a_end = (14,0)): koblet via Koble-verktøyet
+  await selectTool(page, 'connect');
+  await clickWorld(page, 14, 0);
+  await page.getByTestId('port-menu-line').click();
+  await page.getByTestId('connect-length').fill('20');
+  await page.getByTestId('connect-create').click();
+  await expect(page.getByTestId('conn-status-1')).toHaveText('OK');
+  await expect(page.getByTestId('crossing-mark-0')).toHaveCount(0); // ingen kryssadvarsel for koblede spor
+
+  // Et tverrgående spor gjennom krysset flagges derimot
+  await createLineNumeric(page, { x: '3', y: '-8', heading: '90', length: '16' });
+  await expect(page.getByTestId('crossing-mark-0')).toBeVisible();
+});
+
+test('sporkryss lagres og åpnes igjen med alle felt, og kan flyttes med musen', async ({
+  page,
+}, info) => {
+  await openApp(page);
+  await placeCrossing(page, { ratio: '12', half: '20', x: '10', y: '5', heading: '15' });
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('kryss.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.objects[0]).toMatchObject({
+    id: 'crossing-001',
+    type: 'crossing',
+    crossing: { position: [10, 5], ratioN: 12, halfLengthM: 20 },
+  });
+  expect(saved.objects[0].crossing.headingRad).toBeCloseTo((15 * Math.PI) / 180, 12);
+
+  await menu(page, 'file', 'menu-new');
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByTestId('object-crossing-001')).toContainText('1:12,0');
+
+  await selectTool(page, 'select');
+  await page.keyboard.press('Escape');
+  const from = await worldToPage(page, 10, 5);
+  const to = await worldToPage(page, 30, 5);
+  await page.mouse.move(from.x + 1, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  await page.mouse.up();
+  const movedX = Number((await field(page, 'prop-start-x').inputValue()).replace(',', '.'));
+  expect(Math.abs(movedX - 30)).toBeLessThan(0.3); // flyttet ca. +20 m
+});
