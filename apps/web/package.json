@@ -1,0 +1,18 @@
+{
+  "name": "@railcad/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit -p ../../tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@railcad/domain": "*",
+    "@railcad/geometry-api": "*",
+    "@railcad/geometry-ts": "*",
+    "pinia": "*",
+    "vue": "*"
+  }
+}
