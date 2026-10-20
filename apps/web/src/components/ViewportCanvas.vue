@@ -60,6 +60,8 @@ const visibleTracks = computed<Drawable[]>(() => {
   }
   return out;
 });
+/** Piksler per meter under hvilken oppstikkende etiketter og OK-ringer skjules. */
+const LABEL_MIN_SCALE = 4;
 const visibleTurnoutLabels = computed(() => {
   const rect = worldRect.value;
   const out: Array<{ id: string; text: string; x: number; y: number }> = [];
@@ -67,6 +69,8 @@ const visibleTurnoutLabels = computed(() => {
     if (!isTurnout(o)) continue;
     const b = turnoutBounds(o);
     if (!b || !intersects(b, rect)) continue;
+    // Ved lav zoom blir etikettene en grøt – vis dem da bare for valgt veksel.
+    if (v.scale < LABEL_MIN_SCALE && !selectedSet.value.has(o.id)) continue;
     const [x, y] = worldToScreen(v, o.turnout.position);
     const name = getTurnoutType(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
     out.push({ id: o.id, text: `${name} – delvis verifisert`, x, y });
@@ -135,6 +139,7 @@ const connectionMarks = computed(() => {
   return project.connectionResults
     .filter(
       (r) =>
+        (r.status !== 'ok' || v.scale >= LABEL_MIN_SCALE) &&
         r.at &&
         r.at[0] >= rect.minX &&
         r.at[0] <= rect.maxX &&

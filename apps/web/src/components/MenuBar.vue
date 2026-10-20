@@ -33,6 +33,11 @@ const menus = computed<MenuDef[]>(() => [
       { label: 'Nytt prosjekt', run: actions.newProject, testid: 'menu-new' },
       { label: 'Åpne …', kbd: 'Ctrl+O', run: actions.openFile, testid: 'menu-open' },
       { label: 'Åpne eksempelprosjekt', run: actions.openDemo, testid: 'menu-demo' },
+      {
+        label: 'Åpne avansert eksempel (Lodalen-inspirert)',
+        run: actions.openLodalenDemo,
+        testid: 'menu-demo-lodalen',
+      },
       { label: 'Lagre', kbd: 'Ctrl+S', run: actions.save, testid: 'menu-save' },
       { label: '', separator: true },
       {

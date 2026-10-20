@@ -693,3 +693,19 @@ test('RC-010: sporveksel og kobling overlever lagring; ukjent katalogtype avvise
   await chooser2.setFiles(bad);
   await expect(page.getByTestId('dialog')).toContainText('ukjent sporvekseltype');
 });
+
+test('avansert eksempel (Lodalen-inspirert) åpnes med veksler og kontrollerte koblinger', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await menu(page, 'file', 'menu-demo-lodalen');
+  await expect(page.getByTestId('project-title')).toContainText('Lodalen-inspirert');
+  await expect(page.getByTestId('object-turnout-008')).toBeVisible();
+  await expect(page.getByTestId('connections')).toContainText('Koblinger (35)');
+  await expect(page.getByTestId('connections')).toContainText('alle OK');
+  await expect(page.getByTestId('conn-errors')).toHaveCount(0);
+  await expect(page.getByTestId('turnout-label-turnout-001')).toHaveCount(0); // skjult ved lav zoom
+  await page.getByTestId('object-turnout-001').click();
+  await expect(page.getByTestId('turnout-label-turnout-001')).toContainText('delvis verifisert');
+  expect(errors).toEqual([]);
+});

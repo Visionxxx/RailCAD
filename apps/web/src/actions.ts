@@ -1,4 +1,5 @@
 import demo from '@fixtures/demo-verksted.json';
+import demoLodalen from '@fixtures/demo-lodalen.json';
 import { downloadProject, pickProjectFile, readProjectFile, type OpenResult } from './io/files';
 import { loadProject } from '@railcad/domain';
 import { useProjectStore } from './stores/project';
@@ -46,8 +47,14 @@ export function useActions() {
   }
 
   function openDemo() {
+    openFixture(demo);
+  }
+  function openLodalenDemo() {
+    openFixture(demoLodalen);
+  }
+  function openFixture(data: unknown) {
     guardDirty(() => {
-      const result = loadProject(demo);
+      const result = loadProject(data);
       if (!result.ok) return showOpenErrors(result);
       project.load(result.project);
     });
@@ -59,5 +66,5 @@ export function useActions() {
     ui.notify(`Lagret som ${name}.`);
   }
 
-  return { newProject, openFile, openDemo, save };
+  return { newProject, openFile, openDemo, openLodalenDemo, save };
 }

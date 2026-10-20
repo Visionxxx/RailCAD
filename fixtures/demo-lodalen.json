@@ -1,0 +1,908 @@
+{
+  "schemaVersion": "0.1.0",
+  "project": {
+    "id": "demo-lodalen-01",
+    "name": "Sporfelt – Lodalen-inspirert (illustrasjon)",
+    "units": "m",
+    "coordinateSystem": {
+      "type": "local_xy"
+    },
+    "description": "Illustrativt sporfelt inspirert av en stor sporgruppe med innkjøring fra øst og veksellest som åpner seg mot vest. IKKE Lodalens faktiske geometri, og ikke regelverkskontrollert. Veksler (60E1 1:9 R300) er delvis verifisert: akser avledet fra TRV-hovedmål. Sporavstand 5 m er en illustrasjonsverdi."
+  },
+  "objects": [
+    {
+      "id": "track-001",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          900,
+          60
+        ],
+        "headingRad": 3.141592653589793,
+        "lengthM": 150
+      }
+    },
+    {
+      "id": "track-002",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          750,
+          60.00000000000002
+        ],
+        "headingRad": 3.141592653589793,
+        "signedRadiusM": -800,
+        "sweepRad": 0.14
+      }
+    },
+    {
+      "id": "track-003",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          638.3655082846108,
+          67.82720302989026
+        ],
+        "headingRad": 3.001592653589793,
+        "lengthM": 40
+      }
+    },
+    {
+      "id": "turnout-001",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          598.7568684361053,
+          73.40892761565972
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "right"
+      }
+    },
+    {
+      "id": "track-004",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          566.2075941685496,
+          79.8488424756588
+        ],
+        "headingRad": 2.8909354324158976,
+        "lengthM": 147.87661988029836
+      }
+    },
+    {
+      "id": "track-005",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          422.952175836601,
+          116.5282621242938
+        ],
+        "headingRad": 2.8909354324158976,
+        "signedRadiusM": 300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-006",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          390.4029015690453,
+          122.96817698429288
+        ],
+        "headingRad": 3.0015926535897934,
+        "lengthM": 346.7689171175499
+      }
+    },
+    {
+      "id": "turnout-002",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          565.8519908819593,
+          78.04594531528771
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "left"
+      }
+    },
+    {
+      "id": "track-007",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          532.7906269862234,
+          80.85200591732884
+        ],
+        "headingRad": 3.1122498747636884,
+        "lengthM": 147.87661988029836
+      }
+    },
+    {
+      "id": "track-008",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          384.97766332486594,
+          85.19049423337435
+        ],
+        "headingRad": 3.1122498747636884,
+        "signedRadiusM": -300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-009",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          351.91629942913,
+          87.99655483541551
+        ],
+        "headingRad": 3.0015926535897925,
+        "lengthM": 313.53891711755
+      }
+    },
+    {
+      "id": "turnout-003",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          532.9471133278133,
+          82.6829630149157
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "right"
+      }
+    },
+    {
+      "id": "track-010",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          500.39783906025764,
+          89.12287787491478
+        ],
+        "headingRad": 2.8909354324158976,
+        "lengthM": 102.5996941896113
+      }
+    },
+    {
+      "id": "track-011",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          401.00442498465657,
+          114.57177738349597
+        ],
+        "headingRad": 2.8909354324158976,
+        "signedRadiusM": 300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-012",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          368.4551507171009,
+          121.01169224349505
+        ],
+        "headingRad": 3.0015926535897934,
+        "lengthM": 325.30891711754987
+      }
+    },
+    {
+      "id": "turnout-004",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          500.0422357736674,
+          87.31998071454369
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "left"
+      }
+    },
+    {
+      "id": "track-013",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          466.98087187793146,
+          90.12604131658482
+        ],
+        "headingRad": 3.1122498747636884,
+        "lengthM": 102.5996941896113
+      }
+    },
+    {
+      "id": "track-014",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          364.42534361936384,
+          93.13616945470285
+        ],
+        "headingRad": 3.1122498747636884,
+        "signedRadiusM": -300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-015",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          331.3639797236279,
+          95.942230056744
+        ],
+        "headingRad": 3.0015926535897925,
+        "lengthM": 292.0789171175499
+      }
+    },
+    {
+      "id": "turnout-005",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          467.1373582195215,
+          91.95699841417168
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "right"
+      }
+    },
+    {
+      "id": "track-016",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          434.5880839519658,
+          98.39691327417076
+        ],
+        "headingRad": 2.8909354324158976,
+        "lengthM": 57.32276849892421
+      }
+    },
+    {
+      "id": "track-017",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          379.0566741327122,
+          112.61529264269811
+        ],
+        "headingRad": 2.8909354324158976,
+        "signedRadiusM": 300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-018",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          346.5073998651565,
+          119.05520750269719
+        ],
+        "headingRad": 3.0015926535897934,
+        "lengthM": 303.8489171175499
+      }
+    },
+    {
+      "id": "turnout-006",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          434.2324806653756,
+          96.59401611379967
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "left"
+      }
+    },
+    {
+      "id": "track-019",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          401.17111676963964,
+          99.4000767158408
+        ],
+        "headingRad": 3.1122498747636884,
+        "lengthM": 57.32276849892421
+      }
+    },
+    {
+      "id": "track-020",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          343.87302391386186,
+          101.08184467603137
+        ],
+        "headingRad": 3.1122498747636884,
+        "signedRadiusM": -300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-021",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          310.8116600181259,
+          103.88790527807254
+        ],
+        "headingRad": 3.0015926535897925,
+        "lengthM": 270.61891711755
+      }
+    },
+    {
+      "id": "turnout-007",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          401.3276031112297,
+          101.23103381342766
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "right"
+      }
+    },
+    {
+      "id": "track-022",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          368.778328843674,
+          107.67094867342674
+        ],
+        "headingRad": 2.8909354324158976,
+        "lengthM": 12.045842808237127
+      }
+    },
+    {
+      "id": "track-023",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          357.1089232807679,
+          110.65880790190026
+        ],
+        "headingRad": 2.8909354324158976,
+        "signedRadiusM": 300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-024",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          324.5596490132122,
+          117.09872276189935
+        ],
+        "headingRad": 3.0015926535897934,
+        "lengthM": 282.38891711754997
+      }
+    },
+    {
+      "id": "turnout-008",
+      "type": "turnout",
+      "turnout": {
+        "catalogId": "trv-60E1-1:9-R300-EVF",
+        "catalogRevision": "TRV 2026-05-18 (oldid 141902), bibliotek 0.1",
+        "position": [
+          368.42272555708377,
+          105.86805151305565
+        ],
+        "headingRad": 3.001592653589793,
+        "hand": "left"
+      }
+    },
+    {
+      "id": "track-025",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          335.3613616613478,
+          108.67411211509678
+        ],
+        "headingRad": 3.1122498747636884,
+        "lengthM": 12.045842808237127
+      }
+    },
+    {
+      "id": "track-026",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [
+          323.32070420835987,
+          109.02751989735987
+        ],
+        "headingRad": 3.1122498747636884,
+        "signedRadiusM": -300,
+        "sweepRad": 0.11065722117389563
+      }
+    },
+    {
+      "id": "track-027",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          290.2593403126239,
+          111.83358049940102
+        ],
+        "headingRad": 3.0015926535897925,
+        "lengthM": 249.15891711754995
+      }
+    },
+    {
+      "id": "track-028",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [
+          335.51784800293785,
+          110.50506921268364
+        ],
+        "headingRad": 3.001592653589793,
+        "lengthM": 294.1600000000001
+      }
+    },
+    {
+      "id": "dim-001",
+      "type": "dimension",
+      "dimension": {
+        "kind": "length",
+        "targetId": "track-028",
+        "offsetM": 8
+      }
+    },
+    {
+      "id": "dim-002",
+      "type": "dimension",
+      "dimension": {
+        "kind": "distance",
+        "a": [
+          44.93362613024965,
+          156.50415179749535
+        ],
+        "b": [
+          45.63134170347081,
+          161.4552317785585
+        ],
+        "offsetM": 6
+      }
+    },
+    {
+      "id": "dim-003",
+      "type": "dimension",
+      "dimension": {
+        "kind": "distance",
+        "a": [
+          45.63134170347081,
+          161.4552317785585
+        ],
+        "b": [
+          46.329057276692026,
+          166.40631175962167
+        ],
+        "offsetM": 6
+      }
+    },
+    {
+      "id": "dim-004",
+      "type": "dimension",
+      "dimension": {
+        "kind": "distance",
+        "a": [
+          46.329057276692026,
+          166.40631175962167
+        ],
+        "b": [
+          47.026772849913186,
+          171.35739174068482
+        ],
+        "offsetM": 6
+      }
+    }
+  ],
+  "connections": [
+    {
+      "a": {
+        "objectId": "track-001",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-002",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-002",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-003",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-003",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "turnout-001",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-001",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-004",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-004",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-005",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-005",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-006",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-001",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-002",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-002",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-007",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-007",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-008",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-008",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-009",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-002",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-003",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-003",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-010",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-010",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-011",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-011",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-012",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-003",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-004",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-004",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-013",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-013",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-014",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-014",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-015",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-004",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-005",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-005",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-016",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-016",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-017",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-017",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-018",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-005",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-006",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-006",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-019",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-019",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-020",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-020",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-021",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-006",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-007",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-007",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-022",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-022",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-023",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-023",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-024",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-007",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "turnout-008",
+        "port": "stem_in"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-008",
+        "port": "diverging_out"
+      },
+      "b": {
+        "objectId": "track-025",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-025",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-026",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "track-026",
+        "port": "end"
+      },
+      "b": {
+        "objectId": "track-027",
+        "port": "start"
+      }
+    },
+    {
+      "a": {
+        "objectId": "turnout-008",
+        "port": "stem_out"
+      },
+      "b": {
+        "objectId": "track-028",
+        "port": "start"
+      }
+    }
+  ]
+}
