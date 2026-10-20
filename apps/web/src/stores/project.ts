@@ -10,9 +10,18 @@ import {
   type RailProject,
   type TrackGeometry,
 } from '@railcad/domain';
-import type { TrackRef } from '@railcad/geometry-api';
+import type { PortRef, TrackRef } from '@railcad/geometry-api';
 import { applyPatch, type Patch } from '../commands/patch';
-import { createDimension, createTrack, deleteObjects, replaceObjects } from '../commands/builders';
+import {
+  connectPorts,
+  createDimension,
+  createTrack,
+  createTrackConnected,
+  deleteObjects,
+  disconnect,
+  replaceObjects,
+} from '../commands/builders';
+import { geometryEngine as engine } from '../engine';
 
 /** Spesifikasjonen krever minst 50 reverserbare handlinger. */
 export const HISTORY_LIMIT = 200;
@@ -41,6 +50,16 @@ export const useProjectStore = defineStore('project', () => {
   const canUndo = computed(() => undoStack.value.length > 0);
   const canRedo = computed(() => redoStack.value.length > 0);
   const lastUndoLabel = computed(() => undoStack.value.at(-1)?.label ?? '');
+  const trackGeometries = computed(
+    () => new Map(objects.value.filter(isTrack).map((o) => [o.id, o.geometry] as const)),
+  );
+  /** Kontroll av alle koblinger mot toleransene – gjøres på nytt ved hver modellendring. */
+  const connectionResults = computed(() =>
+    engine.evaluateConnections(trackGeometries.value, connections.value),
+  );
+  const connectionSuggestions = computed(() =>
+    engine.findCoincidentFreePorts(trackGeometries.value, connections.value),
+  );
   const lastRedoLabel = computed(() => redoStack.value.at(-1)?.label ?? '');
 
   function pruneSelection() {
@@ -103,6 +122,20 @@ export const useProjectStore = defineStore('project', () => {
     return id;
   }
 
+  function connect(a: PortRef, b: PortRef): boolean {
+    return execute(connectPorts(connections.value, a, b));
+  }
+  function removeConnection(index: number): boolean {
+    return execute(disconnect(connections.value, index));
+  }
+  /** Nytt spor fra en eksisterende port; sporet og koblingen angres samlet. */
+  function addTrackFromPort(geometry: TrackGeometry, anchor: PortRef): string {
+    const { patch, id } = createTrackConnected(objects.value, connections.value, geometry, anchor);
+    execute(patch);
+    selection.value = [id];
+    return id;
+  }
+
   function updateObject(next: RailObject, label: string): boolean {
     return execute(replaceObjects(objects.value, new Map([[next.id, next]]), label));
   }
@@ -157,6 +190,9 @@ export const useProjectStore = defineStore('project', () => {
     loadCount,
     byId,
     trackRefs,
+    trackGeometries,
+    connectionResults,
+    connectionSuggestions,
     selectedObjects,
     dirty,
     canUndo,
@@ -171,6 +207,9 @@ export const useProjectStore = defineStore('project', () => {
     addTrack,
     addDimension,
     updateObject,
+    connect,
+    removeConnection,
+    addTrackFromPort,
     deleteSelection,
     deleteIds,
     updateMeta,

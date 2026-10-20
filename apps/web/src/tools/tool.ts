@@ -12,6 +12,22 @@ export interface ToolEnv {
   engine: GeometryEngine;
   setPreview(p: Preview | null): void;
   setTool(id: ToolId): void;
+  openPortMenu(menu: PortMenuState): void;
+  closePortMenu(): void;
+}
+
+export interface PortMenuItem {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  note?: string;
+}
+
+export interface PortMenuState {
+  /** Skjermposisjon (piksler i tegneflaten) menyen åpnes ved. */
+  screen: Vec2;
+  title: string;
+  items: PortMenuItem[];
 }
 
 export interface KeyInfo {

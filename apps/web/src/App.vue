@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, watchEffect } from 'vue';
 import { useActions } from './actions';
+import ConnectionsPanel from './components/ConnectionsPanel.vue';
 import MenuBar from './components/MenuBar.vue';
 import ModalDialog from './components/ModalDialog.vue';
 import ObjectList from './components/ObjectList.vue';
@@ -103,6 +104,7 @@ onBeforeUnmount(() => {
     <main class="canvas-area"><ViewportCanvas /></main>
     <aside class="side" aria-label="Egenskaper og objekter">
       <PropertiesPanel />
+      <ConnectionsPanel />
       <ObjectList />
     </aside>
     <StatusBar />

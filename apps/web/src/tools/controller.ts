@@ -13,8 +13,9 @@ import {
   ParallelTool,
   RotateTool,
 } from './operations';
+import { ConnectTool } from './connect';
 import { SelectTool } from './select';
-import type { KeyInfo, Tool, ToolEnv } from './tool';
+import type { KeyInfo, PortMenuState, Tool, ToolEnv } from './tool';
 import type { PointerInfo, Preview, ToolId } from './types';
 
 export const TOOL_SHORTCUTS: Record<ToolId, string> = {
@@ -26,6 +27,7 @@ export const TOOL_SHORTCUTS: Record<ToolId, string> = {
   'measure-length': 'M',
   'measure-distance': 'D',
   rotate: 'R',
+  connect: 'K',
   delete: 'E',
 };
 
@@ -36,6 +38,7 @@ export function createToolController() {
   const ui = useUiStore();
 
   const preview = shallowRef<Preview | null>(null);
+  const portMenu = shallowRef<PortMenuState | null>(null);
   const activeId = ref<ToolId>('select');
   // Økes ved fase-skifte i et verktøy slik at veiledningen oppdateres.
   const tick = ref(0);
@@ -50,6 +53,12 @@ export function createToolController() {
       tick.value++;
     },
     setTool: (id) => setTool(id),
+    openPortMenu: (m) => {
+      portMenu.value = m;
+    },
+    closePortMenu: () => {
+      portMenu.value = null;
+    },
   };
 
   const tools: Record<ToolId, Tool> = {
@@ -62,6 +71,7 @@ export function createToolController() {
     'measure-distance': new MeasureDistanceTool(env),
     rotate: new RotateTool(env),
     delete: new DeleteTool(env),
+    connect: new ConnectTool(env),
   };
 
   const active = computed(() => tools[activeId.value]);
@@ -119,7 +129,36 @@ export function createToolController() {
     if (activeId.value !== 'select') setTool('select');
   }
 
-  return { tools, activeId, active, hint, preview, setTool, snapAt, dispatch, key, escape, env };
+  /** Menyvalg i portmenyen (Koble-verktøyet). */
+  function choosePortAction(id: string) {
+    const t = tools.connect as ConnectTool;
+    portMenu.value = null;
+    t.menuChoice(id);
+    tick.value++;
+  }
+  function dismissPortMenu() {
+    if (!portMenu.value) return;
+    portMenu.value = null;
+    (tools.connect as ConnectTool).menuClosed();
+    tick.value++;
+  }
+
+  return {
+    tools,
+    portMenu,
+    choosePortAction,
+    dismissPortMenu,
+    activeId,
+    active,
+    hint,
+    preview,
+    setTool,
+    snapAt,
+    dispatch,
+    key,
+    escape,
+    env,
+  };
 }
 
 export type ToolController = ReturnType<typeof createToolController>;

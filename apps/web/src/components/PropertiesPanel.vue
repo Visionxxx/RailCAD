@@ -84,6 +84,29 @@ function setCurveSide(e: Event) {
   );
 }
 
+// --- Koblinger ---
+const portInfo = computed(() => {
+  const t = track.value;
+  if (!t) return [];
+  return (['start', 'end'] as const).map((port) => {
+    const r = project.connectionResults.find(
+      (x) =>
+        (x.connection.a.objectId === t.id && x.connection.a.port === port) ||
+        (x.connection.b.objectId === t.id && x.connection.b.port === port),
+    );
+    if (!r) return { port, text: 'ledig', cls: 'muted' };
+    const other =
+      r.connection.a.objectId === t.id && r.connection.a.port === port
+        ? r.connection.b
+        : r.connection.a;
+    return {
+      port,
+      text: `${other.objectId} ${other.port === 'start' ? 'start' : 'slutt'} · ${r.status === 'ok' ? 'OK' : 'avvik'}`,
+      cls: r.status === 'ok' ? '' : 'st position',
+    };
+  });
+});
+
 // --- Mål ---
 const dimLayout = computed(() => {
   const d = dimension.value;
@@ -247,8 +270,9 @@ const dimBy = dimPoint('b', 1);
       <div v-if="center" class="field ro">
         <label>Senter X / Y</label><output>{{ fmt(center[0]) }} / {{ fmt(center[1]) }}</output>
       </div>
-      <div class="field ro">
-        <label>Tilkoblinger</label><output class="muted">ingen (kommer i P1)</output>
+      <div v-for="p in portInfo" :key="p.port" class="field ro">
+        <label>{{ p.port === 'start' ? 'Kobling start' : 'Kobling slutt' }}</label>
+        <output :data-testid="`prop-port-${p.port}`" :class="p.cls">{{ p.text }}</output>
       </div>
       <div class="field ro">
         <label>Status</label><output><span class="badge ok">Gyldig geometri</span></output>

@@ -448,3 +448,107 @@ test('smal skjerm: layout bryter om uten horisontal sidescroll', async ({ page }
     path: '/tmp/claude-1000/-home-glenn-Dokumenter-Prosjekt-RailCAD/81375bdf-17de-45c0-b9c7-abd774ad38b0/scratchpad/narrow.png',
   });
 });
+
+test('RC-011: Koble – meny ved musepeker, kurve fra endepunkt og kobling i én angrehandling', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await selectTool(page, 'connect');
+  await expect(page.getByTestId('free-port')).toHaveCount(2);
+  await clickWorld(page, 20, 0);
+  await expect(page.getByTestId('port-menu')).toBeVisible();
+  await expect(page.getByTestId('port-menu-turnout')).toBeDisabled();
+  await page.getByTestId('port-menu-arc').click();
+  await clickWorld(page, 30, 10);
+
+  await expect(page.getByTestId('object-track-002')).toContainText('R 10,0 m');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+  await expect(page.getByTestId('conn-mark-0')).toHaveAttribute('data-status', 'ok');
+  await selectTool(page, 'select');
+  await page.getByTestId('object-track-001').click();
+  await expect(page.getByTestId('prop-port-end')).toContainText('track-002 start · OK');
+  await expect(page.getByTestId('prop-port-start')).toHaveText('ledig');
+
+  await page.keyboard.press('Control+z'); // spor og kobling angres samlet
+  await expect(page.getByTestId('object-list').locator('li')).toHaveCount(1);
+  await expect(page.getByTestId('conn-row-0')).toHaveCount(0);
+  await page.keyboard.press('Control+y');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+  expect(errors).toEqual([]);
+});
+
+test('RC-011: rett spor fra port med numerisk lengde, og Esc lukker menyen', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await selectTool(page, 'connect');
+  await clickWorld(page, 20, 0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('port-menu')).toHaveCount(0);
+
+  await clickWorld(page, 20, 0);
+  await page.getByTestId('port-menu-line').click();
+  await page.getByTestId('connect-length').fill('15');
+  await page.getByTestId('connect-create').click();
+  await expect(page.getByTestId('object-track-002')).toContainText('15,000 m');
+  await expect(field(page, 'prop-start-x')).toHaveValue('20,000');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+});
+
+test('RC-011: forslag kobler sammenfallende endepunkter; avvik rapporteres uten at noe flyttes', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '10' });
+  await createLineNumeric(page, { x: '10', length: '10' });
+  await expect(page.getByTestId('suggest-connect-0')).toBeVisible();
+  await page.getByTestId('suggest-connect-0').click();
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+  await expect(page.getByTestId('suggest-connect-0')).toHaveCount(0);
+
+  await selectTool(page, 'select');
+  await page.getByTestId('object-track-002').click();
+  await setField(page, 'prop-start-x', '10,25');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('Posisjonsavvik 0,250 m');
+  await expect(page.getByTestId('conn-errors')).toContainText('1 avvik');
+  await expect(field(page, 'prop-start-x')).toHaveValue('10,250'); // ikke flyttet automatisk
+  await setField(page, 'prop-heading', '5');
+  await setField(page, 'prop-start-x', '10');
+  await expect(page.getByTestId('conn-status-0')).toContainText('Tangentavvik');
+  await setField(page, 'prop-heading', '0');
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+});
+
+test('RC-011: Koble til sammenfallende endepunkt via menyen, og koblinger overlever lagring', async ({
+  page,
+}, info) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '10' });
+  await createLineNumeric(page, { x: '10', length: '10' });
+  await selectTool(page, 'connect');
+  await clickWorld(page, 10, 0);
+  await page
+    .getByTestId('port-menu-connect:track-001:end')
+    .or(page.getByTestId('port-menu-connect:track-002:start'))
+    .click();
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('koblet.railcad.json');
+  await download.saveAs(path);
+  expect(JSON.parse(readFileSync(path, 'utf8')).connections).toHaveLength(1);
+
+  await menu(page, 'file', 'menu-new');
+  await expect(page.getByTestId('conn-row-0')).toHaveCount(0);
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByTestId('conn-status-0')).toHaveText('OK');
+});

@@ -18,7 +18,13 @@ const tools: Array<{ id: ToolId; label: string; paths: string[]; gap?: boolean }
   { id: 'line', label: 'Rett spor', paths: ['M4 19L20 5', 'M4 19h.01M20 5h.01'] },
   { id: 'arc', label: 'Sirkelkurve', paths: ['M4 20C4 11 11 4 20 4'], gap: false },
   { id: 'parallel', label: 'Parallelt spor', paths: ['M3 9h18M3 15h18'] },
-  { id: 'rotate', label: 'Roter', paths: ['M20 12a8 8 0 1 1-2.3-5.7', 'M20 4v4h-4'], gap: true },
+  {
+    id: 'connect',
+    label: 'Koble',
+    paths: ['M10 8H8a4 4 0 0 0 0 8h2', 'M14 8h2a4 4 0 0 1 0 8h-2', 'M9 12h6'],
+    gap: true,
+  },
+  { id: 'rotate', label: 'Roter', paths: ['M20 12a8 8 0 1 1-2.3-5.7', 'M20 4v4h-4'] },
   {
     id: 'measure-length',
     label: 'Mål lengde',

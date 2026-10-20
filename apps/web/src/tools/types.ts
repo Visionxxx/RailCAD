@@ -29,6 +29,8 @@ export interface Preview {
   hoverId?: string;
   hoverKind?: 'normal' | 'danger';
   pivot?: Vec2;
+  /** Ledig port under markøren (Koble-verktøyet). */
+  portHover?: Vec2;
   /** Tekst ved markøren (mål mens man tegner). */
   hud?: string[];
   hudValid?: boolean;
@@ -43,4 +45,5 @@ export type ToolId =
   | 'measure-length'
   | 'measure-distance'
   | 'rotate'
-  | 'delete';
+  | 'delete'
+  | 'connect';

@@ -6,6 +6,7 @@ import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, parseNumber } from '../format';
 import { useProjectStore } from '../stores/project';
 import { useTools } from '../tools/controller';
+import type { ConnectTool } from '../tools/connect';
 import type { RotateTool } from '../tools/operations';
 import { useViewStore } from '../stores/view';
 
@@ -97,6 +98,25 @@ const rotateTool = computed(() => {
   void ctrl.hint.value;
   return ctrl.tools.rotate as RotateTool;
 });
+const connectTool = computed(() => {
+  void ctrl.hint.value;
+  return ctrl.tools.connect as ConnectTool;
+});
+const connectMode = computed(() => {
+  void ctrl.hint.value;
+  return connectTool.value.activeMode;
+});
+const connectLength = ref('');
+function applyConnectLine() {
+  const n = parseNumber(connectLength.value);
+  if (n === null || n <= 0) {
+    error.value = 'Lengde: oppgi et positivt tall.';
+    return;
+  }
+  error.value = '';
+  if (connectTool.value.createLine(n)) connectLength.value = '';
+}
+
 function applyRotation() {
   const n = parseNumber(rotateText.value);
   if (n === null) {
@@ -203,6 +223,22 @@ function applyRotation() {
       Roter
     </button>
     <span class="muted">Klikk rotasjonspunkt først.</span>
+    <div v-if="error" class="err" role="alert">{{ error }}</div>
+  </form>
+
+  <form
+    v-else-if="toolId === 'connect' && connectMode === 'line'"
+    class="tool-options"
+    data-testid="options-connect"
+    @submit.prevent="applyConnectLine"
+    @pointerdown.stop
+  >
+    <span class="title">Rett spor fra port</span>
+    <label
+      >Lengde (m)<input v-model="connectLength" data-testid="connect-length" inputmode="decimal"
+    /></label>
+    <button class="btn" type="submit" data-testid="connect-create">Opprett</button>
+    <span class="muted">Retningen følger tangenten i endepunktet.</span>
     <div v-if="error" class="err" role="alert">{{ error }}</div>
   </form>
 </template>

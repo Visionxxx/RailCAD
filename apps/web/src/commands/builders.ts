@@ -5,6 +5,7 @@ import {
   nextId,
   type Connection,
   type DimensionSpec,
+  type PortName,
   type RailObject,
   type TrackGeometry,
   type Vec2,
@@ -122,4 +123,53 @@ export function transformObjects(
     }
   }
   return replaceObjects(objects, replacements, label);
+}
+
+/** Kobler to ukoblede porter. Null hvis en av dem allerede er i bruk eller portene er like. */
+export function connectPorts(
+  connections: readonly Connection[],
+  a: { objectId: string; port: PortName },
+  b: { objectId: string; port: PortName },
+): Patch | null {
+  const same = a.objectId === b.objectId && a.port === b.port;
+  const used = (p: { objectId: string; port: PortName }) =>
+    connections.some(
+      (c) =>
+        (c.a.objectId === p.objectId && c.a.port === p.port) ||
+        (c.b.objectId === p.objectId && c.b.port === p.port),
+    );
+  if (same || used(a) || used(b)) return null;
+  return {
+    label: 'Koble spor',
+    objects: {},
+    connections: { before: [...connections], after: [...connections, { a, b }] },
+  };
+}
+
+export function disconnect(connections: readonly Connection[], index: number): Patch | null {
+  if (index < 0 || index >= connections.length) return null;
+  return {
+    label: 'Fjern kobling',
+    objects: {},
+    connections: {
+      before: [...connections],
+      after: connections.filter((_, i) => i !== index),
+    },
+  };
+}
+
+/** Nytt spor som starter i en eksisterende port – spor og kobling i ÉN angrebar handling. */
+export function createTrackConnected(
+  objects: readonly RailObject[],
+  connections: readonly Connection[],
+  geometry: TrackGeometry,
+  anchor: { objectId: string; port: PortName },
+): { patch: Patch; id: string } {
+  const { patch, id } = createTrack(objects, geometry);
+  patch.label = geometry.kind === 'line' ? 'Nytt rett spor fra port' : 'Ny kurve fra port';
+  patch.connections = {
+    before: [...connections],
+    after: [...connections, { a: anchor, b: { objectId: id, port: 'start' } }],
+  };
+  return { patch, id };
 }

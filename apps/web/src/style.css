@@ -672,3 +672,103 @@ button {
   margin-bottom: 10px;
   color: var(--text-dim);
 }
+
+/* Topologi */
+.conn-mark {
+  fill: none;
+  stroke-width: 2;
+  pointer-events: none;
+}
+.conn-mark.ok {
+  stroke: var(--ok);
+}
+.conn-mark.position,
+.conn-mark.tangent,
+.conn-mark.missing {
+  stroke: var(--danger);
+  stroke-dasharray: 3 2;
+}
+.port-free {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+  pointer-events: none;
+}
+.port-hover {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.port-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: 220px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.port-menu-title {
+  padding: 4px 10px;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.port-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  text-align: left;
+}
+.port-menu button:hover:not(:disabled),
+.port-menu button:focus-visible {
+  background: var(--accent-soft);
+}
+.port-menu button:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+.connections {
+  overflow-y: auto;
+  flex: 0 1 auto;
+  max-height: 34%;
+}
+.conn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.conn-row .who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: none;
+  border: 0;
+  text-align: left;
+  padding: 0;
+}
+.conn-row .st {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.st.ok {
+  color: var(--ok);
+}
+.st.position,
+.st.tangent,
+.st.missing {
+  color: var(--danger);
+}
+.btn.small {
+  padding: 1px 8px;
+  font-size: 12px;
+}

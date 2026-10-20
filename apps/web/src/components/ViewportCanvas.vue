@@ -10,6 +10,8 @@ import { useProjectStore } from '../stores/project';
 import { SNAP_LABELS, useViewStore } from '../stores/view';
 import { useTools } from '../tools/controller';
 import type { PointerInfo } from '../tools/types';
+import type { ConnectTool } from '../tools/connect';
+import PortMenu from './PortMenu.vue';
 import ToolOptions from './ToolOptions.vue';
 
 const project = useProjectStore();
@@ -90,6 +92,34 @@ const screenEndpoints = computed(() => {
   return pts;
 });
 
+const connectionMarks = computed(() => {
+  const rect = worldRect.value;
+  return project.connectionResults
+    .filter(
+      (r) =>
+        r.at &&
+        r.at[0] >= rect.minX &&
+        r.at[0] <= rect.maxX &&
+        r.at[1] >= rect.minY &&
+        r.at[1] <= rect.maxY,
+    )
+    .map((r) => ({ index: r.index, status: r.status, p: worldToScreen(v, r.at as Vec2) }));
+});
+const freePortMarks = computed(() => {
+  if (ctrl.activeId.value !== 'connect') return [];
+  const rect = worldRect.value;
+  return (ctrl.tools.connect as ConnectTool)
+    .freePorts()
+    .filter(
+      (f) =>
+        f.point[0] >= rect.minX &&
+        f.point[0] <= rect.maxX &&
+        f.point[1] >= rect.minY &&
+        f.point[1] <= rect.maxY,
+    )
+    .map((f) => ({ key: `${f.objectId}:${f.port}`, p: worldToScreen(v, f.point) }));
+});
+
 const snapMark = computed(() => (snap.value ? worldToScreen(v, snap.value.point) : null));
 
 function dimLabel(layout: DimensionLayout) {
@@ -127,6 +157,10 @@ function pointer(e: PointerEvent | WheelEvent): PointerInfo {
 
 function onDown(e: PointerEvent) {
   host.value?.focus({ preventScroll: true });
+  if (ctrl.portMenu.value) {
+    ctrl.dismissPortMenu(); // klikk utenfor menyen lukker den uten å utføre noe
+    return;
+  }
   const startPan =
     e.button === 1 || (e.button === 0 && (spaceHeld.value || ctrl.activeId.value === 'pan'));
   if (startPan) {
@@ -407,6 +441,33 @@ watch(
           />
         </g>
 
+        <circle
+          v-for="m in connectionMarks"
+          :key="`cm${m.index}`"
+          :class="['conn-mark', m.status]"
+          :cx="m.p[0]"
+          :cy="m.p[1]"
+          r="6"
+          :data-testid="`conn-mark-${m.index}`"
+          :data-status="m.status"
+        />
+        <circle
+          v-for="f in freePortMarks"
+          :key="f.key"
+          class="port-free"
+          :cx="f.p[0]"
+          :cy="f.p[1]"
+          r="6"
+          data-testid="free-port"
+        />
+        <circle
+          v-if="ctrl.preview.value?.portHover"
+          class="port-hover"
+          :cx="worldToScreen(v, ctrl.preview.value.portHover)[0]"
+          :cy="worldToScreen(v, ctrl.preview.value.portHover)[1]"
+          r="9"
+        />
+
         <g v-if="snap && snapMark" data-testid="snap-marker" :data-kind="snap.kind">
           <rect
             v-if="snap.kind === 'endpoint'"
@@ -458,6 +519,7 @@ watch(
     </svg>
 
     <ToolOptions />
+    <PortMenu />
   </div>
 </template>
 

@@ -141,3 +141,78 @@ describe('prosjektstore og historikk', () => {
     expect(engine.endPose(g).point[0]).toBeCloseTo(0, 9);
   });
 });
+
+describe('koblinger i prosjektstore', () => {
+  let store: ReturnType<typeof useProjectStore>;
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+    store.addTrack(line(0, 10)); // track-001: (0,0) → (10,0)
+  });
+
+  it('nytt spor fra port gir spor og kobling i én angrebar handling', () => {
+    const id = store.addTrackFromPort(
+      { kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 },
+      { objectId: 'track-001', port: 'end' },
+    );
+    expect(id).toBe('track-002');
+    expect(store.connections).toEqual([
+      { a: { objectId: 'track-001', port: 'end' }, b: { objectId: 'track-002', port: 'start' } },
+    ]);
+    expect(store.connectionResults[0]?.status).toBe('ok');
+    store.undo();
+    expect(store.objects).toHaveLength(1);
+    expect(store.connections).toEqual([]);
+    store.redo();
+    expect(store.connections).toHaveLength(1);
+  });
+
+  it('avviser kobling av port som allerede er i bruk, og lar angre fjerne koblinger', () => {
+    store.addTrack({ kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 });
+    store.addTrack({ kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 });
+    expect(store.connectionSuggestions.length).toBeGreaterThan(0);
+    expect(
+      store.connect(
+        { objectId: 'track-001', port: 'end' },
+        { objectId: 'track-002', port: 'start' },
+      ),
+    ).toBe(true);
+    expect(
+      store.connect(
+        { objectId: 'track-001', port: 'end' },
+        { objectId: 'track-003', port: 'start' },
+      ),
+    ).toBe(false);
+    expect(
+      store.connect({ objectId: 'track-002', port: 'end' }, { objectId: 'track-002', port: 'end' }),
+    ).toBe(false);
+    store.removeConnection(0);
+    expect(store.connections).toEqual([]);
+    store.undo();
+    expect(store.connections).toHaveLength(1);
+  });
+
+  it('sletting av spor fjerner koblinger til det – og angre gjenoppretter dem', () => {
+    store.addTrackFromPort(
+      { kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 },
+      { objectId: 'track-001', port: 'end' },
+    );
+    store.deleteIds(['track-002']);
+    expect(store.connections).toEqual([]);
+    store.undo();
+    expect(store.connections).toHaveLength(1);
+  });
+
+  it('endring av et koblet spor flytter ikke noe, men gir avvik i koblingskontrollen', () => {
+    store.addTrackFromPort(
+      { kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 },
+      { objectId: 'track-001', port: 'end' },
+    );
+    const t = store.byId.get('track-001') as any;
+    store.updateObject({ ...t, geometry: { ...t.geometry, lengthM: 12 } }, 'Endre lengde');
+    const r = store.connectionResults[0]!;
+    expect(r.status).toBe('position');
+    expect(r.distanceM).toBeCloseTo(2, 12);
+    expect((store.byId.get('track-002') as any).geometry.start).toEqual([10, 0]); // uendret
+  });
+});
