@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { isTypingTarget } from './dom';
 import { onBeforeUnmount, onMounted, watchEffect } from 'vue';
 import { useActions } from './actions';
+import { useAutosave } from './io/autosave';
 import MenuBar from './components/MenuBar.vue';
 import ModalDialog from './components/ModalDialog.vue';
 import ProjectSettings from './components/ProjectSettings.vue';
+import WelcomeCard from './components/WelcomeCard.vue';
 import SidePanel from './components/SidePanel.vue';
 import StatusBar from './components/StatusBar.vue';
 import ToastList from './components/ToastList.vue';
@@ -20,6 +23,7 @@ const view = useViewStore();
 const ui = useUiStore();
 const ctrl = useTools();
 const actions = useActions();
+const autosave = useAutosave();
 
 watchEffect(() => {
   document.documentElement.dataset.theme = view.theme;
@@ -31,20 +35,9 @@ const byShortcut = new Map(
     .map(([id, key]) => [key.toLowerCase(), id]),
 );
 
-function typing(e: KeyboardEvent) {
-  const el = e.target as HTMLElement | null;
-  return (
-    !!el &&
-    (el.tagName === 'INPUT' ||
-      el.tagName === 'TEXTAREA' ||
-      el.tagName === 'SELECT' ||
-      el.isContentEditable)
-  );
-}
-
 function onKeyDown(e: KeyboardEvent) {
   if (ui.dialog || ui.settingsOpen) return; // dialoger håndterer sine egne taster
-  if (typing(e)) return;
+  if (isTypingTarget(e)) return;
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key.toLowerCase();
 
@@ -70,6 +63,8 @@ function onKeyDown(e: KeyboardEvent) {
     project.deleteSelection();
   } else if (e.key === 'Enter') {
     if (ctrl.key({ key: 'Enter', shift: e.shiftKey, ctrl: false })) e.preventDefault();
+  } else if (e.key === '?') {
+    actions.showHelp();
   } else if (k === 'f') {
     view.fitAll();
   } else if (byShortcut.has(k) && !e.repeat) {
@@ -85,6 +80,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 
 onMounted(() => {
+  autosave.start();
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('beforeunload', onBeforeUnload);
 });
@@ -98,7 +94,10 @@ onBeforeUnmount(() => {
   <div class="app">
     <MenuBar />
     <ToolBar />
-    <main class="canvas-area"><ViewportCanvas /></main>
+    <main class="canvas-area">
+      <ViewportCanvas />
+      <WelcomeCard />
+    </main>
     <SidePanel />
     <StatusBar />
     <ToastList />

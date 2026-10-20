@@ -1,8 +1,16 @@
 import { defineStore } from 'pinia';
 import { computed, reactive, ref } from 'vue';
 import type { SnapKind } from '@railcad/geometry-api';
-import { fitBounds, gridSteps, panBy, zoomAt, type ViewState } from '../rendering/viewport';
+import {
+  fitBounds,
+  gridSteps,
+  panBy,
+  visibleWorldRect,
+  zoomAt,
+  type ViewState,
+} from '../rendering/viewport';
 import { unionBounds } from '../rendering/viewport';
+import { backgroundWorldBounds } from '../rendering/background';
 import { cachedBounds } from '../rendering/paths';
 import { useProjectStore } from './project';
 
@@ -73,8 +81,25 @@ export const useViewStore = defineStore('view', () => {
   }
   function fitAll() {
     const project = useProjectStore();
-    const b = unionBounds(project.trackRefs.map((t) => cachedBounds(t.geometry)));
+    // «Tilpass visning» omfatter alt som vises: spor, sporveksler og synlige bakgrunner.
+    const b = unionBounds([
+      ...project.trackRefs.map((t) => cachedBounds(t.geometry)),
+      ...project.backgrounds.filter((bg) => bg.visible).map(backgroundWorldBounds),
+    ]);
     apply(fitBounds(view, b));
+  }
+  /** Sørger for at et nytt objekt er synlig: hvis det ligger utenfor skjermen, flyttes/zoomes utsnittet. */
+  function reveal(b: { minX: number; minY: number; maxX: number; maxY: number }) {
+    const r = visibleWorldRect(view);
+    const intersects = b.minX <= r.maxX && b.maxX >= r.minX && b.minY <= r.maxY && b.maxY >= r.minY;
+    if (intersects) return;
+    const fits = b.maxX - b.minX <= r.maxX - r.minX && b.maxY - b.minY <= r.maxY - r.minY;
+    if (fits) {
+      view.cx = (b.minX + b.maxX) / 2;
+      view.cy = (b.minY + b.maxY) / 2;
+    } else {
+      apply(fitBounds(view, b));
+    }
   }
   function fitToBounds(b: { minX: number; minY: number; maxX: number; maxY: number }) {
     apply(fitBounds(view, b));
@@ -109,6 +134,7 @@ export const useViewStore = defineStore('view', () => {
     pan,
     fitAll,
     fitToBounds,
+    reveal,
     setTheme,
   };
 });

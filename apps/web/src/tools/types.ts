@@ -29,6 +29,8 @@ export interface Preview {
   hoverId?: string;
   hoverKind?: 'normal' | 'danger';
   pivot?: Vec2;
+  /** Valgboks (verdenskoordinater). `crossing` = dratt mot venstre (alt som berøres velges). */
+  rect?: { a: Vec2; b: Vec2; crossing: boolean };
   /** Ledig port under markøren (Koble-verktøyet). */
   portHover?: Vec2;
   /** Tekst ved markøren (mål mens man tegner). */

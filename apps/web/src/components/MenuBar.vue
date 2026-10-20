@@ -112,6 +112,18 @@ const menus = computed<MenuDef[]>(() => [
       },
     ],
   },
+  {
+    id: 'help',
+    label: 'Hjelp',
+    items: [
+      {
+        label: 'Hurtigtaster og tips …',
+        kbd: '?',
+        run: actions.showHelp,
+        testid: 'menu-help-shortcuts',
+      },
+    ],
+  },
 ]);
 
 const open = ref<string | null>(null);
@@ -164,6 +176,38 @@ function choose(item: Item) {
       </div>
     </div>
     <span class="spacer" />
+    <span class="undo-redo" role="group" aria-label="Angre og gjør om">
+      <button
+        :disabled="!project.canUndo"
+        :title="
+          project.canUndo
+            ? `Angre ${project.lastUndoLabel.toLowerCase()} (Ctrl+Z)`
+            : 'Angre (Ctrl+Z)'
+        "
+        :aria-label="project.canUndo ? `Angre ${project.lastUndoLabel.toLowerCase()}` : 'Angre'"
+        data-testid="undo-btn"
+        @click="project.undo()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" />
+        </svg>
+      </button>
+      <button
+        :disabled="!project.canRedo"
+        :title="
+          project.canRedo
+            ? `Gjør om ${project.lastRedoLabel.toLowerCase()} (Ctrl+Y)`
+            : 'Gjør om (Ctrl+Y)'
+        "
+        :aria-label="project.canRedo ? `Gjør om ${project.lastRedoLabel.toLowerCase()}` : 'Gjør om'"
+        data-testid="redo-btn"
+        @click="project.redo()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" />
+        </svg>
+      </button>
+    </span>
     <span class="project-title" data-testid="project-title">
       <b>{{ project.meta.name }}</b
       ><span v-if="project.dirty" title="Ulagrede endringer"> •</span>

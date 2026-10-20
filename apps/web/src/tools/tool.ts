@@ -79,3 +79,18 @@ export function lineBetween(a: Vec2, b: Vec2) {
   if (lengthM < TOLERANCES.minSegmentLengthM) return null;
   return { kind: 'line' as const, start: a, headingRad: Math.atan2(dy, dx), lengthM };
 }
+
+/**
+ * Låser retningen fra `start` til nærmeste multiplum av `stepRad` (f.eks. 15°) og projiserer
+ * `point` på den. Brukes når Skift holdes under tegning (ortho/polar).
+ */
+export function lockAngle(start: Vec2, point: Vec2, stepRad = Math.PI / 12): Vec2 {
+  const dx = point[0] - start[0];
+  const dy = point[1] - start[1];
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return point;
+  const raw = Math.atan2(dy, dx);
+  const locked = Math.round(raw / stepRad) * stepRad;
+  const along = len * Math.cos(raw - locked);
+  return [start[0] + along * Math.cos(locked), start[1] + along * Math.sin(locked)];
+}

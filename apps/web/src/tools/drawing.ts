@@ -1,7 +1,7 @@
 import type { TrackGeometry, Vec2 } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
 import { fmt, fmtDeg, fmtM, radToDeg } from '../format';
-import { Tool, lineBetween } from './tool';
+import { Tool, lineBetween, lockAngle } from './tool';
 import type { PointerInfo } from './types';
 import { isTrack } from '@railcad/domain';
 
@@ -12,7 +12,7 @@ export class LineTool extends Tool {
 
   hint() {
     return this.start
-      ? 'Klikk sluttpunkt. Esc avbryter.'
+      ? 'Klikk sluttpunkt (hold Skift for å låse retning til 15°). Esc avbryter.'
       : 'Klikk startpunkt for rett spor (eller bruk skjemaet for numerisk inntasting).';
   }
 
@@ -22,7 +22,7 @@ export class LineTool extends Tool {
       this.start = p.point;
       return;
     }
-    const g = lineBetween(this.start, p.point);
+    const g = lineBetween(this.start, this.endFor(p));
     if (!g) {
       this.env.ui.notify(
         'Sporet er for kort – velg et sluttpunkt lenger fra startpunktet.',
@@ -36,10 +36,12 @@ export class LineTool extends Tool {
 
   move(p: PointerInfo) {
     if (!this.start) return;
-    const g = lineBetween(this.start, p.point);
+    const g = lineBetween(this.start, this.endFor(p));
     this.env.setPreview({
       ghosts: g ? [{ geometry: g, valid: true }] : [],
-      hud: g ? [`L = ${fmtM(g.lengthM)}`, `α = ${fmtDeg(g.headingRad)}`] : ['For kort'],
+      hud: g
+        ? [`L = ${fmtM(g.lengthM)}`, `α = ${fmtDeg(g.headingRad)}${p.shift ? ' (låst)' : ''}`]
+        : ['For kort'],
       hudValid: !!g,
     });
   }
@@ -48,6 +50,11 @@ export class LineTool extends Tool {
     if (!this.start) return false;
     this.reset();
     return true;
+  }
+
+  /** Sluttpunkt: med Skift låses retningen til hele 15°. */
+  private endFor(p: PointerInfo): Vec2 {
+    return p.shift && this.start ? lockAngle(this.start, p.point) : p.point;
   }
 
   private reset() {

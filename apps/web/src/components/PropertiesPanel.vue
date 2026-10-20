@@ -90,6 +90,23 @@ function setCurveSide(e: Event) {
   );
 }
 
+// --- Prosjektoversikt (når ingenting er valgt) ---
+const overview = computed(() => {
+  let trackCount = 0;
+  let totalLengthM = 0;
+  let turnouts = 0;
+  let dims = 0;
+  for (const o of project.objects) {
+    if (isTrack(o)) {
+      trackCount++;
+      totalLengthM += engine.length(o.geometry);
+    } else if (isTurnout(o)) turnouts++;
+    else dims++;
+  }
+  const issues = project.connectionResults.filter((r) => r.status !== 'ok').length;
+  return { trackCount, totalLengthM, turnouts, dims, issues };
+});
+
 // --- Sporveksel ---
 const turnout = computed<TurnoutObject | null>(() => {
   const o = selected.value.length === 1 ? selected.value[0] : undefined;
@@ -201,7 +218,36 @@ const dimBy = dimPoint('b', 1);
   <section class="props" aria-labelledby="prop-h" data-testid="properties">
     <h2 id="prop-h">Egenskaper</h2>
 
-    <p v-if="!selected.length" class="muted">Ingen objekt valgt.</p>
+    <template v-if="!selected.length">
+      <p class="muted">
+        Ingen objekt valgt. Klikk et objekt, eller dra en valgboks på tegneflaten.
+      </p>
+      <h3 class="overview-h">Prosjektoversikt</h3>
+      <div class="field ro">
+        <label>Spor</label
+        ><output data-testid="ov-tracks"
+          >{{ overview.trackCount }} ({{ fmtM(overview.totalLengthM, 1) }})</output
+        >
+      </div>
+      <div class="field ro">
+        <label>Sporveksler</label><output data-testid="ov-turnouts">{{ overview.turnouts }}</output>
+      </div>
+      <div class="field ro">
+        <label>Mål</label><output>{{ overview.dims }}</output>
+      </div>
+      <div class="field ro">
+        <label>Koblinger</label
+        ><output data-testid="ov-connections"
+          >{{ project.connections.length
+          }}<span v-if="overview.issues" class="st position">
+            · {{ overview.issues }} avvik</span
+          ></output
+        >
+      </div>
+      <div class="field ro">
+        <label>Bakgrunner</label><output>{{ project.backgrounds.length }}</output>
+      </div>
+    </template>
 
     <template v-else-if="selected.length > 1">
       <p data-testid="multi-count">{{ selected.length }} objekter valgt.</p>

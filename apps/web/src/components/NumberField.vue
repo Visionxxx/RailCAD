@@ -45,6 +45,16 @@ function commit() {
   emit('commit', n);
 }
 
+/** Pil opp/ned justerer verdien: 1 (Skift ×10, Alt ×0,1). Bruker feltets egen enhet. */
+function nudge(e: KeyboardEvent) {
+  const dir = e.key === 'ArrowUp' ? 1 : -1;
+  const step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+  const current = parseNumber(text.value) ?? props.modelValue;
+  const next = Math.round((current + dir * step) * 1e9) / 1e9;
+  text.value = fmt(next, props.decimals);
+  commit();
+}
+
 function revert() {
   text.value = shown.value;
   error.value = '';
@@ -66,6 +76,8 @@ function revert() {
       :aria-invalid="error ? 'true' : 'false'"
       :aria-describedby="error ? `${id}-err` : undefined"
       @keydown.enter.prevent="commit"
+      @keydown.up.prevent="nudge"
+      @keydown.down.prevent="nudge"
       @keydown.esc.stop.prevent="revert"
       @blur="commit"
     />

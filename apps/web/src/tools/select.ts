@@ -2,6 +2,7 @@ import { isTrack, type RailObject, type TrackGeometry, type Vec2 } from '@railca
 import { TOLERANCES } from '@railcad/geometry-api';
 import { transformObjects, replaceObjects } from '../commands/builders';
 import { fmtM } from '../format';
+import { objectsInRect, rectFromCorners } from './boxselect';
 import { pickObject } from './pick';
 import { Tool, lineBetween } from './tool';
 import type { Ghost, PointerInfo } from './types';
@@ -12,8 +13,16 @@ const GRIP_RADIUS_PX = 9;
 type Mode =
   | { kind: 'idle' }
   | { kind: 'pending'; screen: Vec2; base: Vec2; ids: string[] }
+  | { kind: 'box'; screen: Vec2; a: Vec2; shift: boolean; moved: boolean }
   | { kind: 'moving'; base: Vec2; ids: string[]; delta: Vec2 }
-  | { kind: 'grip'; id: string; which: 'start' | 'end'; next: TrackGeometry | null };
+  | {
+      kind: 'grip';
+      id: string;
+      which: 'start' | 'end';
+      next: TrackGeometry | null;
+      /** Har pekeren beveget seg siden den ble trykt ned? Et rent klikk skal ikke endre noe. */
+      moved: boolean;
+    };
 
 export class SelectTool extends Tool {
   readonly id = 'select' as const;
@@ -24,7 +33,9 @@ export class SelectTool extends Tool {
   hint() {
     if (this.mode.kind === 'moving') return 'Slipp for å flytte. Esc avbryter.';
     if (this.mode.kind === 'grip') return 'Slipp for å sette endepunktet. Esc avbryter.';
-    return 'Klikk for å velge (Shift = flervalg). Dra et objekt for å flytte, dra endepunktene for å redigere.';
+    if (this.mode.kind === 'box')
+      return 'Slipp for å velge. Mot høyre: helt innenfor. Mot venstre: alt som berøres. Skift legger til.';
+    return 'Klikk for å velge (Skift = flervalg), dra på tom flate for valgboks. Dra et objekt for å flytte, dra endepunktene for å redigere.';
   }
 
   /** Snap er bare aktivt mens noe dras. */
@@ -39,14 +50,15 @@ export class SelectTool extends Tool {
 
     const grip = this.gripAt(p.world, (GRIP_RADIUS_PX + 2) / pxPerM);
     if (grip) {
-      this.mode = { kind: 'grip', ...grip, next: null };
+      this.mode = { kind: 'grip', ...grip, next: null, moved: false };
       this.snapExclude = new Set([grip.id]);
       return;
     }
 
     const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM);
     if (!hit) {
-      if (!p.shift) project.select([]);
+      // Tom flate: start valgboks. Et rent klikk (uten dra) fjerner valget i `up`.
+      this.mode = { kind: 'box', screen: p.screen, a: p.world, shift: p.shift, moved: false };
       return;
     }
     if (p.shift) {
@@ -70,6 +82,19 @@ export class SelectTool extends Tool {
       const { project, view } = this.env;
       const hit = pickObject(project.objects, project.byId, p.world, view.pickToleranceM);
       this.env.setPreview(hit ? { ghosts: [], hoverId: hit.id } : null);
+      return;
+    }
+    if (m.kind === 'box') {
+      if (
+        !m.moved &&
+        Math.hypot(p.screen[0] - m.screen[0], p.screen[1] - m.screen[1]) < DRAG_THRESHOLD_PX
+      )
+        return;
+      m.moved = true;
+      this.env.setPreview({
+        ghosts: [],
+        rect: { a: m.a, b: p.world, crossing: p.world[0] < m.a[0] },
+      });
       return;
     }
     if (m.kind === 'pending') {
@@ -99,6 +124,7 @@ export class SelectTool extends Tool {
     } else if (this.mode.kind === 'grip') {
       const next = this.gripGeometry(this.mode.id, this.mode.which, p.point);
       this.mode.next = next;
+      this.mode.moved = true;
       const e = this.env.engine;
       this.env.setPreview({
         ghosts: next ? [{ geometry: next, valid: true }] : [],
@@ -108,8 +134,20 @@ export class SelectTool extends Tool {
     }
   }
 
-  up() {
+  up(p: PointerInfo) {
     const m = this.mode;
+    if (m.kind === 'box') {
+      const { project, engine } = this.env;
+      if (m.moved) {
+        const rect = rectFromCorners(m.a, p.world);
+        const hit = objectsInRect(project.objects, project.byId, rect, p.world[0] < m.a[0], engine);
+        project.select(m.shift ? [...new Set([...project.selection, ...hit])] : hit);
+      } else if (!m.shift) {
+        project.select([]);
+      }
+      this.reset();
+      return;
+    }
     if (m.kind === 'moving') {
       const [dx, dy] = m.delta;
       if (dx !== 0 || dy !== 0) {
@@ -138,7 +176,7 @@ export class SelectTool extends Tool {
             ),
           );
         }
-      } else {
+      } else if (m.moved) {
         this.env.ui.notify(
           'Endepunktet ga ugyldig geometri (for kort spor eller ugyldig bue).',
           'error',

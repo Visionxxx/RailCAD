@@ -940,3 +940,146 @@ button {
   min-width: 14px;
   padding: 0 4px;
 }
+
+.undo-redo {
+  display: flex;
+  gap: 2px;
+  margin-right: 8px;
+}
+.undo-redo button {
+  width: 28px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text);
+}
+.undo-redo button:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.undo-redo button:disabled {
+  color: var(--text-dim);
+  opacity: 0.45;
+  cursor: default;
+}
+.undo-redo svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.select-box {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1;
+  pointer-events: none;
+}
+.select-box.crossing {
+  fill: rgba(76, 195, 138, 0.15);
+  stroke: var(--ok);
+  stroke-dasharray: 5 3;
+}
+
+/* Zoomknapper og «Kom i gang» */
+.zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 5;
+}
+.zoom-controls button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+}
+.zoom-controls button:hover {
+  background: var(--panel-2);
+}
+.zoom-controls svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.welcome {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 6;
+  width: 290px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--panel) 95%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.welcome h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.welcome ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.welcome li button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  text-align: left;
+}
+.welcome li button:hover {
+  background: var(--accent-soft);
+}
+.welcome kbd {
+  color: var(--text-dim);
+  font: 11px var(--font);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.welcome .close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.overview-h {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 600;
+}

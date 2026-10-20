@@ -13,6 +13,10 @@ export interface DialogState {
   /** Hvis satt vises en bekreftelsesknapp i tillegg til «Lukk». */
   confirmLabel?: string;
   onConfirm?: () => void;
+  /** Tekst på lukkeknappen (standard: «Avbryt» med bekreftelse, ellers «Lukk»). */
+  cancelLabel?: string;
+  /** Kalles når dialogen lukkes uten bekreftelse (knapp eller Esc). */
+  onCancel?: () => void;
 }
 
 export type SideTab = 'properties' | 'objects' | 'connections' | 'backgrounds';
@@ -31,6 +35,8 @@ export const useUiStore = defineStore('ui', () => {
   const toasts = ref<Toast[]>([]);
   const dialog = ref<DialogState | null>(null);
   const settingsOpen = ref(false);
+  /** Skjult «Kom i gang»-kort (gjelder økten). */
+  const welcomeDismissed = ref(false);
   /** Aktiv fane i høyre panel. Huskes mellom økter (kun en bekvemmelighet). */
   const sideTab = ref<SideTab>(loadSideTab());
   function showTab(tab: SideTab) {
@@ -62,6 +68,7 @@ export const useUiStore = defineStore('ui', () => {
     toasts,
     dialog,
     settingsOpen,
+    welcomeDismissed,
     sideTab,
     showTab,
     notify,

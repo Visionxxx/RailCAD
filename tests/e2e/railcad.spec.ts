@@ -980,6 +980,201 @@ test('faner i høyre panel: antall, avviksmerke, piltaster, automatisk bytte og 
   await openTab(page, 'objects');
   await page.reload();
   await expect(page.getByTestId('viewport')).toBeVisible();
+  if (await page.getByTestId('dialog').isVisible()) await page.getByTestId('dialog-close').click(); // evt. kladd-dialog
   expect(await selected()).toBe('tab-objects');
   expect(errors).toEqual([]);
+});
+
+test('et enkelt klikk på et endepunktgrep gir ingen feilmelding og endrer ingenting', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await selectTool(page, 'select');
+  const end = await worldToPage(page, 20, 0);
+  await page.mouse.move(end.x, end.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page.getByTestId('toast')).toHaveCount(0);
+  await expect(field(page, 'prop-length')).toHaveValue('20,000');
+  await expect(page.getByTestId('tab-count-properties')).toHaveText('1'); // fortsatt valgt
+});
+
+// ---------- Brukervennlighet ----------
+async function drag(
+  page: import('@playwright/test').Page,
+  from: [number, number],
+  to: [number, number],
+) {
+  const a = await worldToPage(page, from[0], from[1]);
+  const b = await worldToPage(page, to[0], to[1]);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move(b.x, b.y, { steps: 6 });
+  return async () => page.mouse.up();
+}
+
+test('valgboks: mot høyre velger det som er helt innenfor, mot venstre alt som berøres, Skift legger til', async ({
+  page,
+}) => {
+  await openApp(page);
+  for (const y of ['0', '10', '20']) await createLineNumeric(page, { y, length: '20' });
+  await selectTool(page, 'select');
+  await page.keyboard.press('Escape');
+  const count = page.getByTestId('tab-count-properties');
+
+  let release = await drag(page, [-5, -5], [25, 15]); // vindu: y=0 og y=10 helt innenfor
+  await expect(page.getByTestId('select-box')).toBeVisible();
+  await expect(page.getByTestId('select-box')).not.toHaveClass(/crossing/);
+  await release();
+  await expect(count).toHaveText('2');
+
+  release = await drag(page, [25, 22], [5, 18]); // kryss (mot venstre): berører bare y=20
+  await expect(page.getByTestId('select-box')).toHaveClass(/crossing/);
+  await release();
+  await expect(count).toHaveText('1');
+  await expect(page.getByTestId('select-box')).toHaveCount(0);
+
+  await page.keyboard.down('Shift');
+  release = await drag(page, [25, 12], [5, 8]); // kryss som berører y=10 – legges til
+  await release();
+  await page.keyboard.up('Shift');
+  await expect(count).toHaveText('2');
+
+  await clickWorld(page, 40, 25); // klikk på tom flate fjerner valget
+  await expect(count).toHaveCount(0);
+});
+
+test('Skift låser retningen til 15° når et rett spor tegnes med musen', async ({ page }) => {
+  await openApp(page);
+  await selectTool(page, 'line');
+  await clickWorld(page, 0, 0);
+  const p = await worldToPage(page, 30, 2); // ca. 3,8° fra x-aksen
+  await page.keyboard.down('Shift');
+  await page.mouse.move(p.x, p.y);
+  await expect(page.getByTestId('hud')).toContainText('låst');
+  await page.mouse.click(p.x, p.y);
+  await page.keyboard.up('Shift');
+  await expect(field(page, 'prop-heading')).toHaveValue('0,0000');
+  await expect(field(page, 'prop-start-y')).toHaveValue('0,000');
+});
+
+test('angre/gjør om-knapper og zoomknapper', async ({ page }) => {
+  await openApp(page);
+  await expect(page.getByTestId('undo-btn')).toBeDisabled();
+  await expect(page.getByTestId('redo-btn')).toBeDisabled();
+  await createLineNumeric(page, { length: '20' });
+  await expect(page.getByTestId('undo-btn')).toBeEnabled();
+  await expect(page.getByTestId('undo-btn')).toHaveAttribute('title', /Angre tegn rett spor/);
+  await page.getByTestId('undo-btn').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+  await expect(page.getByTestId('redo-btn')).toBeEnabled();
+  await page.getByTestId('redo-btn').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('1');
+
+  const s0 = (await viewInfo(page)).scale;
+  await page.getByTestId('zoom-in').click();
+  expect((await viewInfo(page)).scale).toBeCloseTo(s0 * 1.4, 6);
+  await page.getByTestId('zoom-out').click();
+  expect((await viewInfo(page)).scale).toBeCloseTo(s0, 6);
+  await page.getByTestId('zoom-fit').click();
+  expect((await viewInfo(page)).scale).toBeGreaterThan(10); // 20 m spor fyller flaten
+});
+
+test('«Kom i gang»-kortet vises i tomt prosjekt, åpner eksempel, og forsvinner når noe finnes', async ({
+  page,
+}) => {
+  await openApp(page);
+  await expect(page.getByTestId('welcome')).toBeVisible();
+  await page.getByTestId('welcome-close').click();
+  await expect(page.getByTestId('welcome')).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByTestId('welcome')).toBeVisible();
+  await page.getByTestId('welcome-demo').click();
+  await expect(page.getByTestId('welcome')).toHaveCount(0);
+  await expect(page.getByTestId('project-title')).toContainText('Verkstedspor');
+});
+
+test('hjelp med «?» og fokus tilbake; Esc lukker dialogen', async ({ page }) => {
+  await openApp(page);
+  await page.getByTestId('tool-select').focus();
+  await page.keyboard.press('?');
+  await expect(page.getByTestId('dialog')).toContainText('Valgboks');
+  await expect(page.getByTestId('dialog-close')).toBeFocused();
+  await page.keyboard.press('Tab'); // eneste knapp – fokus holdes inne i dialogen
+  await expect(page.getByTestId('dialog-close')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('dialog')).toHaveCount(0);
+  await expect(page.getByTestId('tool-select')).toBeFocused();
+
+  await menu(page, 'help', 'menu-help-shortcuts');
+  await expect(page.getByTestId('dialog')).toBeVisible();
+});
+
+test('tallfelt: pil opp/ned justerer (Skift ×10, Alt ×0,1) og kan angres', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  const f = field(page, 'prop-length');
+  await f.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(f).toHaveValue('21,000');
+  await page.keyboard.press('Shift+ArrowUp');
+  await expect(f).toHaveValue('31,000');
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect(f).toHaveValue('30,900');
+  await page.keyboard.press('ArrowDown');
+  await expect(f).toHaveValue('29,900');
+  await page.keyboard.press('Control+z'); // i tekstfelt: angre er appens (fokus er i feltet, men ikke tastet tekst)
+});
+
+test('objekt opprettet via skjema utenfor skjermen blir synlig; oversikt vises når ingenting er valgt', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { x: '5000', y: '3000', length: '40' });
+  const v = await viewInfo(page);
+  expect(Math.abs(v.cx - 5000)).toBeLessThan(200);
+  expect(Math.abs(v.cy - 3000)).toBeLessThan(200);
+  await page.getByTestId('tool-select').click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('ov-tracks')).toHaveText('1 (40,0 m)');
+  await expect(page.getByTestId('ov-turnouts')).toHaveText('0');
+});
+
+test('ulagret arbeid gjenopprettes etter oppdatering; «Forkast» og lagring fjerner sikkerhetskopien', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('railcad.draft')), { timeout: 6000 })
+    .not.toBeNull();
+
+  await page.reload();
+  await expect(page.getByTestId('dialog')).toContainText('Gjenopprette ulagret arbeid');
+  await page.getByTestId('dialog-confirm').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveText('1');
+  await expect(page.getByTestId('project-title')).toContainText('•'); // fortsatt ulagret
+
+  // Lagre fjerner kladden
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  await download.path();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('railcad.draft')), { timeout: 4000 })
+    .toBeNull();
+
+  // Ny endring → ny kladd → «Forkast» etter omlasting gir tomt prosjekt og ingen kladd
+  await createLineNumeric(page, { y: '5', length: '10' });
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('railcad.draft')), { timeout: 6000 })
+    .not.toBeNull();
+  await page.reload();
+  await page.getByTestId('dialog-close').click();
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('railcad.draft'))).toBeNull();
 });

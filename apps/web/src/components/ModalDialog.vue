@@ -1,21 +1,60 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useUiStore } from '../stores/ui';
 
 const ui = useUiStore();
-const first = ref<HTMLButtonElement | null>(null);
-onMounted(() => first.value?.focus());
+const root = ref<HTMLElement | null>(null);
+let returnFocusTo: HTMLElement | null = null;
+
+const FOCUSABLE =
+  'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+
+// Flytt fokus inn når dialogen åpnes, og tilbake dit brukeren var når den lukkes.
+watch(
+  () => ui.dialog,
+  async (d, old) => {
+    if (d && !old) {
+      returnFocusTo = document.activeElement as HTMLElement | null;
+      await nextTick();
+      root.value?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    } else if (!d && old) {
+      returnFocusTo?.focus?.({ preventScroll: true });
+      returnFocusTo = null;
+    }
+  },
+);
 
 function confirm() {
   const d = ui.dialog;
   ui.closeDialog();
   d?.onConfirm?.();
 }
+function cancel() {
+  const d = ui.dialog;
+  ui.closeDialog();
+  d?.onCancel?.();
+}
+
+/** Tab holder seg innenfor dialogen. */
+function trap(e: KeyboardEvent) {
+  const items = [...(root.value?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+  if (!items.length) return;
+  const first = items[0] as HTMLElement;
+  const last = items[items.length - 1] as HTMLElement;
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 </script>
 
 <template>
-  <div v-if="ui.dialog" class="backdrop" @keydown.esc="ui.closeDialog()">
+  <div v-if="ui.dialog" class="backdrop" @keydown.esc.stop="cancel" @keydown.tab="trap">
     <div
+      ref="root"
       class="dialog"
       role="dialog"
       aria-modal="true"
@@ -27,13 +66,8 @@ function confirm() {
         <li v-for="(l, i) in ui.dialog.lines" :key="i">{{ l }}</li>
       </ul>
       <div class="actions">
-        <button
-          ref="first"
-          class="btn secondary"
-          data-testid="dialog-close"
-          @click="ui.closeDialog()"
-        >
-          {{ ui.dialog.confirmLabel ? 'Avbryt' : 'Lukk' }}
+        <button class="btn secondary" data-testid="dialog-close" @click="cancel">
+          {{ ui.dialog.cancelLabel ?? (ui.dialog.confirmLabel ? 'Avbryt' : 'Lukk') }}
         </button>
         <button
           v-if="ui.dialog.confirmLabel"

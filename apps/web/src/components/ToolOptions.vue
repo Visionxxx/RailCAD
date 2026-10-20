@@ -2,7 +2,14 @@
 import { computed, reactive, ref } from 'vue';
 import { validateGeometry, type TrackGeometry } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
-import { TURNOUT_CATALOG, TURNOUT_CATALOG_REVISION, getTurnoutType } from '@railcad/domain';
+import {
+  TURNOUT_CATALOG,
+  TURNOUT_CATALOG_REVISION,
+  getTurnoutType,
+  isTurnout,
+} from '@railcad/domain';
+import { cachedBounds } from '../rendering/paths';
+import { turnoutBounds } from '../rendering/turnouts';
 import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, parseNumber } from '../format';
 import { useProjectStore } from '../stores/project';
@@ -24,13 +31,16 @@ function createTurnoutNumeric() {
   const v = readAll(turnoutForm, { x: 'X', y: 'Y', heading: 'Retning' });
   if (!v || !turnoutType.value) return;
   error.value = '';
-  project.addTurnout({
+  const id = project.addTurnout({
     catalogId: turnoutType.value.catalogId,
     catalogRevision: TURNOUT_CATALOG_REVISION,
     position: [v.x!, v.y!],
     headingRad: degToRad(v.heading!),
     hand: view.turnoutHand,
   });
+  const created = project.byId.get(id);
+  const b = created && isTurnout(created) ? turnoutBounds(created) : null;
+  if (b) view.reveal(b);
 }
 const parallelText = ref(fmt(view.parallelDistanceM));
 const rotateText = ref('');
@@ -65,6 +75,7 @@ function commit(g: TrackGeometry) {
   }
   error.value = '';
   project.addTrack(g);
+  view.reveal(cachedBounds(g)); // koordinater utenfor skjermen: flytt utsnittet så resultatet vises
 }
 
 function createLine() {

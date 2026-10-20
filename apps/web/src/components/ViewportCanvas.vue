@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isTypingTarget } from '../dom';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch, nextTick } from 'vue';
 import {
   getTurnoutType,
@@ -133,6 +134,20 @@ const bgLabels = computed(() => {
     }
   }
   return out;
+});
+/** Valgboksen i skjermkoordinater. */
+const boxRect = computed(() => {
+  const r = ctrl.preview.value?.rect;
+  if (!r) return null;
+  const [x0, y0] = worldToScreen(v, r.a);
+  const [x1, y1] = worldToScreen(v, r.b);
+  return {
+    x: Math.min(x0, x1),
+    y: Math.min(y0, y1),
+    w: Math.abs(x1 - x0),
+    h: Math.abs(y1 - y0),
+    crossing: r.crossing,
+  };
 });
 const matrixOf = (b: Background) => `matrix(${backgroundMatrix(b.placement).join(' ')})`;
 
@@ -291,26 +306,26 @@ function onLeave() {
   if (!panning.value) snap.value = null;
 }
 
+/** Zoom rundt midten av tegneflaten (knappene). */
+function zoomBy(k: number) {
+  viewStore.zoom(v.width / 2, v.height / 2, k);
+}
+
 function onWheel(e: WheelEvent) {
   const rect = host.value!.getBoundingClientRect();
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
-  const dy = Math.max(-240, Math.min(240, e.deltaY * unit));
+  // Pinch på pekeplate sendes som ctrl+hjul med små deltaer – forsterk så det føles likt som musehjul.
+  const dy = Math.max(-240, Math.min(240, e.deltaY * unit * (e.ctrlKey ? 8 : 1)));
   viewStore.zoom(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-dy * 0.0016));
   viewStore.cursor = screenToWorld(v, [e.clientX - rect.left, e.clientY - rect.top]);
 }
 
-function typing(e: KeyboardEvent) {
-  const el = e.target as HTMLElement | null;
-  return (
-    !!el &&
-    (el.tagName === 'INPUT' ||
-      el.tagName === 'TEXTAREA' ||
-      el.tagName === 'SELECT' ||
-      el.isContentEditable)
-  );
-}
 function onKeyDown(e: KeyboardEvent) {
-  if (e.code === 'Space' && !typing(e) && !(e.target as HTMLElement | null)?.closest?.('button')) {
+  if (
+    e.code === 'Space' &&
+    !isTypingTarget(e) &&
+    !(e.target as HTMLElement | null)?.closest?.('button')
+  ) {
     spaceHeld.value = true;
     e.preventDefault();
   }
@@ -609,6 +624,16 @@ watch(
           r="9"
         />
 
+        <rect
+          v-if="boxRect"
+          :class="['select-box', { crossing: boxRect.crossing }]"
+          :x="boxRect.x"
+          :y="boxRect.y"
+          :width="boxRect.w"
+          :height="boxRect.h"
+          data-testid="select-box"
+        />
+
         <g v-if="snap && snapMark" data-testid="snap-marker" :data-kind="snap.kind">
           <rect
             v-if="snap.kind === 'endpoint'"
@@ -661,6 +686,24 @@ watch(
 
     <ToolOptions />
     <PortMenu />
+    <div class="zoom-controls" role="group" aria-label="Zoom" @pointerdown.stop>
+      <button aria-label="Zoom inn" title="Zoom inn" data-testid="zoom-in" @click="zoomBy(1.4)">
+        +
+      </button>
+      <button aria-label="Zoom ut" title="Zoom ut" data-testid="zoom-out" @click="zoomBy(1 / 1.4)">
+        −
+      </button>
+      <button
+        aria-label="Tilpass visning (F)"
+        title="Tilpass visning (F)"
+        data-testid="zoom-fit"
+        @click="viewStore.fitAll()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 

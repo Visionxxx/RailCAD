@@ -280,6 +280,11 @@ export const useProjectStore = defineStore('project', () => {
     };
   }
 
+  /** Markerer prosjektet som endret (f.eks. etter gjenoppretting av en sikkerhetskopi). */
+  function touch() {
+    revision.value++;
+  }
+
   function markSaved() {
     savedRevision.value = revision.value;
   }
@@ -327,5 +332,6 @@ export const useProjectStore = defineStore('project', () => {
     reset,
     toProject,
     markSaved,
+    touch,
   };
 });
