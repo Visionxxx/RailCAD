@@ -26,7 +26,7 @@ Ingen hemmeligheter eller miljøvariabler er nødvendige. Alt kjører lokalt, og
 
 ## Bruk
 
-Åpne **Fil → Åpne eksempelprosjekt** for tre parallelle spor på 140 m, en kurve og to mål.
+Åpne **Fil → Åpne eksempelprosjekt** for tre parallelle spor på 140 m, en kurve og to mål, eller **Åpne avansert eksempel (Lodalen-inspirert)** for et sporfelt med 8 veksler, 35 koblinger og vifteformet veksellest. Det er en illustrasjon – ikke Lodalens faktiske geometri.
 
 | Verktøy (hurtigtast) | Slik bruker du det                                                                                                                                                              |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,6 +48,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Topologi:** Koblinger lagres eksplisitt i prosjektfilen (`connections`) og kontrolleres mot toleranser (posisjon `1 µm`, tangent foreløpig `1e-6` rad). Avvik rapporteres, ingenting flyttes automatisk.
 
+**DXF-eksport:** Fil → Eksporter DXF (R12 eller R2007) – se `docs/dxf.md`. Lag for sporakser, sporveksler, mål og tekst; meter som enhet.
+
 **Lagring:** Fil → Lagre laster ned `<prosjektnavn>.railcad.json`. Åpne leser filen tilbake og validerer den (struktur, tall, invarianter, unike ID-er, referanser) før noe vises; ved feil forklares det hva som er galt og prosjektet er urørt.
 
 ## Arkitektur
@@ -56,14 +58,16 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 packages/
   domain/         Typer, JSON-skjema (zod), validering, migrering, ID-generering
   geometry-api/   Stabilt GeometryEngine-grensesnitt + eksplisitte toleranser
-  geometry-ts/    TypeScript-implementasjon: linje, bue, offset, rotasjon, snapping, mål
+  geometry-ts/    TypeScript-implementasjon: linje, bue, offset, rotasjon, snapping, mål, topologi, sporveksler
+  dxf/            DXF-eksport (R12, R2007)
 apps/web/src/
   commands/       Patch-modell og rene builders (opprett, erstatt, slett, flytt/roter)
   stores/         Pinia: project (modell + angre/gjør om), view (utsnitt/snap), ui
   tools/          Verktøy (Marker, tegning, parallell, mål, roter, slett) + controller
   rendering/      world↔screen, rutenett, SVG-stier
   components/     Meny, verktøylinje, tegneflate, egenskaper, objektliste, status
-fixtures/         Eksempelprosjekt (tre spor)
+fixtures/         Eksempelprosjekter (tre spor; Lodalen-inspirert sporfelt – generert av scripts/generate-lodalen.ts)
+scripts/          Generator for det store eksempelet (npx tsx scripts/generate-lodalen.ts)
 tests/e2e/        Playwright
 docs/             Beslutninger, filformat, kravstatus
 ```
@@ -83,7 +87,8 @@ Se `docs/` for filformat og beslutninger.
 - **Ikke regelverkskontrollert.** Ingen kontroller mot Bane NOR/TRV. Panelet viser «ikke vurdert»; ingenting presenteres som godkjent.
 - **Sporveksler er delvis verifisert** (3 typer, akser avledet fra TRV-hovedmål, ikke kontrollert mot KO-tegning – se `docs/vekseldata-trv.md`). Dobbel kryssveksel, sporsløyfer og EVB-typer er ikke lagt inn.
 - **Tangenttoleranse for koblinger er en foreløpig testverdi.**
-- **Ingen DXF, referansebakgrunn, lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
+- **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
+- **Ingen referansebakgrunn, lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
 - Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.

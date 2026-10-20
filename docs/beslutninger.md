@@ -24,3 +24,6 @@ Tekniske valg tatt under utviklingen:
 - **Standardverdi for sporavstand i parallellverktøyet (5 m) er kun en UI-startverdi**, ikke en faglig anbefaling.
 - **Mål-forskyvning** avrundes til mm ved plassering med mus.
 - **Skinnevisning:** sporvidde 1,435 m brukes kun til skjematisk tegning.
+- **DXF:** R12 (håndskrevet, ASCII) og R2007 (bibliotek, UTF-8). R2000 ble ønsket, men biblioteket skriver R2007 og er merket slik. Måltall eksporteres som tekst, ikke DIMENSION.
+- **Sporveksler** lagres som katalog-ID + plassering; geometrien utledes. Se `docs/vekseldata-trv.md`.
+- **Eksempelplanen (Lodalen-inspirert)** genereres av `scripts/generate-lodalen.ts` ved å kjede objekter port-til-port med geometrimotoren, slik at alle koblinger er eksakte. Sporavstand 5 m er en illustrasjonsverdi.

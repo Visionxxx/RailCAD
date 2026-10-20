@@ -13,6 +13,7 @@
     "@railcad/geometry-api": "*",
     "@railcad/geometry-ts": "*",
     "pinia": "*",
-    "vue": "*"
+    "vue": "*",
+    "@railcad/dxf": "*"
   }
 }

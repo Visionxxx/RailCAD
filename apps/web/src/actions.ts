@@ -1,6 +1,15 @@
 import demo from '@fixtures/demo-verksted.json';
 import demoLodalen from '@fixtures/demo-lodalen.json';
-import { downloadProject, pickProjectFile, readProjectFile, type OpenResult } from './io/files';
+import { exportDxf, type DxfVersion } from '@railcad/dxf';
+import { geometryEngine } from './engine';
+import {
+  downloadProject,
+  downloadText,
+  dxfFileNameFor,
+  pickProjectFile,
+  readProjectFile,
+  type OpenResult,
+} from './io/files';
 import { loadProject } from '@railcad/domain';
 import { useProjectStore } from './stores/project';
 import { useUiStore } from './stores/ui';
@@ -66,5 +75,14 @@ export function useActions() {
     ui.notify(`Lagret som ${name}.`);
   }
 
-  return { newProject, openFile, openDemo, openLodalenDemo, save };
+  /** Eksporterer sporakser, sporveksler og mål til DXF (lag: sporakse, sporveksel, mål, tekst). */
+  function exportDxfFile(version: DxfVersion) {
+    const p = project.toProject();
+    const text = exportDxf(p, geometryEngine, version);
+    const name = dxfFileNameFor(p.project.name, version);
+    downloadText(name, text, 'application/dxf');
+    ui.notify(`Eksporterte ${name} (DXF ${version}, meter).`);
+  }
+
+  return { newProject, openFile, openDemo, openLodalenDemo, save, exportDxfFile };
 }

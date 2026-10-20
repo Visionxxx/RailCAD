@@ -25,6 +25,10 @@ export async function readProjectFile(file: File): Promise<OpenResult> {
   return parseProjectText(await file.text());
 }
 
+export function dxfFileNameFor(name: string, version: string): string {
+  return fileNameFor(name).replace(/\.railcad\.json$/, `-${version.toLowerCase()}.dxf`);
+}
+
 export function fileNameFor(name: string): string {
   const slug = name
     .normalize('NFKD')
@@ -35,10 +39,9 @@ export function fileNameFor(name: string): string {
   return `${slug || 'prosjekt'}.railcad.json`;
 }
 
-/** Laster ned prosjektet som lokal JSON-fil. Ingen server involvert. */
-export function downloadProject(project: RailProject): string {
-  const name = fileNameFor(project.project.name);
-  const blob = new Blob([serializeProject(project)], { type: 'application/json' });
+/** Laster ned tekst som lokal fil (ingen server involvert). */
+export function downloadText(name: string, text: string, mime: string) {
+  const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -47,6 +50,12 @@ export function downloadProject(project: RailProject): string {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Laster ned prosjektet som lokal JSON-fil. */
+export function downloadProject(project: RailProject): string {
+  const name = fileNameFor(project.project.name);
+  downloadText(name, serializeProject(project), 'application/json');
   return name;
 }
 

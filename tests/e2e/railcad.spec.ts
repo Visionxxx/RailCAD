@@ -709,3 +709,39 @@ test('avansert eksempel (Lodalen-inspirert) åpnes med veksler og kontrollerte k
   await expect(page.getByTestId('turnout-label-turnout-001')).toContainText('delvis verifisert');
   expect(errors).toEqual([]);
 });
+
+test('RC-012: DXF-eksport (R12 og R2007) med lag, spor, veksler og mål', async ({ page }, info) => {
+  const errors = await openApp(page);
+  await page.getByTestId('menu-file').click();
+  await expect(page.getByTestId('menu-export-dxf-r12')).toBeDisabled(); // tomt prosjekt
+  await page.keyboard.press('Escape');
+  await menu(page, 'file', 'menu-demo-lodalen');
+
+  const exportAs = async (testId: string, file: string) => {
+    await page.getByTestId('menu-file').click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByTestId(testId).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.dxf$/);
+    const path = info.outputPath(file);
+    await download.saveAs(path);
+    return readFileSync(path, 'utf8');
+  };
+
+  const r12 = await exportAs('menu-export-dxf-r12', 'lodalen-r12.dxf');
+  expect(r12).toContain('AC1009');
+  expect(r12.split(/\r?\n/).filter((l) => l === 'LINE').length).toBe(19 + 8 + 12);
+  expect(r12.split(/\r?\n/).filter((l) => l === 'ARC').length).toBe(9 + 8);
+  for (const layer of ['RAILCAD_SPORAKSE', 'RAILCAD_SPORVEKSEL', 'RAILCAD_MAAL', 'RAILCAD_TEKST']) {
+    expect(r12).toContain(layer);
+  }
+  expect(r12).toContain('delvis verifisert');
+  expect(r12).toContain('ikke regelverkskontrollert');
+
+  const r2007 = await exportAs('menu-export-dxf-r2007', 'lodalen-r2007.dxf');
+  expect(r2007).toContain('AC1021');
+  expect(r2007).toContain('RAILCAD_SPORVEKSEL');
+  await expect(page.getByTestId('toast').last()).toContainText('DXF R2007');
+  expect(errors).toEqual([]);
+});

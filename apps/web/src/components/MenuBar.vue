@@ -41,6 +41,19 @@ const menus = computed<MenuDef[]>(() => [
       { label: 'Lagre', kbd: 'Ctrl+S', run: actions.save, testid: 'menu-save' },
       { label: '', separator: true },
       {
+        label: 'Eksporter DXF (R2007) …',
+        run: () => actions.exportDxfFile('R2007'),
+        disabled: !project.objects.length,
+        testid: 'menu-export-dxf-r2007',
+      },
+      {
+        label: 'Eksporter DXF (R12, maks. kompatibilitet) …',
+        run: () => actions.exportDxfFile('R12'),
+        disabled: !project.objects.length,
+        testid: 'menu-export-dxf-r12',
+      },
+      { label: '', separator: true },
+      {
         label: 'Prosjektinnstillinger …',
         run: () => (ui.settingsOpen = true),
         testid: 'menu-settings',
