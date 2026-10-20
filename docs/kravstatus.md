@@ -51,3 +51,22 @@ A (grunngeometri) ✓ · B (140 → 150) ✓ · C (bue/radius) ✓ · D (lagre/l
 - Tangenttoleranse (`TOLERANCES.connectionTangentRad`) er en **foreløpig testverdi** (ikke faglig fastsatt) og vises som sådan i koblingspanelet.
 - Avvik rapporteres (posisjon, tangent, manglende spor) – ingenting flyttes automatisk.
 - Sporveksler: se `docs/vekseldata-trv.md`. Alle typer har `verification: 'partial'` og vises som «delvis verifisert» i panel, på tegneflaten og i tegningsmenyen. Geometrien lagres ikke i prosjektfilen, den utledes fra katalog + plassering (katalogrevisjon lagres for sporbarhet).
+
+## Sluttkontroll (2026-10-20)
+
+Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `npm run build` rene; `npm test` = **145 bestått**; `npm run test:e2e` = **49 bestått** (Chromium, egen dev-server).
+
+| Område                      | Resultat                                                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| P0 (RC-001 – RC-009)        | Ferdig og testet                                                                                                                    |
+| P1 (RC-010 – RC-013)        | Ferdig. RC-010 **delvis verifisert** (geometri avledet fra TRV-hovedmål, ikke KO-tegning). RC-012 ikke testet i AutoCAD (kun ezdxf) |
+| P2 (RC-014, RC-015)         | Ikke i omfang                                                                                                                       |
+| Testscenarier A–D (kap. 11) | Dekket av e2e; E (sporveksler/koblingsfeil) dekket av veksel- og koblingstester                                                     |
+| Uavhengig kodegjennomgang   | 12 funn verifisert og rettet, hver med test                                                                                         |
+
+### Kjente åpne punkter
+
+- Sporveksler venter på KO-tegninger (se `docs/henvendelse-bane-nor.md`). Tangenttoleranse for koblinger er en foreløpig testverdi.
+- Speilede sirkler/polylinjer (negativ ekstrusjon) i DXF-bakgrunn støttes ikke; bare buer.
+- Ikke implementert (ikke i kravtabellen): objektlåsing, lag-administrasjon, kopiér/lim inn, redigering av prosjektnavn direkte i tittelen.
+- Bare side 1 av PDF; ingen georeferering.
