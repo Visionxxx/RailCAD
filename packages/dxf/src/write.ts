@@ -22,7 +22,11 @@ export function asciiText(s: string): string {
 }
 
 /** DXF R12 (AC1009), ASCII. Håndskrevet – formatet er enkelt og tolerant. */
-export function writeR12(entities: readonly DxfEntity[], comment: string): string {
+export function writeR12(
+  entities: readonly DxfEntity[],
+  comment: string,
+  layers: ReadonlyArray<{ name: string; color: number }> = Object.values(LAYERS),
+): string {
   const out: string[] = [];
   const pair = (code: number, value: string | number) => out.push(String(code), String(value));
   pair(999, asciiText(comment));
@@ -45,7 +49,6 @@ export function writeR12(entities: readonly DxfEntity[], comment: string): strin
   pair(73, 0);
   pair(40, 0);
   pair(0, 'ENDTAB');
-  const layers = Object.values(LAYERS);
   pair(0, 'TABLE');
   pair(2, 'LAYER');
   pair(70, layers.length);

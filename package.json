@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "samples:dxf": "tsx scripts/generate-dxf-samples.ts",
+    "samples:lodalen": "tsx scripts/generate-lodalen.ts"
   },
   "engines": {
     "node": ">=20"
