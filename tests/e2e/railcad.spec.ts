@@ -292,3 +292,57 @@ test('ytelse: 5000 spor åpnes og zoom forblir responsiv', async ({ page }, info
   console.log(`snitt per zoomsteg med 5000 spor: ${ms.toFixed(1)} ms`);
   expect(ms).toBeLessThan(100);
 });
+
+test('flytt (dra), roter (numerisk) og slett med tilknyttet mål – kan angres', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '40' });
+  await selectTool(page, 'measure-length');
+  await clickWorld(page, 20, 0);
+  await clickWorld(page, 20, 4);
+  await expect(page.getByTestId('object-dim-001')).toBeVisible();
+
+  // Flytt: dra sporet fra (10, 0) til (10, 6)
+  await selectTool(page, 'select');
+  const from = await worldToPage(page, 10, 0);
+  const to = await worldToPage(page, 10, 6);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.mouse.up();
+  await expect(field(page, 'prop-start-y')).toHaveValue('6,000');
+  await expect(page.getByTestId('dim-label-dim-001')).toHaveText('40,000 m');
+
+  // Roter 90° om startpunktet (0, 6)
+  await selectTool(page, 'rotate');
+  await clickWorld(page, 0, 6);
+  await page.getByTestId('rotate-angle').fill('90');
+  await page.getByTestId('rotate-apply').click();
+  await selectTool(page, 'select');
+  await page.getByTestId('object-track-001').click();
+  await expect(field(page, 'prop-heading')).toHaveValue('90,0000');
+  await expect(page.getByTestId('prop-end')).toHaveText('0,000 / 46,000');
+
+  // Slett med slett-verktøyet: sporet og lengdemålet forsvinner sammen
+  await page.keyboard.press('f');
+  await selectTool(page, 'delete');
+  await clickWorld(page, 0, 26);
+  await expect(page.getByTestId('object-list').locator('li')).toHaveCount(0);
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('object-list').locator('li')).toHaveCount(2);
+});
+
+test('RC-003/RC-005: bue tegnet med musen fortsetter tangentielt fra sporendepunkt', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '40' });
+  await selectTool(page, 'arc');
+  await clickWorld(page, 40, 0);
+  await expect(page.getByTestId('hint')).toContainText('Klikk sluttpunkt');
+  const p = await worldToPage(page, 60, 10);
+  await page.mouse.move(p.x, p.y);
+  await expect(page.getByTestId('hud')).toContainText('R = 25,000 m (venstre)');
+  await page.mouse.click(p.x, p.y);
+  await expect(page.getByTestId('object-track-002')).toContainText('R 25,0 m');
+  await expect(field(page, 'prop-start-x')).toHaveValue('40,000');
+  await expect(field(page, 'prop-heading')).toHaveValue('0,0000');
+  await expect(page.getByTestId('prop-end')).toHaveText('60,000 / 10,000');
+});
