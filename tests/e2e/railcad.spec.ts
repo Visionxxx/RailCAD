@@ -1178,3 +1178,66 @@ test('ulagret arbeid gjenopprettes etter oppdatering; «Forkast» og lagring fje
   await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('railcad.draft'))).toBeNull();
 });
+
+// ---------- Rettelser etter kodegjennomgang ----------
+test('angre tilbake til lagret tilstand fjerner «ulagret»-merket', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await expect(page.getByTestId('project-title')).toContainText('•');
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('project-title')).not.toContainText('•');
+  await page.keyboard.press('Control+y');
+  await expect(page.getByTestId('project-title')).toContainText('•');
+});
+
+test('angre avbryter et verktøy som venter på neste klikk (parallelt spor med slettet referanse)', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await selectTool(page, 'parallel');
+  await clickWorld(page, 10, 0);
+  await expect(page.getByTestId('hint')).toContainText('plassere kopien');
+  await page.getByTestId('undo-btn').click(); // fjerner referansesporet
+  await expect(page.getByTestId('hint')).toContainText('Velg et rett referansespor');
+  await expect(page.getByTestId('toast')).toHaveCount(0);
+});
+
+test('radius kan ikke gjøres negativ i feltet (retning styres av «Kurveretning»)', async ({
+  page,
+}) => {
+  await openApp(page);
+  await selectTool(page, 'arc');
+  const f = page.getByTestId('options-arc');
+  await f.getByTestId('new-radius').fill('100');
+  await f.getByTestId('new-sweep').fill('45');
+  await page.getByTestId('create-arc').click();
+  await setField(page, 'prop-radius', '-50');
+  await expect(page.getByRole('alert').first()).toContainText('Radius må være større enn 0');
+  await expect(field(page, 'prop-radius')).toHaveValue('-50'); // feltet viser feil, modellen er uendret
+  await expect(page.getByTestId('prop-side')).toHaveValue('left');
+  await page.keyboard.press('Escape');
+});
+
+test('tangent-snap virker også når et rett spor tegnes mot en bue', async ({ page }) => {
+  await openApp(page);
+  await selectTool(page, 'arc');
+  const f = page.getByTestId('options-arc');
+  await f.getByTestId('new-radius').fill('10');
+  await f.getByTestId('new-sweep').fill('180');
+  await page.getByTestId('create-arc').click(); // sentrum (0,10), høyre halvdel
+  await selectTool(page, 'line');
+  await clickWorld(page, 20, 10);
+  const t = await worldToPage(page, 5.1, 18.5); // tangentpunktet ligger i (5; 18,66)
+  await page.mouse.move(t.x, t.y);
+  await expect(page.getByTestId('snap-marker')).toHaveAttribute('data-kind', 'tangent');
+});
+
+test('ugyldige/ekstreme verdier gir feilmelding i stedet for ødelagt visning', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { length: '1e300' });
+  await expect(page.getByTestId('options-line').getByRole('alert')).toContainText('høyst');
+  await expect(page.getByTestId('tab-count-objects')).toHaveCount(0);
+  const v = await viewInfo(page);
+  expect(Number.isFinite(v.scale) && Number.isFinite(v.cx)).toBe(true);
+});

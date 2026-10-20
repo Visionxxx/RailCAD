@@ -95,3 +95,20 @@ describe('objektvalg', () => {
     expect(pickObject(objs, byId, [50, 0.4], 1, (o) => o.id === 'b')).toBeNull();
   });
 });
+
+describe('fitBounds', () => {
+  it('ikke-endelige grenser lar utsnittet være urørt', () => {
+    expect(fitBounds(view, { minX: 0, minY: 0, maxX: Infinity, maxY: 10 })).toBe(view);
+    expect(fitBounds(view, { minX: NaN, minY: 0, maxX: 5, maxY: 10 })).toBe(view);
+  });
+});
+
+describe('filnavn fra prosjektnavn', () => {
+  it('beholder norske tegn som transkripsjon i stedet for å miste dem', async () => {
+    const { fileNameFor } = await import('../src/io/files');
+    expect(fileNameFor('Østfold Bjørnstad æ')).toBe('ostfold-bjornstad-ae.railcad.json');
+    expect(fileNameFor('Åsgårdstrand')).toBe('aasgaardstrand.railcad.json');
+    expect(fileNameFor('Ø')).toBe('o.railcad.json');
+    expect(fileNameFor('***')).toBe('prosjekt.railcad.json');
+  });
+});

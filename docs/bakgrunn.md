@@ -26,6 +26,13 @@ Bakgrunner lagres i prosjektfilen (`backgrounds`, valgfritt felt – filer uten 
 - Bilder/PDF som PNG/JPEG data-URL (maks ca. 10 MB per bilde).
   Importerte filer valideres (struktur, tall, primitiver, bildeformat) før noe vises. Plassering: `p_verden = origo + R(rotasjon) · (skala · p_innhold)`.
 
+## Robusthet ved import
+
+- Ødelagte entiteter (f.eks. LINE uten sluttpunkt) hoppes over og rapporteres; resten leses.
+- Blokker utvides med grense (maks 400 000 elementer og et arbeidstak) – «DXF-bomber» med nøstede blokker eller enorme matriser avvises med klar feilmelding i stedet for å fryse fanen.
+- Entiteter på lag `0` i en blokk arver lagnavnet til INSERT-en. Matrisemellomrom måles i INSERT-ens rotasjonsramme uten skalering.
+- Speilede buer (ekstrusjon 0,0,−1) speiles riktig. (Speilede sirkler/polylinjer med negativ ekstrusjon støttes ikke ennå.)
+
 ## Begrensninger
 
 - Bare side 1 av en PDF. Ingen georeferering (koordinatsystem/EPSG) – bakgrunnen plasseres i det lokale XY-systemet.

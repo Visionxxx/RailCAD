@@ -137,12 +137,20 @@ export function readDxfBackground(text: string): DxfReadOutcome {
   let simplified = 0;
   const count = (rec: Record<string, number>, k: string) => (rec[k] = (rec[k] ?? 0) + 1);
 
+  /** Avbryter importen når grensene overskrides – selv mens blokker ekspanderes (beskytter mot DXF-bomber). */
+  class LimitError extends Error {}
+  const MAX_WORK = 2_000_000;
+  let work = 0;
+  const add = (p: DxfPrim) => {
+    if (prims.length >= BACKGROUND_LIMITS.maxPrims) throw new LimitError('prims');
+    prims.push(p);
+  };
   const pushPoly = (layer: number, pts: Array<P2 | [number, number, number]>, closed: boolean) => {
     if (pts.length < 2) return;
     const flat: number[] = [];
     for (const p of pts)
       flat.push(round(p[0]), round(p[1]), round((p as [number, number, number])[2] ?? 0));
-    prims.push(['P', layer, closed ? 1 : 0, flat]);
+    add(['P', layer, closed ? 1 : 0, flat]);
   };
 
   type Ent = Record<string, any>;
@@ -151,23 +159,38 @@ export function readDxfBackground(text: string): DxfReadOutcome {
     { position?: { x: number; y: number }; entities?: Ent[] }
   >;
 
-  const handle = (e: Ent, m: Xf, depth: number) => {
-    if (e.visible === false || hiddenLayers.has(e.layer ?? '0')) return;
-    const layer = layerOf(e.layer);
+  /**
+   * `inherit` = lagnavnet på INSERT-en som omslutter blokken. Entiteter på lag «0» i en blokk arver
+   * INSERT-ens lag (AutoCAD-regelen), slik at f.eks. farge og synlighet blir riktig.
+   */
+  const handleRaw = (e: Ent, m: Xf, depth: number, inherit?: string) => {
+    if (++work > MAX_WORK) throw new LimitError('work');
+    const layerName: string = (e.layer ?? '0') === '0' && inherit ? inherit : (e.layer ?? '0');
+    if (e.visible === false || hiddenLayers.has(layerName)) return;
+    const layer = layerOf(layerName);
     const t = (p: { x: number; y: number }): P2 => (isIdent(m) ? [p.x, p.y] : apply(m, [p.x, p.y]));
     switch (e.type) {
       case 'LINE': {
         const [a, b] = [t(e.vertices[0]), t(e.vertices[1])];
-        prims.push(['L', layer, round(a[0]), round(a[1]), round(b[0]), round(b[1])]);
+        add(['L', layer, round(a[0]), round(a[1]), round(b[0]), round(b[1])]);
         count(read, 'LINE');
         break;
       }
       case 'ARC': {
+        if ((e.extrusionDirectionZ ?? 1) < 0) {
+          // Speilet bue (normal 0,0,-1): OCS-x er motsatt. Speil sentrum og snu vinklene.
+          e = {
+            ...e,
+            center: { ...e.center, x: -e.center.x },
+            startAngle: Math.PI - e.endAngle,
+            endAngle: Math.PI - e.startAngle,
+          };
+        }
         if (isSimilarity(m)) {
           const c = t(e.center);
           const s = Math.hypot(m.a, m.b);
           const rot = Math.atan2(m.b, m.a);
-          prims.push([
+          add([
             'A',
             layer,
             round(c[0]),
@@ -191,13 +214,7 @@ export function readDxfBackground(text: string): DxfReadOutcome {
       case 'CIRCLE': {
         if (isSimilarity(m)) {
           const c = t(e.center);
-          prims.push([
-            'C',
-            layer,
-            round(c[0]),
-            round(c[1]),
-            round(e.radius * Math.hypot(m.a, m.b)),
-          ]);
+          add(['C', layer, round(c[0]), round(c[1]), round(e.radius * Math.hypot(m.a, m.b))]);
         } else {
           pushPoly(
             layer,
@@ -262,7 +279,7 @@ export function readDxfBackground(text: string): DxfReadOutcome {
         const value = e.type === 'TEXT' ? String(e.text ?? '') : cleanMText(String(e.text ?? ''));
         if (!value) break;
         const rot = (e.rotation ?? 0) + (isIdent(m) ? 0 : (Math.atan2(m.b, m.a) * 180) / Math.PI);
-        prims.push([
+        add([
           'T',
           layer,
           round(p[0]),
@@ -292,18 +309,21 @@ export function readDxfBackground(text: string): DxfReadOutcome {
           e: e.position.x - (sx * Math.cos(rot) * base.x - sy * Math.sin(rot) * base.y),
           f: e.position.y - (sx * Math.sin(rot) * base.x + sy * Math.cos(rot) * base.y),
         };
-        // rekkefølge: først blokkens basepunkt-flytting, så skalering/rotasjon, så innsettingspunkt
-        const inner = compose(m, local);
         const rows = Math.max(1, e.rowCount ?? 1);
         const cols = Math.max(1, e.columnCount ?? 1);
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            const off = compose(inner, {
-              ...IDENT,
-              e: c * (e.columnSpacing ?? 0),
-              f: r * (e.rowSpacing ?? 0),
-            });
-            for (const be of block.entities ?? []) handle(be, off, depth + 1);
+            if (++work > MAX_WORK) throw new LimitError('work');
+            // Matrisemellomrom måles i INSERT-ens rotasjonsramme, uten skalering (AutoCAD-regelen).
+            const dx = c * (e.columnSpacing ?? 0);
+            const dy = r * (e.rowSpacing ?? 0);
+            const cell: Xf = {
+              ...local,
+              e: local.e + Math.cos(rot) * dx - Math.sin(rot) * dy,
+              f: local.f + Math.sin(rot) * dx + Math.cos(rot) * dy,
+            };
+            const off = compose(m, cell);
+            for (const be of block.entities ?? []) handle(be, off, depth + 1, layerName);
           }
         }
         count(read, 'INSERT');
@@ -314,7 +334,27 @@ export function readDxfBackground(text: string): DxfReadOutcome {
     }
   };
 
-  for (const e of doc.entities as Ent[]) handle(e, IDENT, 0);
+  /** Én ødelagt entitet (f.eks. LINE uten sluttpunkt) hoppes over og rapporteres – importen fortsetter. */
+  const handle = (e: Ent, m: Xf, depth: number, inherit?: string) => {
+    try {
+      handleRaw(e, m, depth, inherit);
+    } catch (err) {
+      if (err instanceof LimitError) throw err;
+      count(skipped, `${String(e?.type ?? 'ukjent')} (ugyldig)`);
+    }
+  };
+
+  try {
+    for (const e of doc.entities as Ent[]) handle(e, IDENT, 0);
+  } catch (err) {
+    if (err instanceof LimitError) {
+      return {
+        ok: false,
+        error: `Filen er for kompleks (over ${BACKGROUND_LIMITS.maxPrims} elementer etter utvidelse av blokker).`,
+      };
+    }
+    throw err;
+  }
   if (prims.length === 0)
     return { ok: false, error: 'Fant ingen støttede tegneelementer i filen.' };
   if (prims.length > BACKGROUND_LIMITS.maxPrims) {

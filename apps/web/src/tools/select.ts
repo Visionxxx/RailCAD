@@ -3,6 +3,7 @@ import { TOLERANCES } from '@railcad/geometry-api';
 import { transformObjects, replaceObjects } from '../commands/builders';
 import { fmtM } from '../format';
 import { objectsInRect, rectFromCorners } from './boxselect';
+import { ghostGeometries } from './ghosts';
 import { pickObject } from './pick';
 import { Tool, lineBetween } from './tool';
 import type { Ghost, PointerInfo } from './types';
@@ -109,11 +110,13 @@ export class SelectTool extends Tool {
       const ids = new Set(this.mode.ids);
       const ghosts: Ghost[] = [];
       for (const o of this.env.project.objects) {
-        if (ids.has(o.id) && isTrack(o)) {
-          ghosts.push({
-            geometry: this.env.engine.translate(o.geometry, delta[0], delta[1]),
-            valid: true,
-          });
+        if (!ids.has(o.id)) continue;
+        for (const geometry of ghostGeometries(
+          o,
+          { type: 'move', dx: delta[0], dy: delta[1] },
+          this.env.engine,
+        )) {
+          ghosts.push({ geometry, valid: true });
         }
       }
       this.env.setPreview({

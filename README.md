@@ -42,6 +42,12 @@ Ingen hemmeligheter eller miljøvariabler er nødvendige. Alt kjører lokalt, og
 
 Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn), `Ctrl+S` lagre, `Ctrl+O` åpne, `F` tilpass visning, `Enter` bekrefter parallelt spor.
 
+**Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
+
+**Valg og tegning:** dra på tom flate for _valgboks_ (mot høyre: helt innenfor, mot venstre: alt som berøres, Skift legger til). Hold **Skift** mens du tegner et rett spor for å låse retningen til 15°. Pil opp/ned i tallfelt justerer verdien (Skift ×10, Alt ×0,1). Objekter opprettet via skjema utenfor skjermen blir vist automatisk.
+
+**Sikkerhetskopi:** ulagret arbeid kopieres automatisk til nettleserens lokale lagring (ca. 1,5 s etter hver endring; ikke for svært store prosjekter) og tilbys gjenopprettet ved neste oppstart. Det erstatter ikke lagring – bruk Fil → Lagre.
+
 **Snapping** (bunnlinjen, kan slås av/på): endepunkt, senter, tangent (fra forrige punkt), nærmeste punkt og rutenett. Søkeradius er 12 px og omregnes til meter – den påvirker aldri modellen. Merket vises ved markøren.
 
 **Høyre panel** har fire faner: _Egenskaper_, _Objekter_, _Koblinger_ og _Bakgrunn_. Fanene viser antall (rødt merke på Koblinger ved avvik), kan betjenes med piltaster, og valgt fane huskes. Å velge et objekt (på tegneflaten eller i listen) viser egenskapene; i fanene Koblinger og Bakgrunn blir du værende.
@@ -100,7 +106,7 @@ Se `docs/` for filformat og beslutninger.
 - Mellomrom som panoreringstast virker ikke mens en knapp har tastaturfokus (den aktiverer da knappen).
 - Skinne-/svillevisning er skjematisk (sporvidde 1,435 m, sviller visualisert som mønster), ikke overbygningsprosjektering.
 - Ytelse: tegnet og testet med 5 000 spor (utsnittskulling; ca. 20–40 ms per zoomsteg i testmiljøet). Objektlisten tegner alle rader.
-- Kun lagring som nedlastet fil (ingen automatisk lokal gjenoppretting; nettleseren advarer ved lukking med ulagrede endringer).
+- Lagring skjer som nedlastet fil. Automatisk sikkerhetskopi i nettleseren (kladd) beskytter mot tap ved oppdatering/krasj, men kan utebli for svært store prosjekter eller hvis nettleseren blokkerer lokal lagring.
 
 ## Neste steg (P1)
 

@@ -42,6 +42,8 @@ export function panBy(v: ViewState, dxPx: number, dyPx: number): ViewState {
 /** Tilpasser utsnittet slik at `b` fyller flaten med litt luft. */
 export function fitBounds(v: ViewState, b: Bounds | null, marginPx = 60): ViewState {
   if (!b) return { ...v, cx: 0, cy: 0, scale: 10 };
+  // Ugyldige (ikke-endelige) grenser må aldri ødelegge utsnittet permanent.
+  if (![b.minX, b.minY, b.maxX, b.maxY].every(Number.isFinite)) return v;
   const w = Math.max(b.maxX - b.minX, 1);
   const h = Math.max(b.maxY - b.minY, 1);
   const sx = Math.max(v.width - 2 * marginPx, 50) / w;

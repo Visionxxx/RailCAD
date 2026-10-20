@@ -30,7 +30,12 @@ export function dxfFileNameFor(name: string, version: string): string {
 }
 
 export function fileNameFor(name: string): string {
-  const slug = name
+  // æ/ø/å dekomponeres ikke av NFKD og ville forsvunnet – transkriber først.
+  const folded = name.replace(
+    /[æøåÆØÅ]/g,
+    (c) => ({ æ: 'ae', ø: 'o', å: 'aa', Æ: 'AE', Ø: 'O', Å: 'AA' })[c] ?? '',
+  );
+  const slug = folded
     .normalize('NFKD')
     .replace(/[^\w\s-]/g, '')
     .trim()

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { validateGeometry, type TrackGeometry } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
 import {
@@ -47,6 +47,8 @@ const rotateText = ref('');
 const error = ref('');
 
 const toolId = computed(() => ctrl.activeId.value);
+// Feilmeldingen hører til ett skjema – ikke la den henge igjen når man bytter verktøy.
+watch(toolId, () => (error.value = ''));
 
 /** Leser alle felt; returnerer tallene eller setter en feilmelding og null. */
 function readAll(
@@ -166,6 +168,10 @@ function applyRotation() {
   const n = parseNumber(rotateText.value);
   if (n === null) {
     error.value = 'Vinkel: oppgi et gyldig tall (grader, mot klokka).';
+    return;
+  }
+  if (!rotateTool.value.hasPivot) {
+    error.value = 'Klikk rotasjonspunktet på tegneflaten først.';
     return;
   }
   error.value = '';

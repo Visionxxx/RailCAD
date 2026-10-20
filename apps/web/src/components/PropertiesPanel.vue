@@ -69,9 +69,17 @@ const withHeading = editGeometry('Endre retning', (g, n) => ({ ...g, headingRad:
 const withLength = editGeometry('Endre lengde', (g, n) =>
   g.kind === 'line' ? { ...g, lengthM: n } : g,
 );
-const withRadius = editGeometry('Endre radius', (g, n) =>
+const withRadiusBase = editGeometry('Endre radius', (g, n) =>
   g.kind === 'arc' ? { ...g, signedRadiusM: Math.sign(g.signedRadiusM) * n } : g,
 );
+/** Feltet viser |R|; venstre/høyre styres av «Kurveretning». Negativ verdi ville stille snudd retningen. */
+const withRadius = {
+  commit: withRadiusBase.commit,
+  validate: (n: number) =>
+    n > 0
+      ? withRadiusBase.validate(n)
+      : 'Radius må være større enn 0. Bruk «Kurveretning» for venstre/høyre.',
+};
 const withSweep = editGeometry('Endre sveipvinkel', (g, n) =>
   g.kind === 'arc' ? { ...g, sweepRad: degToRad(n) } : g,
 );

@@ -37,7 +37,9 @@ export function snap(tracks: Iterable<TrackRef>, q: SnapQuery): SnapResult | nul
   };
 
   for (const t of tracks) {
-    if (q.excludeIds?.has(t.id)) continue;
+    // Sporvekslers segmenter har id «<objekt>#<n>» – ekskluder via eierobjektet.
+    const hash = t.id.indexOf('#');
+    if (q.excludeIds?.has(hash < 0 ? t.id : t.id.slice(0, hash))) continue;
     const g = t.geometry;
     if (g.kind === 'arc' && on.has('center')) consider('center', arcCenter(g), t.id);
     const b = bounds(g);

@@ -1,6 +1,7 @@
 import { isTrack, type TrackGeometry, type Vec2 } from '@railcad/domain';
 import { transformObjects } from '../commands/builders';
 import { fmt, fmtM, radToDeg, degToRad } from '../format';
+import { ghostGeometries } from './ghosts';
 import { pickObject } from './pick';
 import { Tool, type KeyInfo } from './tool';
 import type { Ghost, PointerInfo } from './types';
@@ -247,6 +248,7 @@ export class MeasureDistanceTool extends Tool {
     if (p.button !== 0) return;
     if (!this.a) {
       this.a = p.point;
+      this.snapReference = p.point;
     } else if (!this.b) {
       if (Math.hypot(p.point[0] - this.a[0], p.point[1] - this.a[1]) < 1e-6) {
         this.env.ui.notify('Punktene er sammenfallende.', 'error');
@@ -262,6 +264,7 @@ export class MeasureDistanceTool extends Tool {
   cancel() {
     if (!this.a) return false;
     this.a = this.b = null;
+    this.snapReference = undefined;
     this.env.setPreview(null);
     return true;
   }
@@ -356,11 +359,13 @@ export class RotateTool extends Tool {
     const ids = new Set(this.env.project.selection);
     const ghosts: Ghost[] = [];
     for (const o of this.env.project.objects) {
-      if (ids.has(o.id) && isTrack(o)) {
-        ghosts.push({
-          geometry: this.env.engine.rotate(o.geometry, this.pivot as Vec2, angle),
-          valid: true,
-        });
+      if (!ids.has(o.id)) continue;
+      for (const geometry of ghostGeometries(
+        o,
+        { type: 'rotate', pivot: this.pivot as Vec2, angleRad: angle },
+        this.env.engine,
+      )) {
+        ghosts.push({ geometry, valid: true });
       }
     }
     const shown = ((((radToDeg(angle) + 180) % 360) + 360) % 360) - 180;

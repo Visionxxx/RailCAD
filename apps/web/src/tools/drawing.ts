@@ -20,6 +20,7 @@ export class LineTool extends Tool {
     if (p.button !== 0) return;
     if (!this.start) {
       this.start = p.point;
+      this.snapReference = p.point; // gir tangent-snap mot buer fra startpunktet
       return;
     }
     const g = lineBetween(this.start, this.endFor(p));
@@ -59,6 +60,7 @@ export class LineTool extends Tool {
 
   private reset() {
     this.start = null;
+    this.snapReference = undefined;
     this.env.setPreview(null);
   }
 }

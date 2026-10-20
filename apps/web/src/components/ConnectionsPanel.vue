@@ -3,8 +3,10 @@ import { computed } from 'vue';
 import { TOLERANCES, type ConnectionResult, type PortRef } from '@railcad/geometry-api';
 import { fmt, fmtDeg, fmtM, portLabel, radToDeg } from '../format';
 import { useProjectStore } from '../stores/project';
+import { useUiStore } from '../stores/ui';
 
 const project = useProjectStore();
+const ui = useUiStore();
 
 const portName = (p: PortRef) => `${p.objectId} ${portLabel(p.port)}`;
 
@@ -31,9 +33,24 @@ function select(r: ConnectionResult) {
     [r.connection.a.objectId, r.connection.b.objectId].filter((id) => project.byId.has(id)),
   );
 }
+/** Avvik fra perfekt motsatte tangenter for et forslag (radianer). */
+function kinkOf(s: { a: PortRef; b: PortRef }): number {
+  const a = project.portPoses.get(`${s.a.objectId}:${s.a.port}`);
+  const b = project.portPoses.get(`${s.b.objectId}:${s.b.port}`);
+  if (!a || !b) return Infinity;
+  const d = Math.abs(a.headingRad - b.headingRad - Math.PI) % (2 * Math.PI);
+  return Math.min(d, 2 * Math.PI - d);
+}
+const hasKink = (s: { a: PortRef; b: PortRef }) => kinkOf(s) > TOLERANCES.connectionTangentRad;
+
+/** «Koble alle» kobler bare forslag uten tangentavvik – knekk må velges bevisst, én og én. */
 function connectAll() {
-  // Hver kobling er sin egen angrebare handling.
-  for (const s of [...project.connectionSuggestions]) project.connect(s.a, s.b);
+  const ok = project.connectionSuggestions.filter((s) => !hasKink(s));
+  const skipped = project.connectionSuggestions.length - ok.length;
+  const n = project.connectAll(ok);
+  if (skipped) {
+    ui.notify(`${n} koblet. ${skipped} forslag har tangentavvik (knekk) og må kobles enkeltvis.`);
+  }
 }
 </script>
 
@@ -78,7 +95,12 @@ function connectAll() {
         :key="`${portName(s.a)}|${portName(s.b)}`"
         class="conn-row"
       >
-        <span class="who">{{ portName(s.a) }} = {{ portName(s.b) }}</span>
+        <span class="who"
+          >{{ portName(s.a) }} = {{ portName(s.b)
+          }}<span v-if="hasKink(s)" class="st position" title="Tangentene møtes med knekk">
+            · knekk {{ fmtDeg(kinkOf(s)) }}</span
+          ></span
+        >
         <button
           class="btn small"
           :data-testid="`suggest-connect-${i}`"

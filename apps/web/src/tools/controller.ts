@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import type { Vec2 } from '@railcad/domain';
 import { geometryEngine } from '../engine';
 import { useProjectStore } from '../stores/project';
@@ -87,6 +87,17 @@ export function createToolController() {
     void tick.value;
     return active.value.hint();
   });
+
+  // Angre/gjør om/åpne endrer modellen under et verktøy som venter på neste klikk (f.eks. valgt
+  // referansespor): avbryt da, så verktøyet ikke jobber mot objekter som ikke lenger finnes.
+  watch(
+    () => project.historyEpoch,
+    () => {
+      portMenu.value = null;
+      tools[activeId.value].cancel();
+      tick.value++;
+    },
+  );
 
   function setTool(id: ToolId) {
     if (id === activeId.value) return;

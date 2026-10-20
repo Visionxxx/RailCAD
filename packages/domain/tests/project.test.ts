@@ -180,3 +180,65 @@ describe('sporveksler i prosjektfil', () => {
     expect(withTurnout(ok, wrong2).ok).toBe(false);
   });
 });
+
+describe('størrelsesgrenser (overflow)', () => {
+  it('avviser verdier som er endelige men gir uendelig/NaN videre', () => {
+    expect(
+      validateGeometry({
+        kind: 'arc',
+        start: [0, 0],
+        headingRad: 0,
+        signedRadiusM: 1e308,
+        sweepRad: 3,
+      }),
+    ).not.toEqual([]);
+    expect(
+      validateGeometry({ kind: 'line', start: [0, 0], headingRad: 0, lengthM: 1e300 }),
+    ).not.toEqual([]);
+    expect(
+      validateGeometry({ kind: 'line', start: [1e12, 0], headingRad: 0, lengthM: 10 }),
+    ).not.toEqual([]);
+    expect(
+      validateGeometry({
+        kind: 'arc',
+        start: [0, 0],
+        headingRad: 0,
+        signedRadiusM: 9e6,
+        sweepRad: 6,
+      }),
+    ).not.toEqual([]); // buelengde > grense
+    // UTM-koordinater og realistiske verdier er greit
+    expect(
+      validateGeometry({ kind: 'line', start: [262000, 6649500], headingRad: 0, lengthM: 140 }),
+    ).toEqual([]);
+    expect(
+      validateGeometry({
+        kind: 'arc',
+        start: [0, 0],
+        headingRad: 0,
+        signedRadiusM: 5000,
+        sweepRad: 1,
+      }),
+    ).toEqual([]);
+  });
+
+  it('filer med slike verdier avvises ved åpning', () => {
+    const p: any = demo();
+    p.objects[1].geometry.signedRadiusM = 1e308;
+    expect(validateProject(p).ok).toBe(false);
+    const q: any = demo();
+    q.objects[0].geometry.start = [1e15, 0];
+    expect(validateProject(q).ok).toBe(false);
+  });
+});
+
+describe('ID-tegnsett', () => {
+  it.each(['a:b', 'x#1', 'med mellomrom', 'æøå'])('avviser ID «%s»', (id) => {
+    const p: any = demo();
+    p.objects[0].id = id;
+    p.objects[2].dimension.targetId = id;
+    const r = validateProject(p);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.join('\n')).toContain('ID kan bare inneholde');
+  });
+});

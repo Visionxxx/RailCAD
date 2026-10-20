@@ -94,3 +94,14 @@ describe('sporvekselgeometri', () => {
     expect(moved.ports.diverging_out.headingRad).toBeCloseTo(Math.PI / 2 + Math.atan(1 / 9), 12);
   });
 });
+
+describe('snap og sporveksler', () => {
+  it('ekskludering av en sporveksel gjelder alle segmentene (id#n)', () => {
+    const t = getTurnoutType('trv-60E1-1:9-R300-EVF')!;
+    const layout = e.turnoutLayout(t, at('left'));
+    const refs = layout.segments.map((geometry, i) => ({ id: `turnout-001#${i}`, geometry }));
+    const q = { cursor: [0, 0] as [number, number], toleranceM: 1, kinds: ['endpoint'] as const };
+    expect(e.snap(refs, q)).not.toBeNull();
+    expect(e.snap(refs, { ...q, excludeIds: new Set(['turnout-001']) })).toBeNull();
+  });
+});

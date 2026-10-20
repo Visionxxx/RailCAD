@@ -345,3 +345,62 @@ describe('bakgrunner i prosjektstore', () => {
     expect(store.connectionResults).toEqual([]);
   });
 });
+
+describe('ulagret-status og historikk', () => {
+  let store: ReturnType<typeof useProjectStore>;
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+
+  it('å angre tilbake til lagret tilstand gjør prosjektet «lagret» igjen; gjør om gjør det ulagret', () => {
+    expect(store.dirty).toBe(false);
+    store.addTrack(line(0));
+    expect(store.dirty).toBe(true);
+    store.markSaved();
+    expect(store.dirty).toBe(false);
+    store.addTrack(line(5));
+    expect(store.dirty).toBe(true);
+    store.undo(); // tilbake til lagret punkt
+    expect(store.dirty).toBe(false);
+    store.undo(); // forbi lagret punkt
+    expect(store.dirty).toBe(true);
+    store.redo();
+    expect(store.dirty).toBe(false);
+    store.redo();
+    expect(store.dirty).toBe(true);
+  });
+
+  it('endret prosjektnavn er ulagret, og lagring rydder det; gjenopprettet arbeid er ulagret', () => {
+    store.updateMeta({ name: 'Nytt navn' });
+    expect(store.dirty).toBe(true);
+    store.markSaved();
+    expect(store.dirty).toBe(false);
+    store.touch();
+    expect(store.dirty).toBe(true);
+  });
+
+  it('historikkhopp (angre, gjør om, åpne) øker epoken slik at åpne verktøy kan avbrytes', () => {
+    const e0 = store.historyEpoch;
+    store.addTrack(line(0));
+    expect(store.historyEpoch).toBe(e0); // vanlig redigering teller ikke
+    store.undo();
+    store.redo();
+    store.reset();
+    expect(store.historyEpoch).toBe(e0 + 3);
+  });
+
+  it('connectAll kobler flere par som ÉN handling og hopper over porter som allerede er brukt', () => {
+    store.addTrack(line(0, 10)); // track-001: (0,0)→(10,0)
+    store.addTrack({ kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 }); // track-002
+    store.addTrack({ kind: 'line', start: [10, 0], headingRad: 0, lengthM: 5 }); // track-003, samme start som 002
+    const pairs = store.connectionSuggestions;
+    expect(pairs.length).toBeGreaterThanOrEqual(2); // 001.end finnes mot både 002.start og 003.start
+    const before = store.connections.length;
+    const n = store.connectAll(pairs);
+    expect(n).toBeLessThan(pairs.length); // 001.end kan bare brukes én gang
+    expect(store.connections.length).toBe(before + n);
+    store.undo(); // én handling reverserer alle
+    expect(store.connections).toHaveLength(before);
+  });
+});

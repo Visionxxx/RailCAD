@@ -249,3 +249,37 @@ export function removeBackgroundPatch(
     backgrounds: { before: [...backgrounds], after: backgrounds.filter((b) => b.id !== id) },
   };
 }
+
+/**
+ * Kobler flere portpar i ÉN angrebar handling. Par der en port allerede er brukt (også av et tidligere
+ * par i samme kall) hoppes over. Returnerer patch og antall koblede par.
+ */
+export function connectMany(
+  connections: readonly Connection[],
+  pairs: ReadonlyArray<{
+    a: { objectId: string; port: PortName };
+    b: { objectId: string; port: PortName };
+  }>,
+): { patch: Patch | null; connected: number } {
+  const used = new Set(
+    connections.flatMap((c) => [`${c.a.objectId}:${c.a.port}`, `${c.b.objectId}:${c.b.port}`]),
+  );
+  const added: Connection[] = [];
+  for (const { a, b } of pairs) {
+    const ka = `${a.objectId}:${a.port}`;
+    const kb = `${b.objectId}:${b.port}`;
+    if (ka === kb || used.has(ka) || used.has(kb)) continue;
+    used.add(ka);
+    used.add(kb);
+    added.push({ a, b });
+  }
+  if (!added.length) return { patch: null, connected: 0 };
+  return {
+    connected: added.length,
+    patch: {
+      label: added.length === 1 ? 'Koble spor' : `Koble ${added.length} spor`,
+      objects: {},
+      connections: { before: [...connections], after: [...connections, ...added] },
+    },
+  };
+}

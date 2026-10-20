@@ -19,6 +19,7 @@ import {
   addBackgroundPatch,
   removeBackgroundPatch,
   updateBackgroundPatch,
+  connectMany,
   connectPorts,
   createDimension,
   createTrack,
@@ -42,9 +43,17 @@ export const useProjectStore = defineStore('project', () => {
   const selection = shallowRef<string[]>([]);
   const undoStack = shallowRef<Patch[]>([]);
   const redoStack = shallowRef<Patch[]>([]);
-  /** Økes ved hver modellendring; `savedRevision` markerer sist lagrede tilstand. */
+  /** Økes ved hver modellendring (også angre/gjør om) – brukes til å utløse sikkerhetskopi. */
   const revision = ref(0);
-  const savedRevision = ref(0);
+  /**
+   * «Ulagret» betyr at historikken ikke står på det lagrede punktet (eller navn/beskrivelse er endret).
+   * Å angre tilbake til lagret tilstand gjør derfor prosjektet «lagret» igjen.
+   */
+  const savedMarker = shallowRef<unknown>(null);
+  const metaRevision = ref(0);
+  const savedMetaRevision = ref(0);
+  /** Økes når historikken hopper (angre/gjør om/åpne) – åpne verktøy må da avbrytes. */
+  const historyEpoch = ref(0);
   /** Økes når et helt prosjekt lastes – visningen bruker det til å tilpasse utsnittet. */
   const loadCount = ref(0);
 
@@ -65,7 +74,11 @@ export const useProjectStore = defineStore('project', () => {
   const selectedObjects = computed(() =>
     selection.value.map((id) => byId.value.get(id)).filter((o): o is RailObject => !!o),
   );
-  const dirty = computed(() => revision.value !== savedRevision.value);
+  const dirty = computed(
+    () =>
+      (undoStack.value.at(-1) ?? null) !== savedMarker.value ||
+      metaRevision.value !== savedMetaRevision.value,
+  );
   const canUndo = computed(() => undoStack.value.length > 0);
   const canRedo = computed(() => redoStack.value.length > 0);
   const lastUndoLabel = computed(() => undoStack.value.at(-1)?.label ?? '');
@@ -165,6 +178,7 @@ export const useProjectStore = defineStore('project', () => {
     );
     undoStack.value = undoStack.value.slice(0, -1);
     redoStack.value = [...redoStack.value, patch];
+    historyEpoch.value++;
   }
 
   function redo() {
@@ -179,6 +193,7 @@ export const useProjectStore = defineStore('project', () => {
     );
     redoStack.value = redoStack.value.slice(0, -1);
     undoStack.value = [...undoStack.value, patch];
+    historyEpoch.value++;
   }
 
   function select(ids: string[]) {
@@ -206,6 +221,12 @@ export const useProjectStore = defineStore('project', () => {
 
   function connect(a: PortRef, b: PortRef): boolean {
     return execute(connectPorts(connections.value, a, b));
+  }
+  /** Kobler flere par som én angrebar handling. Returnerer antall koblede par. */
+  function connectAll(pairs: Array<{ a: PortRef; b: PortRef }>): number {
+    const { patch, connected } = connectMany(connections.value, pairs);
+    execute(patch);
+    return connected;
   }
   function removeConnection(index: number): boolean {
     return execute(disconnect(connections.value, index));
@@ -249,6 +270,7 @@ export const useProjectStore = defineStore('project', () => {
 
   function updateMeta(patch: Partial<Pick<ProjectMeta, 'name' | 'description'>>) {
     meta.value = { ...meta.value, ...patch };
+    metaRevision.value++;
     revision.value++;
   }
 
@@ -261,7 +283,10 @@ export const useProjectStore = defineStore('project', () => {
     undoStack.value = [];
     redoStack.value = [];
     revision.value = 0;
-    savedRevision.value = 0;
+    savedMarker.value = null;
+    metaRevision.value = 0;
+    savedMetaRevision.value = 0;
+    historyEpoch.value++;
     loadCount.value++;
   }
 
@@ -282,11 +307,14 @@ export const useProjectStore = defineStore('project', () => {
 
   /** Markerer prosjektet som endret (f.eks. etter gjenoppretting av en sikkerhetskopi). */
   function touch() {
+    savedMarker.value = {}; // et punkt som aldri tilsvarer en historikkpost ⇒ ulagret
     revision.value++;
   }
 
   function markSaved() {
-    savedRevision.value = revision.value;
+    savedMarker.value = undoStack.value.at(-1) ?? null;
+    savedMetaRevision.value = metaRevision.value;
+    revision.value++; // utløser opprydding av sikkerhetskopien
   }
 
   return {
@@ -296,6 +324,7 @@ export const useProjectStore = defineStore('project', () => {
     backgrounds,
     selection,
     revision,
+    historyEpoch,
     loadCount,
     byId,
     trackRefs,
@@ -319,6 +348,7 @@ export const useProjectStore = defineStore('project', () => {
     addDimension,
     updateObject,
     connect,
+    connectAll,
     removeConnection,
     addTrackFromPort,
     addTurnout,

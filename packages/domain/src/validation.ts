@@ -7,10 +7,28 @@ import { TRACK_PORTS, TURNOUT_PORTS, type RailProject, type TrackGeometry } from
 export const CURRENT_SCHEMA_VERSION = '0.1.0';
 
 const finite = z.number().refine((n) => Number.isFinite(n), 'må være et endelig tall');
-const vec2 = z.tuple([finite, finite]);
+/** Grenser som holder all geometri innenfor trygt tallområde (overflow gir NaN i visning og eksport). */
+export const GEOMETRY_LIMITS = Object.freeze({
+  /** Største absolutte koordinat, meter (UTM-nordverdier er < 1,1e7). */
+  maxCoordinateM: 1e8,
+  /** Største lengde / radius, meter. */
+  maxExtentM: 1e7,
+});
+const coordinate = finite.refine(
+  (n) => Math.abs(n) <= GEOMETRY_LIMITS.maxCoordinateM,
+  `koordinat utenfor ±${GEOMETRY_LIMITS.maxCoordinateM} m`,
+);
+const vec2 = z.tuple([coordinate, coordinate]);
 const nonEmptyString = z.string().min(1, 'kan ikke være tom');
+/** ID-er brukes i menyvalg og snap-referanser (`id:port`, `id#n`) – derfor et trygt tegnsett. */
+const idString = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9_.-]+$/,
+    'ID kan bare inneholde bokstaver (a–z), tall, punktum, understrek og bindestrek',
+  );
 const portSchema = z.enum(['start', 'end', 'stem_in', 'stem_out', 'diverging_out']);
-const endpointRef = z.object({ objectId: nonEmptyString, port: portSchema }).passthrough();
+const endpointRef = z.object({ objectId: idString, port: portSchema }).passthrough();
 
 const geometrySchema = z.discriminatedUnion('kind', [
   z
@@ -34,11 +52,11 @@ const dimensionSchema = z.discriminatedUnion('kind', [
 
 const objectSchema = z.discriminatedUnion('type', [
   z
-    .object({ id: nonEmptyString, type: z.literal('track_segment'), geometry: geometrySchema })
+    .object({ id: idString, type: z.literal('track_segment'), geometry: geometrySchema })
     .passthrough(),
   z
     .object({
-      id: nonEmptyString,
+      id: idString,
       type: z.literal('turnout'),
       turnout: z
         .object({
@@ -52,7 +70,7 @@ const objectSchema = z.discriminatedUnion('type', [
     })
     .passthrough(),
   z
-    .object({ id: nonEmptyString, type: z.literal('dimension'), dimension: dimensionSchema })
+    .object({ id: idString, type: z.literal('dimension'), dimension: dimensionSchema })
     .passthrough(),
 ]);
 
@@ -65,7 +83,7 @@ const placementSchema = z
   })
   .passthrough();
 const backgroundCommon = {
-  id: nonEmptyString,
+  id: idString,
   name: z.string(),
   visible: z.boolean(),
   opacity: finite.refine((n) => n >= 0 && n <= 1, 'dekkevne må være mellom 0 og 1'),
@@ -120,18 +138,27 @@ const projectSchema = z
 /** Geometriske invarianter (spesifikasjon 5.5). Returnerer feilmeldinger, tom liste = gyldig. */
 export function validateGeometry(g: TrackGeometry): string[] {
   const errors: string[] = [];
-  if (!g.start.every(Number.isFinite)) errors.push('Startpunkt må være endelige tall.');
+  const { maxCoordinateM, maxExtentM } = GEOMETRY_LIMITS;
+  if (!g.start.every((n) => Number.isFinite(n) && Math.abs(n) <= maxCoordinateM)) {
+    errors.push(`Startpunkt må være endelige tall innenfor ±${maxCoordinateM} m.`);
+  }
   if (!Number.isFinite(g.headingRad)) errors.push('Retning må være et endelig tall.');
   if (g.kind === 'line') {
-    if (!(Number.isFinite(g.lengthM) && g.lengthM > 0)) {
-      errors.push('Lengde må være et positivt, endelig tall.');
+    if (!(Number.isFinite(g.lengthM) && g.lengthM > 0 && g.lengthM <= maxExtentM)) {
+      errors.push(`Lengde må være et positivt tall på høyst ${maxExtentM} m.`);
     }
   } else {
-    if (!Number.isFinite(g.signedRadiusM) || g.signedRadiusM === 0) {
-      errors.push('Radius kan ikke være null og må være et endelig tall.');
+    if (
+      !Number.isFinite(g.signedRadiusM) ||
+      g.signedRadiusM === 0 ||
+      Math.abs(g.signedRadiusM) > maxExtentM
+    ) {
+      errors.push(`Radius kan ikke være null og må være innenfor ±${maxExtentM} m.`);
     }
     if (!(Number.isFinite(g.sweepRad) && g.sweepRad > 0 && g.sweepRad < 2 * Math.PI)) {
       errors.push('Sweep-vinkel må være større enn 0 og mindre enn 360°.');
+    } else if (Math.abs(g.signedRadiusM) * g.sweepRad > maxExtentM) {
+      errors.push(`Buelengden kan ikke overstige ${maxExtentM} m.`);
     }
   }
   return errors;
