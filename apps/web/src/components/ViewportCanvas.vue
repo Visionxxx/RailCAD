@@ -13,7 +13,14 @@ import type { DimensionLayout, SnapResult } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
 import { fmtM } from '../format';
 import { cachedBounds, railPaths, trackPath } from '../rendering/paths';
+import { backgroundMatrix, backgroundWorldCorners, type Background } from '@railcad/domain';
 import { cachedTurnoutLayout, turnoutBounds } from '../rendering/turnouts';
+import {
+  aciColor,
+  backgroundLabels,
+  backgroundPaths,
+  backgroundWorldBounds,
+} from '../rendering/background';
 import { intersects, screenToWorld, visibleWorldRect, worldToScreen } from '../rendering/viewport';
 import { useProjectStore } from '../stores/project';
 import { SNAP_LABELS, useViewStore } from '../stores/view';
@@ -96,6 +103,39 @@ const dimLayouts = computed<DimDraw[]>(() => {
   }
   return out;
 });
+/** Synlige bakgrunner (skjult eller utenfor skjermen hoppes over). */
+const visibleBackgrounds = computed<Background[]>(() => {
+  const rect = worldRect.value;
+  return project.backgrounds.filter((b) => b.visible && intersects(backgroundWorldBounds(b), rect));
+});
+const backgroundOutline = computed(() => {
+  const bg = project.backgrounds.find((b) => b.id === viewStore.activeBackgroundId);
+  return bg && bg.visible
+    ? backgroundWorldCorners(bg)
+        .map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`)
+        .join('') + 'Z'
+    : '';
+});
+/** Tekst fra DXF-bakgrunner som er stor nok til å leses (maks 400 om gangen). */
+const bgLabels = computed(() => {
+  const out: Array<{ key: string; text: string; x: number; y: number; px: number; deg: number }> =
+    [];
+  const rect = worldRect.value;
+  for (const bg of visibleBackgrounds.value) {
+    if (bg.kind !== 'dxf') continue;
+    for (const l of backgroundLabels(bg)) {
+      const px = l.heightM * v.scale;
+      if (px < 5 || l.x < rect.minX || l.x > rect.maxX || l.y < rect.minY || l.y > rect.maxY)
+        continue;
+      const [x, y] = worldToScreen(v, [l.x, l.y]);
+      out.push({ key: l.key, text: l.text, x, y, px: Math.min(px, 40), deg: -l.rotationDeg });
+      if (out.length >= 400) return out;
+    }
+  }
+  return out;
+});
+const matrixOf = (b: Background) => `matrix(${backgroundMatrix(b.placement).join(' ')})`;
+
 const visibleDims = computed(() => {
   const rect = worldRect.value;
   return dimLayouts.value.filter((d) => intersects(cachedBounds(d.layout.line), rect));
@@ -362,6 +402,43 @@ watch(
 
       <!-- Verdenslag: geometri i meter, Y opp. Streker har fast pikselbredde. -->
       <g :transform="worldTransform" data-testid="world">
+        <!-- Referansebakgrunner ligger under sporene. -->
+        <g
+          v-for="bg in visibleBackgrounds"
+          :key="bg.id"
+          :opacity="bg.opacity"
+          :data-testid="`background-${bg.id}`"
+          :data-kind="bg.kind"
+        >
+          <g :transform="matrixOf(bg)">
+            <template v-if="bg.kind === 'dxf'">
+              <path
+                v-for="p in backgroundPaths(bg)"
+                :key="p.layer"
+                class="bg-path"
+                :d="p.d"
+                :stroke="aciColor(p.color)"
+                vector-effect="non-scaling-stroke"
+              />
+            </template>
+            <image
+              v-else
+              :href="bg.dataUrl"
+              x="0"
+              y="0"
+              :width="bg.widthPx"
+              :height="bg.heightPx"
+              preserveAspectRatio="none"
+              :transform="`translate(0 ${bg.heightPx}) scale(1 -1)`"
+            />
+          </g>
+        </g>
+        <path
+          v-if="backgroundOutline"
+          class="bg-outline"
+          :d="backgroundOutline"
+          vector-effect="non-scaling-stroke"
+        />
         <g
           v-for="t in visibleTracks"
           :key="t.id"
@@ -444,6 +521,15 @@ watch(
 
       <!-- Skjermlag: tekst, grep og markører i piksler. -->
       <g>
+        <text
+          v-for="l in bgLabels"
+          :key="l.key"
+          class="bg-text"
+          :transform="`translate(${l.x} ${l.y}) rotate(${l.deg})`"
+          :font-size="l.px"
+        >
+          {{ l.text }}
+        </text>
         <text
           v-for="t in visibleTurnoutLabels"
           :key="t.id"

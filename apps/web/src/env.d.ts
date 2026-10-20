@@ -4,3 +4,8 @@ declare module '*.vue' {
   const component: DefineComponent<object, object, unknown>;
   export default component;
 }
+
+declare module 'pdfjs-dist/build/pdf.worker.min.mjs?url' {
+  const url: string;
+  export default url;
+}

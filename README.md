@@ -50,6 +50,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **DXF-eksport:** Fil → Eksporter DXF (R12 eller R2007) – se `docs/dxf.md`. Lag for sporakser, sporveksler, mål og tekst; meter som enhet.
 
+**Bakgrunn:** Fil → Importer bakgrunn (DXF, PDF, PNG, JPEG) – referanse under planen, med skalering ved to punkter, flytting, dekkevne og synlighet. Se `docs/bakgrunn.md`.
+
 **Lagring:** Fil → Lagre laster ned `<prosjektnavn>.railcad.json`. Åpne leser filen tilbake og validerer den (struktur, tall, invarianter, unike ID-er, referanser) før noe vises; ved feil forklares det hva som er galt og prosjektet er urørt.
 
 ## Arkitektur
@@ -59,7 +61,7 @@ packages/
   domain/         Typer, JSON-skjema (zod), validering, migrering, ID-generering
   geometry-api/   Stabilt GeometryEngine-grensesnitt + eksplisitte toleranser
   geometry-ts/    TypeScript-implementasjon: linje, bue, offset, rotasjon, snapping, mål, topologi, sporveksler
-  dxf/            DXF-eksport (R12, R2007)
+  dxf/            DXF-eksport (R12, R2007) og DXF-lesing for bakgrunn
 apps/web/src/
   commands/       Patch-modell og rene builders (opprett, erstatt, slett, flytt/roter)
   stores/         Pinia: project (modell + angre/gjør om), view (utsnitt/snap), ui
@@ -67,7 +69,7 @@ apps/web/src/
   rendering/      world↔screen, rutenett, SVG-stier
   components/     Meny, verktøylinje, tegneflate, egenskaper, objektliste, status
 fixtures/         Eksempelprosjekter (tre spor; Lodalen-inspirert sporfelt – generert av scripts/generate-lodalen.ts)
-scripts/          Generator for det store eksempelet (npx tsx scripts/generate-lodalen.ts)
+scripts/          Generatorer for eksempler og testfiler (generate-lodalen, generate-dxf-samples, generate-background-samples)
 tests/e2e/        Playwright
 docs/             Beslutninger, filformat, kravstatus
 ```
@@ -88,7 +90,8 @@ Se `docs/` for filformat og beslutninger.
 - **Sporveksler er delvis verifisert** (3 typer, akser avledet fra TRV-hovedmål, ikke kontrollert mot KO-tegning – se `docs/vekseldata-trv.md`). Dobbel kryssveksel, sporsløyfer og EVB-typer er ikke lagt inn.
 - **Tangenttoleranse for koblinger er en foreløpig testverdi.**
 - **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
-- **Ingen referansebakgrunn, lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
+- **Bakgrunn:** bare side 1 av PDF, ingen georeferering, DXF uten HATCH/DIMENSION.
+- **Ingen lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
 - Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.

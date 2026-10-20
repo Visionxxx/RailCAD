@@ -1,0 +1,43 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1190 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 447 >>
+stream
+0.93 0.89 0.82 rg 0 0 1190 842 re f
+0.80 0.75 0.68 rg 300 300 320 60 re f 700 320 220 55 re f 100 650 80 50 re f
+1 1 1 RG 14 w 0 760 m 1190 740 l S
+0.35 0.35 0.35 RG 1.5 w
+60 420 m 1130 400 l S
+60 434 m 1130 428 l S
+60 448 m 1130 456 l S
+60 462 m 1130 484 l S
+60 476 m 1130 512 l S
+60 490 m 1130 540 l S
+0 0 0 RG 2 w 100 60 m 500 60 l S 100 52 m 100 68 l S 500 52 m 500 68 l S
+BT /F1 14 Tf 100 78 Td (Skalalinje 100 m \(syntetisk testdata\)) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000242 00000 n 
+0000000740 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+810
+%%EOF

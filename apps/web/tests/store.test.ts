@@ -288,3 +288,60 @@ describe('sporveksler i prosjektstore', () => {
     expect(store.connections).toEqual([]);
   });
 });
+
+describe('bakgrunner i prosjektstore', () => {
+  const bg = (id = 'bg-001') => ({
+    kind: 'dxf' as const,
+    id,
+    name: 'kart',
+    visible: true,
+    opacity: 1,
+    placement: {
+      origin: [0, 0] as [number, number],
+      scaleMPerUnit: 1,
+      rotationRad: 0,
+      scaleConfirmed: true,
+    },
+    layers: [{ name: '0', color: 7 }],
+    prims: [['L', 0, 0, 0, 10, 10]] as any,
+    sourceUnits: 'meters',
+    extents: { minX: 0, minY: 0, maxX: 10, maxY: 10 },
+  });
+  let store: ReturnType<typeof useProjectStore>;
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+
+  it('import, endring og fjerning kan angres og gjøres om', () => {
+    store.addBackground(bg());
+    store.updateBackground('bg-001', (b) => ({ ...b, visible: false }), 'Skjul bakgrunn');
+    expect(store.backgrounds[0]?.visible).toBe(false);
+    store.removeBackground('bg-001');
+    expect(store.backgrounds).toEqual([]);
+    store.undo();
+    expect(store.backgrounds).toHaveLength(1);
+    store.undo();
+    expect(store.backgrounds[0]?.visible).toBe(true);
+    store.undo();
+    expect(store.backgrounds).toEqual([]);
+    store.redo();
+    expect(store.backgrounds).toHaveLength(1);
+  });
+
+  it('delvise endringer uten effekt gir ingen historikkpost; bakgrunner tas med i toProject kun når de finnes', () => {
+    expect(store.toProject().backgrounds).toBeUndefined();
+    store.addBackground(bg());
+    const steps = store.canUndo;
+    expect(store.updateBackground('bg-001', (b) => b, 'Ingen endring')).toBe(false);
+    expect(store.updateBackground('finnes-ikke', (b) => ({ ...b }), 'x')).toBe(false);
+    expect(steps).toBe(true);
+    expect(store.toProject().backgrounds).toHaveLength(1);
+  });
+
+  it('bakgrunner berører ikke koblingskontroll eller objektliste', () => {
+    store.addBackground(bg());
+    expect(store.objects).toEqual([]);
+    expect(store.connectionResults).toEqual([]);
+  });
+});

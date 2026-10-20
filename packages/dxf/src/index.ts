@@ -23,3 +23,4 @@ export function exportDxf(
       )
     : writeR2007(entities);
 }
+export { readDxfBackground, cleanMText, type DxfReadResult, type DxfReadOutcome } from './read';

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import {
   clickWorld,
@@ -744,4 +745,185 @@ test('RC-012: DXF-eksport (R12 og R2007) med lag, spor, veksler og mål', async 
   expect(r2007).toContain('RAILCAD_SPORVEKSEL');
   await expect(page.getByTestId('toast').last()).toContainText('DXF R2007');
   expect(errors).toEqual([]);
+});
+
+// ---------- RC-013: referansebakgrunn ----------
+const fixture = (...p: string[]) => join(process.cwd(), 'fixtures', ...p);
+
+async function importBackground(page: import('@playwright/test').Page, file: string) {
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-import-background').click(),
+  ]);
+  await chooser.setFiles(file);
+}
+
+test('RC-013: DXF-bakgrunn importeres med enhet fra filen og beholder posisjonen', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await importBackground(page, fixture('dxf', 'kartunderlag-lokal-r2007.dxf'));
+  await expect(page.getByTestId('bg-row-bg-001')).toContainText('kartunderlag-lokal-r2007');
+  await expect(page.getByTestId('bg-row-bg-001')).toContainText('DXF');
+  await expect(page.getByTestId('bg-unscaled-bg-001')).toHaveCount(0); // meter oppgitt i filen
+  await expect(page.getByTestId('dialog')).toHaveCount(0);
+  await expect(page.getByTestId('background-bg-001')).toHaveAttribute('data-kind', 'dxf');
+  await expect(page.getByTestId('background-bg-001').locator('path.bg-path').first()).toBeVisible();
+  await expect(field(page, 'bg-origin-x')).toHaveValue('0,000');
+  await expect(field(page, 'bg-scale')).toHaveValue('1,000000');
+  await expect(page.getByTestId('bg-size')).toContainText('985,0');
+  expect(errors).toEqual([]);
+});
+
+test('RC-013: millimeter-DXF skaleres automatisk til meter; UTM-DXF plasseres i visningen med forklaring', async ({
+  page,
+}) => {
+  await openApp(page);
+  await importBackground(page, fixture('dxf', 'kartunderlag-mm-r2007.dxf'));
+  await expect(page.getByTestId('dialog')).toContainText('millimeters');
+  await page.getByTestId('dialog-close').click();
+  await expect(field(page, 'bg-scale')).toHaveValue('0,001000');
+  await expect(page.getByTestId('bg-size')).toContainText('985,0'); // 985 000 mm = 985 m
+
+  await importBackground(page, fixture('dxf', 'kartunderlag-utm-r2007.dxf'));
+  await expect(page.getByTestId('dialog')).toContainText('Store koordinater');
+  await page.getByTestId('dialog-close').click();
+  await expect(page.getByTestId('bg-row-bg-002')).toBeVisible();
+  const x = Number(
+    (await field(page, 'bg-origin-x').inputValue()).replace(',', '.').replace(/\s/g, ''),
+  );
+  expect(Math.abs(x)).toBeLessThan(2000); // ikke 262 000 – lagt i visningen
+});
+
+test('RC-013: bilde uten skala markeres, og «Skaler med to punkter» setter skalaen fra kjent avstand', async ({
+  page,
+}) => {
+  await openApp(page);
+  await importBackground(page, fixture('background', 'kartunderlag.png'));
+  await expect(page.getByTestId('dialog')).toContainText('Skalaen er ukjent');
+  await page.getByTestId('dialog-close').click();
+  await expect(page.getByTestId('bg-unscaled-bg-001')).toBeVisible();
+  await expect(page.getByTestId('background-bg-001')).toHaveAttribute('data-kind', 'image');
+  await expect(field(page, 'bg-scale')).toHaveValue('0,125000'); // antatt 200 m bred
+
+  await page.getByTestId('bg-scale-tool').click();
+  await expect(page.getByTestId('hint')).toContainText('første punkt');
+  const a = await worldToPage(page, 0, 0);
+  const v = await viewInfo(page);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.click(a.x, a.y);
+  const b = { x: a.x + 100 * v.scale * 0.1, y: a.y }; // ca. 10 m til høyre
+  await page.mouse.move(b.x, b.y);
+  await page.mouse.click(b.x, b.y);
+  const measured = (await page.getByTestId('bg-measured').textContent())!;
+  expect(measured).toContain('Målt på kartet');
+  const m = Number(measured.match(/([\d]+(?:,\d+)?) m/)![1]!.replace(',', '.'));
+  await page.getByTestId('bg-actual').fill(String(m * 2)); // dobbelt så langt i virkeligheten
+  await page.getByTestId('bg-apply-scale').click();
+  await expect(field(page, 'bg-scale')).toHaveValue('0,250000');
+  await expect(page.getByTestId('bg-unscaled-bg-001')).toHaveCount(0);
+
+  await page.keyboard.press('Control+z');
+  await expect(field(page, 'bg-scale')).toHaveValue('0,125000');
+  await expect(page.getByTestId('bg-unscaled-bg-001')).toBeVisible();
+});
+
+test('RC-013: PDF gjengis til bilde og kan skjules, gjøres gjennomsiktig og fjernes (alt kan angres)', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await importBackground(page, fixture('background', 'kartunderlag.pdf'));
+  await expect(page.getByTestId('dialog')).toContainText('Skalaen er ukjent');
+  await page.getByTestId('dialog-close').click();
+  await expect(page.getByTestId('bg-row-bg-001')).toContainText('PDF');
+  await expect(page.getByTestId('background-bg-001').locator('image')).toHaveCount(1);
+  const size = await page.getByTestId('background-bg-001').locator('image').getAttribute('width');
+  expect(Number(size)).toBeGreaterThan(1500);
+
+  await page.getByTestId('bg-opacity').fill('30');
+  await expect(page.getByTestId('background-bg-001')).toHaveAttribute('opacity', '0.3');
+  await page.getByTestId('bg-visible-bg-001').uncheck();
+  await expect(page.getByTestId('background-bg-001')).toHaveCount(0);
+  await page.getByTestId('bg-visible-bg-001').check();
+  await expect(page.getByTestId('background-bg-001')).toHaveCount(1);
+  await page.getByTestId('bg-remove-bg-001').click();
+  await expect(page.getByTestId('bg-row-bg-001')).toHaveCount(0);
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('bg-row-bg-001')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('RC-013: bakgrunner lagres i prosjektfilen og kommer tilbake; ugyldig bakgrunn avvises', async ({
+  page,
+}, info) => {
+  const { writeFileSync } = await import('node:fs');
+  await openApp(page);
+  await createLineNumeric(page, { length: '20' });
+  await importBackground(page, fixture('dxf', 'kartunderlag-lokal-r2007.dxf'));
+  await page.getByTestId('bg-opacity').fill('40');
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('med-bakgrunn.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.backgrounds).toHaveLength(1);
+  expect(saved.backgrounds[0]).toMatchObject({
+    kind: 'dxf',
+    visible: true,
+    opacity: 0.4,
+    sourceUnits: 'meters',
+  });
+  expect(saved.backgrounds[0].placement.scaleConfirmed).toBe(true);
+  expect(saved.backgrounds[0].prims.length).toBe(59);
+
+  await menu(page, 'file', 'menu-new');
+  await expect(page.getByTestId('bg-row-bg-001')).toHaveCount(0);
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByTestId('bg-row-bg-001')).toContainText('kartunderlag-lokal-r2007');
+  await expect(page.getByTestId('background-bg-001')).toHaveAttribute('opacity', '0.4');
+
+  saved.backgrounds[0].prims[0] = ['X', 0];
+  const bad = info.outputPath('ugyldig-bakgrunn.json');
+  writeFileSync(bad, JSON.stringify(saved));
+  await page.getByTestId('menu-file').click();
+  const [chooser2] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser2.setFiles(bad);
+  await expect(page.getByTestId('dialog')).toContainText('ukjent primitiv');
+});
+
+test('RC-013: «Flytt fra → til» snapper til hjørner i DXF-bakgrunnen og flytter den', async ({
+  page,
+}) => {
+  await openApp(page);
+  await importBackground(page, fixture('dxf', 'kartunderlag-lokal-r2007.dxf'));
+  const before = Number((await field(page, 'bg-origin-x').inputValue()).replace(',', '.'));
+  await page.getByTestId('bg-move-tool').click();
+  // Hjørnet (900, -20) i eiendomsgrensen
+  const corner = await worldToPage(page, 900, -20);
+  await page.mouse.move(corner.x + 3, corner.y - 2);
+  await expect(page.getByTestId('snap-marker')).toHaveAttribute('data-kind', 'endpoint');
+  await page.mouse.click(corner.x + 3, corner.y - 2);
+  const target = await worldToPage(page, 900, 100);
+  await page.mouse.move(target.x, target.y);
+  await expect(page.getByTestId('hud')).toContainText('Δy');
+  await page.mouse.click(target.x + 1, target.y);
+  const after = Number((await field(page, 'bg-origin-y').inputValue()).replace(',', '.'));
+  expect(after).toBeGreaterThan(80); // flyttet ca. +120 m i Y fra -36
+  expect(Number((await field(page, 'bg-origin-x').inputValue()).replace(',', '.'))).toBeCloseTo(
+    before,
+    0,
+  );
 });

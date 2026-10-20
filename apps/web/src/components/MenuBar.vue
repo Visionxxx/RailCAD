@@ -41,6 +41,11 @@ const menus = computed<MenuDef[]>(() => [
       { label: 'Lagre', kbd: 'Ctrl+S', run: actions.save, testid: 'menu-save' },
       { label: '', separator: true },
       {
+        label: 'Importer bakgrunn (DXF, PDF, bilde) …',
+        run: actions.importBackground,
+        testid: 'menu-import-background',
+      },
+      {
         label: 'Eksporter DXF (R2007) …',
         run: () => actions.exportDxfFile('R2007'),
         disabled: !project.objects.length,

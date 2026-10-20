@@ -1,3 +1,4 @@
+import type { Background } from './background';
 /** Punkt i lokalt XY-system, meter. X mot øst, Y mot nord (matematisk orientering). */
 export type Vec2 = readonly [number, number];
 
@@ -108,6 +109,8 @@ export interface RailProject {
   project: ProjectMeta;
   objects: RailObject[];
   connections: Connection[];
+  /** Referansebakgrunner (valgfri; mangler i eldre filer). */
+  backgrounds?: Background[];
 }
 
 export function isTrack(o: RailObject): o is TrackSegment {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BACKGROUND_LIMITS, type DxfPrim } from './background';
 import { getTurnoutType } from './turnout-catalog';
 import { TRACK_PORTS, TURNOUT_PORTS, type RailProject, type TrackGeometry } from './types';
 
@@ -55,6 +56,49 @@ const objectSchema = z.discriminatedUnion('type', [
     .passthrough(),
 ]);
 
+const placementSchema = z
+  .object({
+    origin: vec2,
+    scaleMPerUnit: finite.refine((n) => n > 0, 'skala må være større enn 0'),
+    rotationRad: finite,
+    scaleConfirmed: z.boolean(),
+  })
+  .passthrough();
+const backgroundCommon = {
+  id: nonEmptyString,
+  name: z.string(),
+  visible: z.boolean(),
+  opacity: finite.refine((n) => n >= 0 && n <= 1, 'dekkevne må være mellom 0 og 1'),
+  placement: placementSchema,
+};
+const backgroundSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('dxf'),
+      ...backgroundCommon,
+      layers: z.array(
+        z.object({ name: z.string(), color: z.number().int().min(0).max(256) }).passthrough(),
+      ),
+      prims: z.array(z.any()),
+      sourceUnits: z.string(),
+      extents: z.object({ minX: finite, minY: finite, maxX: finite, maxY: finite }).passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      kind: z.literal('image'),
+      ...backgroundCommon,
+      source: z.enum(['image', 'pdf']),
+      dataUrl: z
+        .string()
+        .regex(/^data:image\/(png|jpeg);base64,/, 'må være en PNG- eller JPEG-data-URL')
+        .refine((s) => s.length <= BACKGROUND_LIMITS.maxImageDataUrlChars, 'bildet er for stort'),
+      widthPx: z.number().int().positive().max(BACKGROUND_LIMITS.maxImagePixelsPerSide),
+      heightPx: z.number().int().positive().max(BACKGROUND_LIMITS.maxImagePixelsPerSide),
+    })
+    .passthrough(),
+]);
+
 const projectSchema = z
   .object({
     schemaVersion: nonEmptyString,
@@ -69,6 +113,7 @@ const projectSchema = z
       .passthrough(),
     objects: z.array(objectSchema),
     connections: z.array(z.object({ a: endpointRef, b: endpointRef }).passthrough()),
+    backgrounds: z.array(backgroundSchema).optional(),
   })
   .passthrough();
 
@@ -90,6 +135,57 @@ export function validateGeometry(g: TrackGeometry): string[] {
     }
   }
   return errors;
+}
+
+/** Kontrollerer kompakte DXF-primitiver. Returnerer første feil, eller null. */
+export function validatePrims(prims: readonly unknown[], layerCount: number): string | null {
+  if (prims.length > BACKGROUND_LIMITS.maxPrims) return `for mange primitiver (${prims.length})`;
+  const finiteNums = (a: readonly unknown[]) =>
+    a.every((n) => typeof n === 'number' && Number.isFinite(n));
+  for (let i = 0; i < prims.length; i++) {
+    const p = prims[i] as DxfPrim | undefined;
+    if (!Array.isArray(p)) return `prims[${i}]: forventet liste`;
+    const layer = p[1];
+    if (
+      !Number.isInteger(layer) ||
+      (layer as number) < 0 ||
+      (layer as number) >= Math.max(layerCount, 1)
+    ) {
+      return `prims[${i}]: ugyldig lag-indeks`;
+    }
+    switch (p[0]) {
+      case 'L':
+        if (p.length !== 6 || !finiteNums(p.slice(2))) return `prims[${i}]: ugyldig linje`;
+        break;
+      case 'A':
+        if (p.length !== 7 || !finiteNums(p.slice(2)) || (p[4] as number) <= 0)
+          return `prims[${i}]: ugyldig bue`;
+        break;
+      case 'C':
+        if (p.length !== 5 || !finiteNums(p.slice(2)) || (p[4] as number) <= 0)
+          return `prims[${i}]: ugyldig sirkel`;
+        break;
+      case 'P':
+        if (
+          p.length !== 4 ||
+          (p[2] !== 0 && p[2] !== 1) ||
+          !Array.isArray(p[3]) ||
+          p[3].length % 3 !== 0 ||
+          p[3].length < 6 ||
+          !finiteNums(p[3])
+        ) {
+          return `prims[${i}]: ugyldig polylinje`;
+        }
+        break;
+      case 'T':
+        if (p.length !== 7 || !finiteNums(p.slice(2, 6)) || typeof p[6] !== 'string')
+          return `prims[${i}]: ugyldig tekst`;
+        break;
+      default:
+        return `prims[${i}]: ukjent primitiv «${String(p[0])}»`;
+    }
+  }
+  return null;
 }
 
 export type ProjectValidation =
@@ -143,6 +239,15 @@ export function validateProject(raw: unknown): ProjectValidation {
     }
     if (d.kind === 'distance' && d.a[0] === d.b[0] && d.a[1] === d.b[1]) {
       errors.push(`objects[${i}] (${o.id}): punktene i målet er sammenfallende`);
+    }
+  });
+  const bgIds = new Set<string>();
+  (project.backgrounds ?? []).forEach((b, i) => {
+    if (bgIds.has(b.id)) errors.push(`backgrounds[${i}].id: duplikat ID «${b.id}»`);
+    bgIds.add(b.id);
+    if (b.kind === 'dxf') {
+      const e = validatePrims(b.prims, b.layers.length);
+      if (e) errors.push(`backgrounds[${i}] (${b.id}): ${e}`);
     }
   });
   const usedPorts = new Set<string>();

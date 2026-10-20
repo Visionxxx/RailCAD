@@ -7,6 +7,7 @@ import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, parseNumber } from '../format';
 import { useProjectStore } from '../stores/project';
 import { useTools } from '../tools/controller';
+import type { BackgroundScaleTool } from '../tools/background';
 import type { ConnectTool } from '../tools/connect';
 import type { RotateTool } from '../tools/operations';
 import { useViewStore } from '../stores/view';
@@ -121,6 +122,24 @@ const connectMode = computed(() => {
   void ctrl.hint.value;
   return connectTool.value.activeMode;
 });
+const scaleTool = computed(() => {
+  void ctrl.hint.value;
+  return ctrl.tools['bg-scale'] as BackgroundScaleTool;
+});
+const scaleStage = computed(() => {
+  void ctrl.hint.value;
+  return scaleTool.value.stage;
+});
+const actualDistance = ref('');
+function applyScale() {
+  const n = parseNumber(actualDistance.value);
+  if (n === null || n <= 0) {
+    error.value = 'Virkelig avstand: oppgi et positivt tall (meter).';
+    return;
+  }
+  error.value = '';
+  if (scaleTool.value.apply(n)) actualDistance.value = '';
+}
 const connectLength = ref('');
 function applyConnectLine() {
   const n = parseNumber(connectLength.value);
@@ -302,6 +321,25 @@ function applyRotation() {
       {{ turnoutType.source.drawing }} · {{ TURNOUT_CATALOG_REVISION }} ·
       <b style="color: var(--warn)">delvis verifisert</b> – akser avledet fra TRV-hovedmål.
     </div>
+    <div v-if="error" class="err" role="alert">{{ error }}</div>
+  </form>
+
+  <form
+    v-else-if="toolId === 'bg-scale' && scaleStage === 2"
+    class="tool-options"
+    data-testid="options-bg-scale"
+    @submit.prevent="applyScale"
+    @pointerdown.stop
+  >
+    <span class="title">Skaler bakgrunn</span>
+    <span data-testid="bg-measured">Målt på kartet: {{ fmt(scaleTool.measuredM, 3) }} m</span>
+    <label
+      >Virkelig avstand (m)<input
+        v-model="actualDistance"
+        data-testid="bg-actual"
+        inputmode="decimal"
+    /></label>
+    <button class="btn" type="submit" data-testid="bg-apply-scale">Bruk</button>
     <div v-if="error" class="err" role="alert">{{ error }}</div>
   </form>
 </template>

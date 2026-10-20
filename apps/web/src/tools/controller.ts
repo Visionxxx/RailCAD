@@ -13,6 +13,7 @@ import {
   ParallelTool,
   RotateTool,
 } from './operations';
+import { BackgroundMoveTool, BackgroundScaleTool } from './background';
 import { ConnectTool } from './connect';
 import { SelectTool } from './select';
 import { TurnoutTool } from './turnout';
@@ -30,6 +31,8 @@ export const TOOL_SHORTCUTS: Record<ToolId, string> = {
   rotate: 'R',
   connect: 'K',
   turnout: 'T',
+  'bg-scale': '',
+  'bg-move': '',
   delete: 'E',
 };
 
@@ -75,6 +78,8 @@ export function createToolController() {
     delete: new DeleteTool(env),
     connect: new ConnectTool(env),
     turnout: new TurnoutTool(env),
+    'bg-scale': new BackgroundScaleTool(env),
+    'bg-move': new BackgroundMoveTool(env),
   };
 
   const active = computed(() => tools[activeId.value]);
@@ -97,7 +102,7 @@ export function createToolController() {
     const t = active.value;
     const dragging = t instanceof SelectTool ? t.dragging : true;
     if (!t.snapEnabled || !dragging) return null;
-    return geometryEngine.snap(project.trackRefs, {
+    const found = geometryEngine.snap(project.trackRefs, {
       cursor: world,
       toleranceM: view.snapToleranceM,
       kinds: view.activeSnapKinds,
@@ -105,6 +110,17 @@ export function createToolController() {
       gridStepM: view.grid.minor,
       excludeIds: t.snapExclude,
     });
+    // Endepunkter i sporene vinner; ellers kan verktøyet snappe til bakgrunnens hjørner.
+    if (found && found.kind !== 'grid') return found;
+    const extra = view.snapOn.endpoint ? t.extraSnap?.(world, view.snapToleranceM) : null;
+    if (extra) {
+      return {
+        kind: 'endpoint' as const,
+        point: extra,
+        distanceM: Math.hypot(extra[0] - world[0], extra[1] - world[1]),
+      };
+    }
+    return found;
   }
 
   function dispatch(kind: 'down' | 'move' | 'up', p: PointerInfo) {

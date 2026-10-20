@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import {
   createEmptyProject,
+  type Background,
   isTrack,
   isTurnout,
   type Connection,
@@ -15,6 +16,9 @@ import {
 import { portKey, type Pose, type PortRef, type TrackRef } from '@railcad/geometry-api';
 import { applyPatch, type Patch } from '../commands/patch';
 import {
+  addBackgroundPatch,
+  removeBackgroundPatch,
+  updateBackgroundPatch,
   connectPorts,
   createDimension,
   createTrack,
@@ -34,6 +38,7 @@ export const useProjectStore = defineStore('project', () => {
   const meta = ref<ProjectMeta>(createEmptyProject().project);
   const objects = shallowRef<RailObject[]>([]);
   const connections = shallowRef<Connection[]>([]);
+  const backgrounds = shallowRef<Background[]>([]);
   const selection = shallowRef<string[]>([]);
   const undoStack = shallowRef<Patch[]>([]);
   const redoStack = shallowRef<Patch[]>([]);
@@ -121,9 +126,14 @@ export const useProjectStore = defineStore('project', () => {
     if (kept.length !== selection.value.length) selection.value = kept;
   }
 
-  function commit(next: { objects: RailObject[]; connections: Connection[] }) {
+  function commit(next: {
+    objects: RailObject[];
+    connections: Connection[];
+    backgrounds: Background[];
+  }) {
     objects.value = next.objects;
     connections.value = next.connections;
+    backgrounds.value = next.backgrounds;
     revision.value++;
     pruneSelection();
   }
@@ -131,7 +141,13 @@ export const useProjectStore = defineStore('project', () => {
   /** Utfører en redigering og legger den på angre-stakken. */
   function execute(patch: Patch | null): boolean {
     if (!patch) return false;
-    commit(applyPatch({ objects: objects.value, connections: connections.value }, patch, 'do'));
+    commit(
+      applyPatch(
+        { objects: objects.value, connections: connections.value, backgrounds: backgrounds.value },
+        patch,
+        'do',
+      ),
+    );
     undoStack.value = [...undoStack.value, patch].slice(-HISTORY_LIMIT);
     redoStack.value = [];
     return true;
@@ -140,7 +156,13 @@ export const useProjectStore = defineStore('project', () => {
   function undo() {
     const patch = undoStack.value.at(-1);
     if (!patch) return;
-    commit(applyPatch({ objects: objects.value, connections: connections.value }, patch, 'undo'));
+    commit(
+      applyPatch(
+        { objects: objects.value, connections: connections.value, backgrounds: backgrounds.value },
+        patch,
+        'undo',
+      ),
+    );
     undoStack.value = undoStack.value.slice(0, -1);
     redoStack.value = [...redoStack.value, patch];
   }
@@ -148,7 +170,13 @@ export const useProjectStore = defineStore('project', () => {
   function redo() {
     const patch = redoStack.value.at(-1);
     if (!patch) return;
-    commit(applyPatch({ objects: objects.value, connections: connections.value }, patch, 'do'));
+    commit(
+      applyPatch(
+        { objects: objects.value, connections: connections.value, backgrounds: backgrounds.value },
+        patch,
+        'do',
+      ),
+    );
     redoStack.value = redoStack.value.slice(0, -1);
     undoStack.value = [...undoStack.value, patch];
   }
@@ -197,6 +225,17 @@ export const useProjectStore = defineStore('project', () => {
     return id;
   }
 
+  function addBackground(bg: Background): string {
+    execute(addBackgroundPatch(backgrounds.value, bg));
+    return bg.id;
+  }
+  function updateBackground(id: string, change: (b: Background) => Background, label: string) {
+    return execute(updateBackgroundPatch(backgrounds.value, id, change, label));
+  }
+  function removeBackground(id: string) {
+    return execute(removeBackgroundPatch(backgrounds.value, id));
+  }
+
   function updateObject(next: RailObject, label: string): boolean {
     return execute(replaceObjects(objects.value, new Map([[next.id, next]]), label));
   }
@@ -217,6 +256,7 @@ export const useProjectStore = defineStore('project', () => {
     meta.value = project.project;
     objects.value = project.objects;
     connections.value = project.connections;
+    backgrounds.value = project.backgrounds ?? [];
     selection.value = [];
     undoStack.value = [];
     redoStack.value = [];
@@ -235,6 +275,8 @@ export const useProjectStore = defineStore('project', () => {
       project: { ...meta.value },
       objects: [...objects.value],
       connections: [...connections.value],
+      // Valgfritt felt: utelates når det ikke finnes bakgrunner (filene forblir like som før).
+      ...(backgrounds.value.length ? { backgrounds: [...backgrounds.value] } : {}),
     };
   }
 
@@ -246,6 +288,7 @@ export const useProjectStore = defineStore('project', () => {
     meta,
     objects,
     connections,
+    backgrounds,
     selection,
     revision,
     loadCount,
@@ -274,6 +317,9 @@ export const useProjectStore = defineStore('project', () => {
     removeConnection,
     addTrackFromPort,
     addTurnout,
+    addBackground,
+    updateBackground,
+    removeBackground,
     deleteSelection,
     deleteIds,
     updateMeta,

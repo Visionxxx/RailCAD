@@ -45,6 +45,8 @@ export const useViewStore = defineStore('view', () => {
   const parallelSide = ref<'auto' | 'left' | 'right'>('auto');
   /** Valgt biblioteksvekseltype og -retning for plassering (kun UI-valg). */
   const turnoutTypeId = ref('trv-60E1-1:9-R300-EVF');
+  /** Valgt bakgrunn i bakgrunnspanelet (for skalering/flytting). */
+  const activeBackgroundId = ref<string | null>(null);
   const turnoutHand = ref<'left' | 'right'>('left');
   /** Markørposisjon i verdenskoordinater (rå, ikke snappet). */
   const cursor = ref<readonly [number, number] | null>(null);
@@ -74,6 +76,9 @@ export const useViewStore = defineStore('view', () => {
     const b = unionBounds(project.trackRefs.map((t) => cachedBounds(t.geometry)));
     apply(fitBounds(view, b));
   }
+  function fitToBounds(b: { minX: number; minY: number; maxX: number; maxY: number }) {
+    apply(fitBounds(view, b));
+  }
   function setTheme(t: Theme) {
     theme.value = t;
     try {
@@ -93,6 +98,7 @@ export const useViewStore = defineStore('view', () => {
     parallelSide,
     turnoutTypeId,
     turnoutHand,
+    activeBackgroundId,
     cursor,
     activeSnapKinds,
     grid,
@@ -102,6 +108,7 @@ export const useViewStore = defineStore('view', () => {
     zoom,
     pan,
     fitAll,
+    fitToBounds,
     setTheme,
   };
 });

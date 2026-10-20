@@ -1,4 +1,4 @@
-import type { Connection, RailObject } from '@railcad/domain';
+import type { Background, Connection, RailObject } from '@railcad/domain';
 
 /**
  * En redigering som data: hvert berørt objekt har før/etter-tilstand og posisjon i
@@ -9,11 +9,14 @@ export interface Patch {
   label: string;
   objects: Record<string, { before: RailObject | null; after: RailObject | null; index: number }>;
   connections?: { before: Connection[]; after: Connection[] };
+  /** Referansebakgrunner (hele listen før/etter – elementene deles, så det koster ingen kopiering). */
+  backgrounds?: { before: Background[]; after: Background[] };
 }
 
 export interface ModelState {
   objects: RailObject[];
   connections: Connection[];
+  backgrounds: Background[];
 }
 
 export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'undo'): ModelState {
@@ -44,5 +47,9 @@ export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'u
   if (patch.connections) {
     connections = direction === 'do' ? patch.connections.after : patch.connections.before;
   }
-  return { objects: result, connections };
+  let backgrounds = state.backgrounds;
+  if (patch.backgrounds) {
+    backgrounds = direction === 'do' ? patch.backgrounds.after : patch.backgrounds.before;
+  }
+  return { objects: result, connections, backgrounds };
 }

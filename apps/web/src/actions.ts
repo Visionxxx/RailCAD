@@ -2,6 +2,9 @@ import demo from '@fixtures/demo-verksted.json';
 import demoLodalen from '@fixtures/demo-lodalen.json';
 import { exportDxf, type DxfVersion } from '@railcad/dxf';
 import { geometryEngine } from './engine';
+import { importBackgroundFile, pickBackgroundFile } from './io/background';
+import { useViewStore } from './stores/view';
+import { backgroundWorldBounds } from './rendering/background';
 import {
   downloadProject,
   downloadText,
@@ -18,6 +21,7 @@ import { useUiStore } from './stores/ui';
 export function useActions() {
   const project = useProjectStore();
   const ui = useUiStore();
+  const viewStore = useViewStore();
 
   /** Utfører `action` – etter bekreftelse hvis det finnes ulagrede endringer. */
   function guardDirty(action: () => void) {
@@ -84,5 +88,41 @@ export function useActions() {
     ui.notify(`Eksporterte ${name} (DXF ${version}, meter).`);
   }
 
-  return { newProject, openFile, openDemo, openLodalenDemo, save, exportDxfFile };
+  /** Importerer DXF, PDF eller bilde som referansebakgrunn (valgfri plassering/skala settes etterpå). */
+  async function importBackground() {
+    const file = await pickBackgroundFile();
+    if (!file) return;
+    importBackgroundFrom(file);
+  }
+  async function importBackgroundFrom(file: File) {
+    ui.notify(`Leser ${file.name} …`);
+    const result = await importBackgroundFile(file, {
+      existingIds: project.backgrounds.map((b) => b.id),
+      viewCenter: [viewStore.view.cx, viewStore.view.cy],
+    });
+    if (!result.ok) {
+      ui.showDialog({ title: 'Kunne ikke importere bakgrunn', lines: [result.error] });
+      return;
+    }
+    const bg = result.background;
+    project.addBackground(bg);
+    viewStore.activeBackgroundId = bg.id;
+    viewStore.fitToBounds(backgroundWorldBounds(bg));
+    if (result.notes.length) {
+      ui.showDialog({ title: `Bakgrunn importert: ${bg.name}`, lines: result.notes });
+    } else {
+      ui.notify(`Importerte bakgrunn «${bg.name}».`);
+    }
+  }
+
+  return {
+    importBackground,
+    importBackgroundFrom,
+    newProject,
+    openFile,
+    openDemo,
+    openLodalenDemo,
+    save,
+    exportDxfFile,
+  };
 }

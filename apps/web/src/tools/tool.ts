@@ -46,6 +46,8 @@ export abstract class Tool {
   snapExclude: ReadonlySet<string> | undefined;
   /** Om snapping er aktiv akkurat nå. */
   snapEnabled = true;
+  /** Ekstra snap-kilde (utenfor spor), brukt når ordinær snapping ikke treffer. */
+  extraSnap?(world: Vec2, toleranceM: number): Vec2 | null;
 
   constructor(protected env: ToolEnv) {}
 

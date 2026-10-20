@@ -1,4 +1,5 @@
 import {
+  type Background,
   idPrefix,
   isDimension,
   isTrack,
@@ -211,4 +212,40 @@ export function createTurnout(
     };
   }
   return { patch, id };
+}
+
+/** Ny bakgrunn legges øverst i listen (tegnes sist av bakgrunnene). */
+export function addBackgroundPatch(backgrounds: readonly Background[], bg: Background): Patch {
+  return {
+    label: 'Importer bakgrunn',
+    objects: {},
+    backgrounds: { before: [...backgrounds], after: [...backgrounds, bg] },
+  };
+}
+
+export function updateBackgroundPatch(
+  backgrounds: readonly Background[],
+  id: string,
+  change: (b: Background) => Background,
+  label: string,
+): Patch | null {
+  const i = backgrounds.findIndex((b) => b.id === id);
+  if (i < 0) return null;
+  const next = change(backgrounds[i] as Background);
+  if (next === backgrounds[i]) return null;
+  const after = backgrounds.slice();
+  after[i] = next;
+  return { label, objects: {}, backgrounds: { before: [...backgrounds], after } };
+}
+
+export function removeBackgroundPatch(
+  backgrounds: readonly Background[],
+  id: string,
+): Patch | null {
+  if (!backgrounds.some((b) => b.id === id)) return null;
+  return {
+    label: 'Fjern bakgrunn',
+    objects: {},
+    backgrounds: { before: [...backgrounds], after: backgrounds.filter((b) => b.id !== id) },
+  };
 }

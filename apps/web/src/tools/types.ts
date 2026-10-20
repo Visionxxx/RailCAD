@@ -47,4 +47,6 @@ export type ToolId =
   | 'rotate'
   | 'delete'
   | 'connect'
-  | 'turnout';
+  | 'turnout'
+  | 'bg-scale'
+  | 'bg-move';

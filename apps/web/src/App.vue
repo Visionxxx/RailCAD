@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, watchEffect } from 'vue';
 import { useActions } from './actions';
+import BackgroundPanel from './components/BackgroundPanel.vue';
 import ConnectionsPanel from './components/ConnectionsPanel.vue';
 import MenuBar from './components/MenuBar.vue';
 import ModalDialog from './components/ModalDialog.vue';
@@ -28,10 +29,9 @@ watchEffect(() => {
 });
 
 const byShortcut = new Map(
-  (Object.entries(TOOL_SHORTCUTS) as Array<[ToolId, string]>).map(([id, key]) => [
-    key.toLowerCase(),
-    id,
-  ]),
+  (Object.entries(TOOL_SHORTCUTS) as Array<[ToolId, string]>)
+    .filter(([, key]) => key !== '')
+    .map(([id, key]) => [key.toLowerCase(), id]),
 );
 
 function typing(e: KeyboardEvent) {
@@ -105,6 +105,7 @@ onBeforeUnmount(() => {
     <aside class="side" aria-label="Egenskaper og objekter">
       <PropertiesPanel />
       <ConnectionsPanel />
+      <BackgroundPanel />
       <ObjectList />
     </aside>
     <StatusBar />

@@ -10,10 +10,11 @@
   },
   "dependencies": {
     "@railcad/domain": "*",
+    "@railcad/dxf": "*",
     "@railcad/geometry-api": "*",
     "@railcad/geometry-ts": "*",
+    "pdfjs-dist": "^6.4.299",
     "pinia": "*",
-    "vue": "*",
-    "@railcad/dxf": "*"
+    "vue": "*"
   }
 }

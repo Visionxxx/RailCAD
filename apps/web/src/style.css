@@ -781,3 +781,59 @@ button {
   stroke-width: 3px;
   pointer-events: none;
 }
+
+/* Referansebakgrunn */
+.bg-path {
+  fill: none;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.bg-outline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 8 4;
+  pointer-events: none;
+}
+.bg-text {
+  fill: var(--text-dim);
+  font-family: var(--font);
+  pointer-events: none;
+}
+
+.backgrounds {
+  overflow-y: auto;
+  flex: 0 1 auto;
+  max-height: 40%;
+}
+.bg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.bg-row .who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  text-align: left;
+  padding: 0;
+}
+.bg-row.active .who {
+  color: var(--accent);
+  font-weight: 600;
+}
+.bg-details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.backgrounds h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
