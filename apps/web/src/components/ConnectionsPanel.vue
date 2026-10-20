@@ -57,6 +57,12 @@ function connectAll() {
 type Issue = (typeof project.crossingIssues)[number];
 const view = useViewStore();
 
+/** Krysningsforhold 1:n (tan α = 1/n) for spisse vinkler – slik krysningsvinkler oppgis for sporveksler og kryss. */
+function ratioText(angleRad: number): string {
+  if (!(angleRad > 0.001 && angleRad <= 0.35)) return '';
+  return ` (1:${fmt(1 / Math.tan(angleRad), 1)})`;
+}
+
 function crossingText(x: Issue): string {
   const where = `(${fmt(x.point[0], 1)}; ${fmt(x.point[1], 1)})`;
   if (x.kind === 'overlap')
@@ -65,7 +71,7 @@ function crossingText(x: Issue): string {
     const other = x.endOf === x.a ? x.b : x.a;
     return `${x.endOf} ender på ${other} ${where}`;
   }
-  return `${x.a} × ${x.b} krysser i ${fmtDeg(x.angleRad, 1)} ${where}`;
+  return `${x.a} × ${x.b} krysser i ${fmtDeg(x.angleRad, 1)}${ratioText(x.angleRad)} ${where}`;
 }
 function showCrossing(x: Issue) {
   project.select([x.a, x.b]);

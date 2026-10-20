@@ -27,5 +27,5 @@ Ingen åpne måltabeller funnet:
 - **Bane NOR TRV** har tegningsnumre for dobbel kryssveksel og sporsløyfe med sporkryss, men uten mål i teksten (se `henvendelse-bane-nor.md`).
 - **EN 13232-2 / -9** (geometri for sporveksler og kryss) ligger bak betalingsmur (BSI/CEN/nasjonale standardorgan).
 - **Trafikverket (SE)** publiserer definisjoner og vedlikeholdsregler, ikke geometritabeller i det jeg fant.
-- **Väylävirasto (FI) RATO 4 «Vaihteet»** kan være offentlig, men nedlasting ble blokkert (403) – kan lastes ned manuelt og sjekkes.
+- **Väylävirasto (FI) RATO 4 «Vaihteet»** (lastet ned manuelt av deg, 2012-utgaven): har tegninger med hovedmål for sporkryss (RR), kryssveksler (KRV/YRV) og sovitettu sporkryss (SRR), men for **sporvidde 1524 mm** – ikke gyldig for norske forhold. Se `kilde-rato4.md`.
 - **Leverandører** (Vossloh Cogifer, voestalpine Turnout Technology) har brosjyrer, men ingen offentlige CAD-/geometrifiler – se `henvendelse-leverandor.md`.

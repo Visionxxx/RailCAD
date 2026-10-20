@@ -1307,3 +1307,12 @@ test('T-forbindelse (spor som ender på et annet) og overlapp flagges, og flytti
   await openTab(page, 'connections');
   await expect(page.getByTestId('cross-row-0')).toContainText('overlapper 15,0 m');
 });
+
+test('spisse krysningsvinkler vises også som forhold 1:n', async ({ page }) => {
+  await openApp(page);
+  await createLineNumeric(page, { x: '-50', length: '100' });
+  const deg = String((Math.atan(1 / 9) * 180) / Math.PI); // 1:9
+  await createLineNumeric(page, { x: '-20', y: '-5', heading: deg, length: '100' });
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('cross-row-0')).toContainText('6,3° (1:9,0)');
+});
