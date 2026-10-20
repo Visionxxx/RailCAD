@@ -19,6 +19,16 @@ export interface DialogState {
   onCancel?: () => void;
 }
 
+export interface NumberPrompt {
+  title: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  /** Heltall (f.eks. sidenummer) */
+  integer?: boolean;
+}
+
 export type SideTab = 'properties' | 'objects' | 'connections' | 'backgrounds';
 const SIDE_TABS: readonly SideTab[] = ['properties', 'objects', 'connections', 'backgrounds'];
 
@@ -35,6 +45,7 @@ export const useUiStore = defineStore('ui', () => {
   const toasts = ref<Toast[]>([]);
   const dialog = ref<DialogState | null>(null);
   const settingsOpen = ref(false);
+  const prompt = ref<(NumberPrompt & { resolve: (v: number | null) => void }) | null>(null);
   /** Skjult «Kom i gang»-kort (gjelder økten). */
   const welcomeDismissed = ref(false);
   /** Aktiv fane i høyre panel. Huskes mellom økter (kun en bekvemmelighet). */
@@ -60,6 +71,12 @@ export const useUiStore = defineStore('ui', () => {
   function showDialog(d: DialogState) {
     dialog.value = d;
   }
+  /** Spør om ett tall. Gir null hvis brukeren avbryter. */
+  function promptNumber(p: NumberPrompt): Promise<number | null> {
+    return new Promise((resolve) => {
+      prompt.value = { ...p, resolve };
+    });
+  }
   function closeDialog() {
     dialog.value = null;
   }
@@ -68,6 +85,8 @@ export const useUiStore = defineStore('ui', () => {
     toasts,
     dialog,
     settingsOpen,
+    prompt,
+    promptNumber,
     welcomeDismissed,
     sideTab,
     showTab,

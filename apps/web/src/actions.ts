@@ -100,8 +100,18 @@ export function useActions() {
     const result = await importBackgroundFile(file, {
       existingIds: project.backgrounds.map((b) => b.id),
       viewCenter: [viewStore.view.cx, viewStore.view.cy],
+      pickPage: (numPages, name) =>
+        ui.promptNumber({
+          title: `Velg PDF-side: ${name}`,
+          label: `Side (1–${numPages})`,
+          value: 1,
+          min: 1,
+          max: numPages,
+          integer: true,
+        }),
     });
     if (!result.ok) {
+      if (result.cancelled) return; // brukeren avbrøt sidevalget
       ui.showDialog({ title: 'Kunne ikke importere bakgrunn', lines: [result.error] });
       return;
     }

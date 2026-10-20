@@ -8,12 +8,15 @@ import {
 import { readDxfBackground } from '@railcad/dxf';
 
 export type BackgroundImport =
-  { ok: true; background: Background; notes: string[] } | { ok: false; error: string };
+  | { ok: true; background: Background; notes: string[] }
+  | { ok: false; error: string; cancelled?: boolean };
 
 export interface ImportContext {
   existingIds: Iterable<string>;
   /** Verdenskoordinaten midt i tegneflaten – brukes til å plassere innhold uten kjent posisjon. */
   viewCenter: Vec2;
+  /** Spør hvilken PDF-side som skal brukes (kalles bare ved flere sider). Null = avbryt. */
+  pickPage?: (numPages: number, fileName: string) => Promise<number | null>;
 }
 
 const MAX_BACKGROUND_FILE_BYTES = 40 * 1024 * 1024;
@@ -172,8 +175,14 @@ async function importPdf(file: File, ctx: ImportContext): Promise<BackgroundImpo
     return { ok: false, error: `Kunne ikke lese PDF: ${(e as Error).message}` };
   }
   const notes: string[] = [];
-  if (doc.numPages > 1) notes.push(`PDF-en har ${doc.numPages} sider. Bare side 1 er importert.`);
-  const page = await doc.getPage(1);
+  let pageNumber = 1;
+  if (doc.numPages > 1) {
+    const chosen = ctx.pickPage ? await ctx.pickPage(doc.numPages, file.name) : 1;
+    if (chosen === null) return { ok: false, error: '', cancelled: true };
+    pageNumber = chosen;
+    notes.push(`PDF-en har ${doc.numPages} sider. Importert: side ${pageNumber}.`);
+  }
+  const page = await doc.getPage(pageNumber);
   const natural = page.getViewport({ scale: 1 });
   const k = Math.min(4, PDF_MAX_SIDE_PX / Math.max(natural.width, natural.height));
   const viewport = page.getViewport({ scale: k });

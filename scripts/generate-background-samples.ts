@@ -95,4 +95,31 @@ pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
 for (const off of offsets) pdf += `${String(off).padStart(10, '0')} 00000 n \n`;
 pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
 writeFileSync(`${OUT}/kartunderlag.pdf`, pdf, 'latin1');
-console.log(`Skrev ${OUT}/kartunderlag.png og kartunderlag.pdf`);
+
+// ---------- PDF med to sider (tester sidevalg ved import) ----------
+const page2 = [
+  '0.85 0.92 0.85 rg 0 0 1190 842 re f',
+  '0 0 0 RG 3 w 100 400 m 1100 400 l S 100 420 m 1100 420 l S',
+  'BT /F1 24 Tf 100 500 Td (Side 2 \\(syntetisk testdata\\)) Tj ET',
+].join('\n');
+const objs2 = [
+  '<< /Type /Catalog /Pages 2 0 R >>',
+  '<< /Type /Pages /Kids [3 0 R 6 0 R] /Count 2 >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1190 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+  `<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}\nendstream`,
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1190 842] /Contents 7 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+  `<< /Length ${Buffer.byteLength(page2)} >>\nstream\n${page2}\nendstream`,
+];
+let pdf2 = '%PDF-1.4\n';
+const offsets2: number[] = [];
+objs2.forEach((o, i) => {
+  offsets2.push(Buffer.byteLength(pdf2));
+  pdf2 += `${i + 1} 0 obj\n${o}\nendobj\n`;
+});
+const xref2 = Buffer.byteLength(pdf2);
+pdf2 += `xref\n0 ${objs2.length + 1}\n0000000000 65535 f \n`;
+for (const off of offsets2) pdf2 += `${String(off).padStart(10, '0')} 00000 n \n`;
+pdf2 += `trailer\n<< /Size ${objs2.length + 1} /Root 1 0 R >>\nstartxref\n${xref2}\n%%EOF\n`;
+writeFileSync(`${OUT}/kartunderlag-2sider.pdf`, pdf2, 'latin1');
+console.log(`Skrev ${OUT}/kartunderlag.png, kartunderlag.pdf og kartunderlag-2sider.pdf`);

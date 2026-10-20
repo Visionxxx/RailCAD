@@ -5,6 +5,7 @@ import { useActions } from './actions';
 import { useAutosave } from './io/autosave';
 import MenuBar from './components/MenuBar.vue';
 import ModalDialog from './components/ModalDialog.vue';
+import PromptDialog from './components/PromptDialog.vue';
 import ProjectSettings from './components/ProjectSettings.vue';
 import WelcomeCard from './components/WelcomeCard.vue';
 import SidePanel from './components/SidePanel.vue';
@@ -103,5 +104,6 @@ onBeforeUnmount(() => {
     <ToastList />
     <ModalDialog />
     <ProjectSettings />
+    <PromptDialog />
   </div>
 </template>

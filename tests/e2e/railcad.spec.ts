@@ -1429,3 +1429,23 @@ test('sporkryss lagres og åpnes igjen med alle felt, og kan flyttes med musen',
   const movedX = Number((await field(page, 'prop-start-x').inputValue()).replace(',', '.'));
   expect(Math.abs(movedX - 30)).toBeLessThan(0.3); // flyttet ca. +20 m
 });
+
+test('PDF med flere sider: sidevalg ved import, og avbryt gir ingen bakgrunn', async ({ page }) => {
+  const errors = await openApp(page);
+  await importBackground(page, fixture('background', 'kartunderlag-2sider.pdf'));
+  await expect(page.getByTestId('prompt')).toContainText('Side (1–2)');
+  await page.getByTestId('prompt-input').fill('3');
+  await page.getByTestId('prompt-ok').click();
+  await expect(page.getByRole('alert').first()).toContainText('mellom 1 og 2');
+  await page.getByTestId('prompt-cancel').click();
+  await expect(page.getByTestId('bg-row-bg-001')).toHaveCount(0);
+  await expect(page.getByTestId('dialog')).toHaveCount(0); // avbrutt – ingen feildialog
+
+  await importBackground(page, fixture('background', 'kartunderlag-2sider.pdf'));
+  await page.getByTestId('prompt-input').fill('2');
+  await page.getByTestId('prompt-input').press('Enter');
+  await expect(page.getByTestId('dialog')).toContainText('Importert: side 2');
+  await page.getByTestId('dialog-close').click();
+  await expect(page.getByTestId('bg-row-bg-001')).toContainText('PDF');
+  expect(errors).toEqual([]);
+});

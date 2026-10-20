@@ -1,6 +1,48 @@
 import DxfParser from 'dxf-parser';
 import { BACKGROUND_LIMITS, DXF_UNIT_NAMES, metersPerDxfUnit, type DxfPrim } from '@railcad/domain';
 
+/**
+ * dxf-parser leser ikke ekstrusjonsretningen (normalen, koder 210–230) for CIRCLE. En sirkel med
+ * normal (0,0,−1) er speilet om y-aksen, så vi trenger den for å plassere sentrum riktig.
+ */
+class CircleWithNormal {
+  readonly ForEntityName = 'CIRCLE';
+  parseEntity(scanner: any, curr: any) {
+    const entity: Record<string, any> = { type: curr.value };
+    curr = scanner.next();
+    while (!scanner.isEOF()) {
+      if (curr.code === 0) break;
+      switch (curr.code) {
+        case 8:
+          entity.layer = curr.value;
+          break;
+        case 10:
+          entity.center = { x: curr.value, y: 0, z: 0 };
+          break;
+        case 20:
+          if (entity.center) entity.center.y = curr.value;
+          break;
+        case 30:
+          if (entity.center) entity.center.z = curr.value;
+          break;
+        case 40:
+          entity.radius = curr.value;
+          break;
+        case 60:
+          entity.visible = curr.value === 0;
+          break;
+        case 230:
+          entity.extrusionDirectionZ = curr.value;
+          break;
+        default:
+          break;
+      }
+      curr = scanner.next();
+    }
+    return entity;
+  }
+}
+
 /** Resultat av lesing av en DXF som referansebakgrunn. */
 export interface DxfReadResult {
   layers: Array<{ name: string; color: number }>;
@@ -92,7 +134,9 @@ function arcPoints(c: P2, r: number, a0: number, a1: number): P2[] {
 export function readDxfBackground(text: string): DxfReadOutcome {
   let doc;
   try {
-    doc = new DxfParser().parseSync(text);
+    const parser = new DxfParser();
+    parser.registerEntityHandler(CircleWithNormal as never);
+    doc = parser.parseSync(text);
   } catch (e) {
     return { ok: false, error: `Kunne ikke lese DXF: ${(e as Error).message}` };
   }
@@ -212,6 +256,7 @@ export function readDxfBackground(text: string): DxfReadOutcome {
         break;
       }
       case 'CIRCLE': {
+        if ((e.extrusionDirectionZ ?? 1) < 0) e = { ...e, center: { ...e.center, x: -e.center.x } };
         if (isSimilarity(m)) {
           const c = t(e.center);
           add(['C', layer, round(c[0]), round(c[1]), round(e.radius * Math.hypot(m.a, m.b))]);
@@ -227,7 +272,11 @@ export function readDxfBackground(text: string): DxfReadOutcome {
       }
       case 'LWPOLYLINE':
       case 'POLYLINE': {
-        const verts = (e.vertices ?? []) as Array<{ x: number; y: number; bulge?: number }>;
+        let verts = (e.vertices ?? []) as Array<{ x: number; y: number; bulge?: number }>;
+        if ((e.extrusionDirectionZ ?? 1) < 0) {
+          // Normal (0,0,−1): speil om y-aksen. Speiling snur også buenes retning (bulge-fortegn).
+          verts = verts.map((v) => ({ ...v, x: -v.x, bulge: -(v.bulge ?? 0) }));
+        }
         // Speiling snur bulge-fortegnet.
         const flip = det(m) < 0 ? -1 : 1;
         pushPoly(

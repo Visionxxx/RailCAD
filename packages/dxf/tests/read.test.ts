@@ -421,3 +421,81 @@ describe('lesing av DXF – blokkregler', () => {
     expect(starts).toContainEqual([100, 60]);
   });
 });
+
+describe('lesing av DXF – speilede entiteter (negativ ekstrusjon)', () => {
+  const entities = (...pairs: Array<[number, string | number]>) =>
+    dxf([0, 'SECTION'], [2, 'ENTITIES'], ...pairs, [0, 'ENDSEC']);
+  const anchor: Array<[number, string | number]> = [
+    [0, 'LINE'],
+    [8, '0'],
+    [10, -50],
+    [20, 0],
+    [30, 0],
+    [11, 50],
+    [21, 0],
+    [31, 0], // fast utstrekning
+  ];
+
+  it('sirkel med normal (0,0,−1) får speilet sentrum; vanlig sirkel er uendret', () => {
+    const r = ok(
+      entities(
+        ...anchor,
+        [0, 'CIRCLE'],
+        [8, '0'],
+        [10, 12],
+        [20, 3],
+        [30, 0],
+        [40, 2],
+        [210, 0],
+        [220, 0],
+        [230, -1],
+        [0, 'CIRCLE'],
+        [8, '0'],
+        [10, 12],
+        [20, 3],
+        [30, 0],
+        [40, 2],
+      ),
+    );
+    const [ox, oy] = r.offset;
+    const circles = r.prims
+      .filter((p) => p[0] === 'C')
+      .map((p) => {
+        const q = p as readonly ['C', number, number, number, number];
+        return [+(q[2] + ox).toFixed(6), +(q[3] + oy).toFixed(6), q[4]];
+      });
+    expect(circles).toContainEqual([-12, 3, 2]); // speilet
+    expect(circles).toContainEqual([12, 3, 2]); // vanlig
+  });
+
+  it('polylinje med normal −z speiles om y-aksen og bulge snus', () => {
+    const r = ok(
+      entities(
+        ...anchor,
+        [0, 'LWPOLYLINE'],
+        [8, '0'],
+        [90, 2],
+        [70, 0],
+        [10, 10],
+        [20, 0],
+        [42, 0.5],
+        [10, 20],
+        [20, 0],
+        [210, 0],
+        [220, 0],
+        [230, -1],
+      ),
+    );
+    const poly = r.prims.find((p) => p[0] === 'P') as readonly [
+      'P',
+      number,
+      0 | 1,
+      readonly number[],
+    ];
+    const [ox] = r.offset;
+    const v = poly[3];
+    expect(+(v[0]! + ox).toFixed(6)).toBe(-10);
+    expect(+(v[3]! + ox).toFixed(6)).toBe(-20);
+    expect(v[2]).toBe(-0.5);
+  });
+});
