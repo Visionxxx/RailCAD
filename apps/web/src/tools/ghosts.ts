@@ -1,5 +1,5 @@
 import {
-  getTurnoutType,
+  findTurnoutDefinition,
   isCrossing,
   isTrack,
   isTurnout,
@@ -42,7 +42,7 @@ export function ghostGeometries(
     return engine.crossingLayout({ ...o.crossing, position, headingRad }).segments;
   }
   if (isTurnout(o)) {
-    const type = getTurnoutType(o.turnout.catalogId);
+    const type = findTurnoutDefinition(o.turnout.catalogId);
     if (!type) return [];
     const p = o.turnout.position;
     const position: Vec2 =

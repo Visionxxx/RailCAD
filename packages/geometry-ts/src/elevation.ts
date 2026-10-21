@@ -2,10 +2,10 @@ import type {
   Connection,
   CrossingPlacement,
   TrackGeometry,
-  TurnoutType,
+  TurnoutPortName,
   Vec2,
 } from '@railcad/domain';
-import { portKey } from '@railcad/geometry-api';
+import { portKey, type TurnoutRoute } from '@railcad/geometry-api';
 import { closestPoint, length } from './track';
 
 /**
@@ -96,24 +96,28 @@ export interface SegmentElevation {
   zEnd: number | null;
 }
 
-/** Kote ved start/slutt av hvert av vekselens segmenter (stamspor, avviksbue, evt. rett parti). */
+/**
+ * Kote ved start/slutt av vekselens segmenter. Hver rute (stamspor eller gren) går fra stamspor inn
+ * til sin utgående port; høyden er lineær langs ruten mellom portenes koter.
+ */
 export function turnoutSegmentElevations(
-  type: TurnoutType,
   segments: readonly TrackGeometry[],
-  z: { stemIn?: number; stemOut?: number; divergingOut?: number },
+  routes: readonly TurnoutRoute[],
+  z: Partial<Record<TurnoutPortName, number>>,
 ): SegmentElevation[] {
-  const out: SegmentElevation[] = [];
-  const divergingTotal = segments.slice(1).reduce((a, g) => a + length(g), 0);
-  segments.forEach((g, i) => {
-    if (i === 0) {
-      out.push({ zStart: z.stemIn ?? null, zEnd: z.stemOut ?? null });
-      return;
+  const out: SegmentElevation[] = segments.map(() => ({ zStart: null, zEnd: null }));
+  for (const r of routes) {
+    const total = r.segments.reduce((a, i) => a + length(segments[i] as TrackGeometry), 0);
+    let before = 0;
+    for (const i of r.segments) {
+      const len = length(segments[i] as TrackGeometry);
+      out[i] = {
+        zStart: lerpElevation(z.stem_in, z[r.port], before, total),
+        zEnd: lerpElevation(z.stem_in, z[r.port], before + len, total),
+      };
+      before += len;
     }
-    const before = segments.slice(1, i).reduce((a, h) => a + length(h), 0);
-    const along = (s: number) => lerpElevation(z.stemIn, z.divergingOut, s, divergingTotal);
-    out.push({ zStart: along(before), zEnd: along(before + length(g)) });
-  });
-  void type;
+  }
   return out;
 }
 

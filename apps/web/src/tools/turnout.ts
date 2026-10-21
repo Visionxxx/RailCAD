@@ -1,6 +1,6 @@
 import {
   TURNOUT_CATALOG_REVISION,
-  getTurnoutType,
+  findTurnoutDefinition,
   type TurnoutPlacement,
   type Vec2,
 } from '@railcad/domain';
@@ -78,10 +78,10 @@ export class TurnoutTool extends Tool {
   }
 
   private placementAt(position: Vec2, headingRad: number): TurnoutPlacement | null {
-    const type = getTurnoutType(this.env.view.turnoutTypeId);
+    const type = findTurnoutDefinition(this.env.view.turnoutTypeId);
     if (!type) return null;
     return {
-      catalogId: type.catalogId,
+      catalogId: type.id,
       catalogRevision: TURNOUT_CATALOG_REVISION,
       position,
       headingRad,

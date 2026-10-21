@@ -1,6 +1,7 @@
 import {
   TURNOUT_CATALOG_REVISION,
   type LineGeometry,
+  type TurnoutDefinition,
   type TurnoutType,
   type Vec2,
 } from '@railcad/domain';
@@ -10,7 +11,7 @@ import type {
   AssemblyPlan,
   ScissorsInput,
 } from '@railcad/geometry-api';
-import { turnoutLayout } from './turnout';
+import { asDefinition, turnoutLayout } from './turnout';
 import { add, rotate } from './vec';
 
 /**
@@ -18,24 +19,41 @@ import { add, rotate } from './vec';
  * Fire veksler (T1–T4), et kryss med vinkel 2α, fire diagonale spor (rette, vinkel ±α) og to
  * gjennomgående spor mellom vekslenes stamspor ut. Se docs/sporkryss-sovitet.md.
  */
-export function scissorsPlan(type: TurnoutType, input: ScissorsInput): AssemblyPlan {
+export function scissorsPlan(
+  typeOrDef: TurnoutType | TurnoutDefinition,
+  input: ScissorsInput,
+): AssemblyPlan {
+  const type = asDefinition(typeOrDef);
+  const branch = type.branches[0];
+  if (
+    type.branches.length !== 1 ||
+    type.stemLengthM === null ||
+    !branch ||
+    branch.hand !== 'left'
+  ) {
+    return {
+      ok: false,
+      error:
+        'Sovitet sporkryss krever en enkel venstreveksel (stamspor og én gren, definert mot venstre).',
+    };
+  }
   const { spacingM: s, crossingHalfLengthM: h } = input;
   if (!(s > 0 && Number.isFinite(s)))
     return { ok: false, error: 'Sporavstanden må være et positivt tall.' };
   if (!(h > 0 && h <= 1e4))
     return { ok: false, error: 'Lengden fra M til krysset-enden må være mellom 0 og 10 000 m.' };
 
-  const alpha = Math.atan(1 / type.ratioN);
+  const alpha = Math.atan(1 / branch.ratioN);
   const half = s / 2;
   const base = turnoutLayout(type, {
-    catalogId: type.catalogId,
+    catalogId: type.id,
     catalogRevision: TURNOUT_CATALOG_REVISION,
     position: [0, 0],
     headingRad: 0,
     hand: 'left',
   });
-  const [lx, ly] = base.ports.diverging_out.point as [number, number];
-  const stemL = base.ports.stem_out.point[0];
+  const [lx, ly] = base.ports.diverging_out!.point as [number, number];
+  const stemL = base.ports.stem_out!.point[0];
 
   // T1 på spor 1 (y = −s/2), avvik mot venstre. Diagonalen fra avvik-ut må gå gjennom M med retning α:
   //   D1y = D1x·tanα  der D1 = (x1 + lx, ly − s/2)  ⇒  x1 = (ly − s/2)/tanα − lx.
@@ -60,7 +78,7 @@ export function scissorsPlan(type: TurnoutType, input: ScissorsInput): AssemblyP
   }
 
   const placement = (hand: 'left' | 'right', position: Vec2, headingRad: number) => ({
-    catalogId: type.catalogId,
+    catalogId: type.id,
     catalogRevision: TURNOUT_CATALOG_REVISION,
     position,
     headingRad,

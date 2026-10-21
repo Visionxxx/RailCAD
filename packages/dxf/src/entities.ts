@@ -1,5 +1,5 @@
 import {
-  getTurnoutType,
+  findTurnoutDefinition,
   isCrossing,
   isDimension,
   isTrack,
@@ -104,7 +104,7 @@ export function buildEntities(project: RailProject, engine: GeometryEngine): Dxf
       });
       allPoints.push(o.crossing.position);
     } else if (isTurnout(o)) {
-      const type = getTurnoutType(o.turnout.catalogId);
+      const type = findTurnoutDefinition(o.turnout.catalogId);
       if (!type) continue;
       const layout = engine.turnoutLayout(type, o.turnout);
       for (const seg of layout.segments)
@@ -115,7 +115,7 @@ export function buildEntities(project: RailProject, engine: GeometryEngine): Dxf
         height: TEXT_HEIGHT_M,
         at: [o.turnout.position[0], o.turnout.position[1] + TEXT_HEIGHT_M],
         rotationDeg: deg(o.turnout.headingRad),
-        value: `${o.id}: ${type.name} ${type.source.drawing} - delvis verifisert`,
+        value: `${o.id}: ${type.name} ${type.sourceText} - ${type.verificationLabel.toLowerCase()}`,
       });
       allPoints.push(o.turnout.position);
     } else if (isDimension(o)) {

@@ -48,10 +48,10 @@ describe('høydemodell', () => {
       headingRad: 0,
       hand: 'left',
     });
-    const z = turnoutSegmentElevations(type, layout.segments, {
-      stemIn: 100,
-      stemOut: 101,
-      divergingOut: 100.5,
+    const z = turnoutSegmentElevations(layout.segments, layout.routes, {
+      stem_in: 100,
+      stem_out: 101,
+      diverging_out: 100.5,
     });
     expect(z).toHaveLength(3);
     expect(z[0]).toEqual({ zStart: 100, zEnd: 101 });

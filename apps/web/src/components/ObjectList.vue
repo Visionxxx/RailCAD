@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { getTurnoutType, isCrossing, isTrack, isTurnout, type RailObject } from '@railcad/domain';
+import {
+  findTurnoutDefinition,
+  isCrossing,
+  isTrack,
+  isTurnout,
+  type RailObject,
+} from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
 import { fmt, fmtM } from '../format';
 import { useProjectStore } from '../stores/project';
@@ -15,7 +21,7 @@ function summary(o: RailObject): string {
   }
   if (isCrossing(o))
     return `1:${fmt(o.crossing.ratioN, 1)} · ${fmtM(2 * o.crossing.halfLengthM, 1)}`;
-  if (isTurnout(o)) return getTurnoutType(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
+  if (isTurnout(o)) return findTurnoutDefinition(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
   const t = project.byId.get(o.dimension.kind === 'length' ? o.dimension.targetId : '');
   const layout = engine.dimensionLayout(o.dimension, () =>
     t && isTrack(t) ? t.geometry : undefined,

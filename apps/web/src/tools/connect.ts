@@ -1,4 +1,4 @@
-import { TURNOUT_CATALOG_REVISION, getTurnoutType, type Vec2 } from '@railcad/domain';
+import { TURNOUT_CATALOG_REVISION, findTurnoutDefinition, type Vec2 } from '@railcad/domain';
 import { TOLERANCES, type PortRef } from '@railcad/geometry-api';
 import { fmtM, portLabel } from '../format';
 import { crossingFromView } from './crossing';
@@ -147,11 +147,11 @@ export class ConnectTool extends Tool {
       }
       this.reset();
     } else if (id === 'turnout:left' || id === 'turnout:right') {
-      const type = getTurnoutType(this.env.view.turnoutTypeId);
+      const type = findTurnoutDefinition(this.env.view.turnoutTypeId);
       if (type) {
         this.env.project.addTurnout(
           {
-            catalogId: type.catalogId,
+            catalogId: type.id,
             catalogRevision: TURNOUT_CATALOG_REVISION,
             position: m.port.point,
             headingRad: m.port.headingRad,
@@ -218,11 +218,19 @@ export class ConnectTool extends Tool {
   }
 
   private turnoutItems() {
-    const type = getTurnoutType(this.env.view.turnoutTypeId);
+    const type = findTurnoutDefinition(this.env.view.turnoutTypeId);
     if (!type) return [];
     return [
-      { id: 'turnout:left', label: `Sporveksel ${type.name} – venstre`, note: 'delvis verifisert' },
-      { id: 'turnout:right', label: `Sporveksel ${type.name} – høyre`, note: 'delvis verifisert' },
+      {
+        id: 'turnout:left',
+        label: `Sporveksel ${type.name} – venstre`,
+        note: type.verificationLabel.toLowerCase(),
+      },
+      {
+        id: 'turnout:right',
+        label: `Sporveksel ${type.name} – høyre`,
+        note: type.verificationLabel.toLowerCase(),
+      },
     ];
   }
 

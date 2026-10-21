@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import {
   createEmptyProject,
-  getTurnoutType,
+  type TurnoutPortName,
   DEFAULT_LAYER_ID,
   nextId,
   type DesignParameters,
@@ -252,16 +252,16 @@ export const useProjectStore = defineStore('project', () => {
       };
     }
     if (isTurnout(o)) {
-      const type = getTurnoutType(o.turnout.catalogId);
       const layout = cachedTurnoutLayout(o);
-      if (!type || !layout) return null;
+      if (!layout) return null;
+      const z: Partial<Record<TurnoutPortName, number>> = {};
+      for (const name of Object.keys(layout.ports) as TurnoutPortName[]) {
+        const v = zOf(name);
+        if (v !== undefined) z[name] = v;
+      }
       return {
         segments: layout.segments,
-        z: turnoutSegmentElevations(type, layout.segments, {
-          stemIn: zOf('stem_in'),
-          stemOut: zOf('stem_out'),
-          divergingOut: zOf('diverging_out'),
-        }),
+        z: turnoutSegmentElevations(layout.segments, layout.routes, z),
       };
     }
     if (isCrossing(o)) {

@@ -1,3 +1,4 @@
+import type { CrossingPreset, CustomTurnoutType } from './custom-turnouts';
 import type { Background } from './background';
 /** Punkt i lokalt XY-system, meter. X mot øst, Y mot nord (matematisk orientering). */
 export type Vec2 = readonly [number, number];
@@ -75,7 +76,7 @@ export interface TurnoutPlacement {
   catalogRevision: string;
   position: Vec2;
   headingRad: number;
-  /** Retning avvikssporet tar sett fra stamsporet innover mot krysset. */
+  /** Speiling: `right` speiler hele vekselen (alle grener bytter side). Enkel veksel: retning på avviket. */
   hand: 'left' | 'right';
 }
 
@@ -127,13 +128,18 @@ export type RailObject = TrackSegment | DimensionObject | TurnoutObject | Crossi
 
 export type TrackPortName = 'start' | 'end';
 /** Stamspor inn (SS), stamspor ut (bakkant), avvikende spor ut (bakkant). */
-export type TurnoutPortName = 'stem_in' | 'stem_out' | 'diverging_out';
+export type TurnoutPortName = 'stem_in' | 'stem_out' | 'diverging_out' | 'diverging2_out';
 /** Sporkryss: ender på spor A og spor B (A går i retning `headingRad`, B i retning `headingRad + α`). */
 export type CrossingPortName = 'a_start' | 'a_end' | 'b_start' | 'b_end';
 export type PortName = TrackPortName | TurnoutPortName | CrossingPortName;
 
 export const TRACK_PORTS: readonly TrackPortName[] = ['start', 'end'];
-export const TURNOUT_PORTS: readonly TurnoutPortName[] = ['stem_in', 'stem_out', 'diverging_out'];
+export const TURNOUT_PORTS: readonly TurnoutPortName[] = [
+  'stem_in',
+  'stem_out',
+  'diverging_out',
+  'diverging2_out',
+];
 export const CROSSING_PORTS: readonly CrossingPortName[] = ['a_start', 'a_end', 'b_start', 'b_end'];
 
 /**
@@ -204,6 +210,10 @@ export interface RailProject {
    */
   portElevations?: Record<string, number>;
   designParameters?: DesignParameters;
+  /** Egne veksler (brukerdefinert). Valgfritt. */
+  customTurnouts?: CustomTurnoutType[];
+  /** Egne forhåndsinnstillinger for sporkryss/kryssveksel. Valgfritt. */
+  crossingPresets?: CrossingPreset[];
 }
 
 export function isTrack(o: RailObject): o is TrackSegment {

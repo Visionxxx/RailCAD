@@ -5,6 +5,7 @@ import type {
   TrackGeometry,
   CrossingPlacement,
   CrossingPortName,
+  TurnoutDefinition,
   TurnoutPlacement,
   TurnoutPortName,
   TurnoutType,
@@ -88,10 +89,19 @@ export type ConnectionStatus = 'ok' | 'position' | 'tangent' | 'missing';
 /** Nøkkel for en port i portkartet: `<objektId>:<port>`. */
 export const portKey = (objectId: string, port: PortName): string => `${objectId}:${port}`;
 
+/** En rute gjennom vekselen: hvilke segmenter som hører til hvilken utgående port. */
+export interface TurnoutRoute {
+  port: TurnoutPortName;
+  /** Indekser i `segments`, i kjøreretning fra stamspor inn. */
+  segments: number[];
+}
+
 export interface TurnoutLayout {
-  /** Aksene som rette/buede segmenter i prosjektkoordinater: stamspor, avviksbue og evt. rett avvik. */
+  /** Aksene som rette/buede segmenter i prosjektkoordinater: (stamspor,) og for hver gren bue + evt. rett parti. */
   segments: TrackGeometry[];
-  ports: Record<TurnoutPortName, Pose>;
+  /** Porter vekselen har (stem_out finnes bare med stamspor; diverging2_out bare med to grener). */
+  ports: Partial<Record<TurnoutPortName, Pose>>;
+  routes: TurnoutRoute[];
 }
 
 export interface CrossingLayout {
@@ -245,14 +255,14 @@ export interface GeometryEngine {
    * Sovitet sporkryss (SRR): to parallelle spor forbundet av to kryssende forbindelser. Fire veksler fra
    * biblioteket (valgt type), et kryss med vinkel 2α i midten og rette spor imellom, alt koblet.
    */
-  scissorsPlan(type: TurnoutType, input: ScissorsInput): AssemblyPlan;
+  scissorsPlan(type: TurnoutType | TurnoutDefinition, input: ScissorsInput): AssemblyPlan;
   /** Finner steder der akser fra ulike objekter krysser, berører eller overlapper hverandre. */
   findIntersections(items: readonly IntersectionItem[]): Intersection[];
   /**
    * Sporveksel fra biblioteket: akser og porter i prosjektkoordinater. Geometrien er avledet av
    * hovedmålene (se `TurnoutType`) og skal vises som delvis verifisert.
    */
-  turnoutLayout(type: TurnoutType, placement: TurnoutPlacement): TurnoutLayout;
+  turnoutLayout(type: TurnoutType | TurnoutDefinition, placement: TurnoutPlacement): TurnoutLayout;
   dimensionLayout(
     spec: DimensionSpec,
     resolveTarget: (id: string) => TrackGeometry | undefined,

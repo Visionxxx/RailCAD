@@ -55,7 +55,7 @@ describe('sporvekselgeometri', () => {
     const arcEnd = e.endPose(arc);
     expect(arcEnd.headingRad).toBeCloseTo(alpha, 12);
     expect(l.segments[2]!.start[0]).toBeCloseTo(arcEnd.point[0], 12);
-    expect(l.ports.diverging_out.headingRad).toBeCloseTo(alpha, 12);
+    expect(l.ports.diverging_out!.headingRad).toBeCloseTo(alpha, 12);
     // Krysset (TK) ligger A fra SS langs stamsporet: avvikets tangenter møtes der.
     const tk = t.mainDimensionsMm.A / 1000;
     const dx = arcEnd.point[0] - tk;
@@ -66,32 +66,35 @@ describe('sporvekselgeometri', () => {
   it('høyreveksel speiler venstreveksel', () => {
     const left = e.turnoutLayout(t, at('left'));
     const right = e.turnoutLayout(t, at('right'));
-    expect(right.ports.diverging_out.point[0]).toBeCloseTo(left.ports.diverging_out.point[0], 12);
-    expect(right.ports.diverging_out.point[1]).toBeCloseTo(-left.ports.diverging_out.point[1], 12);
-    expect(right.ports.diverging_out.headingRad).toBeCloseTo(
-      -left.ports.diverging_out.headingRad,
+    expect(right.ports.diverging_out!.point[0]).toBeCloseTo(left.ports.diverging_out!.point[0], 12);
+    expect(right.ports.diverging_out!.point[1]).toBeCloseTo(
+      -left.ports.diverging_out!.point[1],
+      12,
+    );
+    expect(right.ports.diverging_out!.headingRad).toBeCloseTo(
+      -left.ports.diverging_out!.headingRad,
       12,
     );
   });
 
   it('porter: stamspor inn (utgående = bakover), stamspor ut og avvik ut', () => {
     const l = e.turnoutLayout(flat, at('left'));
-    expect(l.ports.stem_in.point).toEqual([0, 0]);
-    expect(l.ports.stem_in.headingRad).toBeCloseTo(Math.PI, 12);
-    expect(l.ports.stem_out.point[0]).toBeCloseTo(33.23, 9);
-    expect(l.ports.stem_out.headingRad).toBe(0);
+    expect(l.ports.stem_in!.point).toEqual([0, 0]);
+    expect(l.ports.stem_in!.headingRad).toBeCloseTo(Math.PI, 12);
+    expect(l.ports.stem_out!.point[0]).toBeCloseTo(33.23, 9);
+    expect(l.ports.stem_out!.headingRad).toBe(0);
   });
 
   it('plassering og rotasjon transformerer uten å endre mål', () => {
     const base = e.turnoutLayout(t, at('left'));
     const moved = e.turnoutLayout(t, at('left', 100, 50, Math.PI / 2));
-    expect(moved.ports.stem_in.point).toEqual([100, 50]);
-    expect(moved.ports.stem_out.point[0]).toBeCloseTo(100, 9);
-    expect(moved.ports.stem_out.point[1]).toBeCloseTo(50 + 27.139, 9);
+    expect(moved.ports.stem_in!.point).toEqual([100, 50]);
+    expect(moved.ports.stem_out!.point[0]).toBeCloseTo(100, 9);
+    expect(moved.ports.stem_out!.point[1]).toBeCloseTo(50 + 27.139, 9);
     moved.segments.forEach((seg, i) =>
       expect(e.length(seg)).toBeCloseTo(e.length(base.segments[i]!), 12),
     );
-    expect(moved.ports.diverging_out.headingRad).toBeCloseTo(Math.PI / 2 + Math.atan(1 / 9), 12);
+    expect(moved.ports.diverging_out!.headingRad).toBeCloseTo(Math.PI / 2 + Math.atan(1 / 9), 12);
   });
 });
 

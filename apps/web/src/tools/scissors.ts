@@ -1,4 +1,4 @@
-import { getTurnoutType, type Vec2 } from '@railcad/domain';
+import { findTurnoutDefinition, type Vec2 } from '@railcad/domain';
 import { TOLERANCES } from '@railcad/geometry-api';
 import { fmtDeg } from '../format';
 import { cachedCrossingLayout } from '../rendering/crossings';
@@ -70,7 +70,7 @@ export class ScissorsTool extends Tool {
   }
 
   private plan(position: Vec2, headingRad: number) {
-    const type = getTurnoutType(this.env.view.scissorsTurnoutId);
+    const type = findTurnoutDefinition(this.env.view.scissorsTurnoutId);
     if (!type) return { ok: false as const, error: 'Velg en veksltype i verktøylinjen.' };
     return this.env.engine.scissorsPlan(type, {
       position,

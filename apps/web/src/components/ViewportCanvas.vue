@@ -2,7 +2,7 @@
 import { isTypingTarget } from '../dom';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch, nextTick } from 'vue';
 import {
-  getTurnoutType,
+  findTurnoutDefinition,
   isCrossing,
   isDimension,
   isTrack,
@@ -99,7 +99,7 @@ const visibleTurnoutLabels = computed(() => {
     // Ved lav zoom blir etikettene en grøt – vis dem da bare for valgt veksel.
     if (v.scale < LABEL_MIN_SCALE && !selectedSet.value.has(o.id)) continue;
     const [x, y] = worldToScreen(v, o.turnout.position);
-    const name = getTurnoutType(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
+    const name = findTurnoutDefinition(o.turnout.catalogId)?.name ?? o.turnout.catalogId;
     out.push({ id: o.id, text: `${name} – delvis verifisert`, x, y });
   }
   return out;
