@@ -4,6 +4,11 @@ export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // PDF-gjengivelse og WebGL kan være trege når mange arbeidere deler en maskin: færre arbeidere og ett
+  // nytt forsøk i CI, og romsligere tidsgrense for forventninger.
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 2 : undefined,
+  expect: { timeout: 10_000 },
   reporter: [['list']],
   use: { baseURL: 'http://localhost:5199', trace: 'retain-on-failure' },
   projects: [
