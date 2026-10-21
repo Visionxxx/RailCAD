@@ -1999,6 +1999,9 @@ test('3D-oversikt: åpnes fra Visning, viser merknad, antall akser og overdrivel
   await expect(page.getByTestId('v3-note')).toContainText('overdrevet');
   await expect(page.getByTestId('v3-stats')).toContainText('akser');
   await expect(page.getByTestId('v3-canvas').locator('canvas')).toHaveCount(1);
+  await page.getByTestId('v3-view-top').click();
+  await page.getByTestId('v3-view-side').click();
+  await page.getByTestId('v3-view-fit').click();
   await page.getByTestId('v3-exaggeration').fill('40');
   await expect(page.getByTestId('view3d')).toContainText('×40');
   await page.keyboard.press('Escape');

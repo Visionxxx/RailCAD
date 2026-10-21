@@ -72,6 +72,7 @@ const stats = ref({ lines: 0, unknown: 0 });
 interface Handle {
   setExaggeration(v: number): void;
   select(id: string | null): void;
+  setView(mode: 'fit' | 'top' | 'side'): void;
   dispose(): void;
 }
 let handle: Handle | null = null;
@@ -131,6 +132,17 @@ onBeforeUnmount(stop);
           step="1"
           data-testid="v3-exaggeration"
       /></label>
+      <div class="views">
+        <button class="btn secondary" data-testid="v3-view-fit" @click="handle?.setView('fit')">
+          Oversikt
+        </button>
+        <button class="btn secondary" data-testid="v3-view-top" @click="handle?.setView('top')">
+          Rett ovenfra
+        </button>
+        <button class="btn secondary" data-testid="v3-view-side" @click="handle?.setView('side')">
+          Fra siden
+        </button>
+      </div>
       <div class="stage">
         <div ref="host" class="canvas" data-testid="v3-canvas" />
         <aside v-if="info" class="info" data-testid="v3-info">
@@ -146,8 +158,8 @@ onBeforeUnmount(stop);
       <p v-if="status" class="muted" data-testid="v3-status">{{ status }}</p>
       <p class="muted" style="font-size: 12px" data-testid="v3-stats">
         {{ stats.lines }} akser, {{ stats.unknown }} med ukjent kote. Dra = roter · høyreknapp =
-        flytt · hjul = zoom · klikk på en skinne = informasjon. Skinnene er skjematiske (sporvidde
-        1,435 m); tverrsnittet er forstørret ved store anlegg slik at de synes.
+        flytt · hjul = zoom · klikk på skinne eller sporbunn = informasjon. Sporbygningen er
+        skjematisk (sporvidde 1,435 m, sviller hver 0,6 m).
       </p>
       <div class="actions">
         <button class="btn secondary" data-testid="v3-close" @click="ui.view3dOpen = false">
@@ -168,6 +180,11 @@ onBeforeUnmount(stop);
   border: 1px solid var(--border);
   border-radius: 6px;
   margin-bottom: 8px;
+}
+.views {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 .stage {
   position: relative;
