@@ -5,7 +5,8 @@ import {
   DEFAULT_LAYER_ID,
   TRACK_PORTS,
   TURNOUT_PORTS,
-  getTurnoutType,
+  findTurnoutDefinition,
+  turnoutPortsFor,
   isCrossing,
   isDimension,
   isTrack,
@@ -158,7 +159,7 @@ const turnout = computed<TurnoutObject | null>(() => {
   return o && isTurnout(o) ? o : null;
 });
 const turnoutType = computed(() =>
-  turnout.value ? getTurnoutType(turnout.value.turnout.catalogId) : undefined,
+  turnout.value ? findTurnoutDefinition(turnout.value.turnout.catalogId) : undefined,
 );
 const turnoutDims = computed(() => {
   const m = turnoutType.value?.mainDimensionsMm;
@@ -277,7 +278,13 @@ const crossingAngleDeg = computed(() =>
 const portInfo = computed(() => {
   const o = track.value ?? turnout.value ?? crossing.value;
   if (!o) return [];
-  const ports = track.value ? TRACK_PORTS : crossing.value ? CROSSING_PORTS : TURNOUT_PORTS;
+  const ports: readonly string[] = track.value
+    ? TRACK_PORTS
+    : crossing.value
+      ? CROSSING_PORTS
+      : turnoutType.value
+        ? turnoutPortsFor(turnoutType.value)
+        : TURNOUT_PORTS;
   return ports.map((port) => {
     const r = project.connectionResults.find(
       (x) =>
@@ -659,17 +666,17 @@ const dimBy = dimPoint('b', 1);
       </div>
       <div class="field ro">
         <label>Kilde</label>
-        <output>{{ turnoutType.source.drawing }}</output>
+        <output>{{ turnoutType.sourceText }}</output>
       </div>
-      <div class="field ro">
+      <div v-if="turnoutDims" class="field ro">
         <label>Hovedmål (mm)</label><output style="font-size: 11px">{{ turnoutDims }}</output>
       </div>
       <div class="field ro">
         <label>Verifisering</label
         ><output
-          ><span class="badge" style="color: var(--warn)" data-testid="prop-verification"
-            >Delvis verifisert</span
-          ></output
+          ><span class="badge" style="color: var(--warn)" data-testid="prop-verification">{{
+            turnoutType.verificationLabel
+          }}</span></output
         >
       </div>
       <p class="muted" style="font-size: 11px; margin: 0 0 8px">
@@ -714,7 +721,7 @@ const dimBy = dimPoint('b', 1);
       />
       <ElevationFields
         :object-id="turnout.id"
-        :ports="['stem_in', 'stem_out', 'diverging_out']"
+        :ports="turnoutPortsFor(turnoutType)"
         :disabled="isLocked"
       />
       <div v-for="p in portInfo" :key="p.port" class="field ro">

@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { BACKGROUND_LIMITS, type DxfPrim } from './background';
-import { getTurnoutType } from './turnout-catalog';
+import {
+  findTurnoutDefinition,
+  turnoutPortsFor,
+  validateCustomTurnout,
+  type CrossingPreset,
+  type CustomTurnoutType,
+} from './custom-turnouts';
+import { TURNOUT_CATALOG } from './turnout-catalog';
 import {
   CROSSING_PORTS,
   DEFAULT_LAYER_ID,
@@ -34,12 +41,60 @@ const idString = z
     /^[A-Za-z0-9_.-]+$/,
     'ID kan bare inneholde bokstaver (a–z), tall, punktum, understrek og bindestrek',
   );
+const branchSchema = z
+  .object({
+    hand: z.enum(['left', 'right']),
+    ratioN: finite,
+    radiusM: finite,
+    straightM: finite,
+  })
+  .passthrough();
+const dimsSchema = z
+  .object({
+    A: finite.optional(),
+    B: finite.optional(),
+    C: finite.optional(),
+    D: finite.optional(),
+    E: finite.optional(),
+    F: finite.optional(),
+    L: finite.optional(),
+  })
+  .passthrough();
+export const customTurnoutSchema = z
+  .object({
+    id: idString,
+    name: z.string().max(200),
+    stemLengthM: finite.nullable(),
+    branches: z.array(branchSchema).max(4),
+    inputMode: z.enum(['geometry', 'dimensions']),
+    mainDimensionsMm: dimsSchema.optional(),
+    source: z.string().max(500).optional(),
+    note: z.string().max(2000).optional(),
+  })
+  .passthrough();
+export const crossingPresetSchema = z
+  .object({
+    id: idString,
+    name: z.string().min(1).max(80),
+    ratioN: finite.refine((n) => n >= 1.5 && n <= 100, 'n må være mellom 1,5 og 100'),
+    halfLengthM: finite.refine((n) => n > 0 && n <= 1e4, 'lengde må være mellom 0 og 10 000 m'),
+    slip: z
+      .object({
+        arcs: z.enum(['ab', 'ba', 'both']),
+        radiusM: finite.refine((n) => n > 0 && n <= 1e5, 'radius må være mellom 0 og 100 000 m'),
+      })
+      .passthrough()
+      .optional(),
+    note: z.string().max(2000).optional(),
+  })
+  .passthrough();
 const portSchema = z.enum([
   'start',
   'end',
   'stem_in',
   'stem_out',
   'diverging_out',
+  'diverging2_out',
   'a_start',
   'a_end',
   'b_start',
@@ -234,6 +289,8 @@ const projectSchema = z
           .passthrough(),
       )
       .optional(),
+    customTurnouts: z.array(customTurnoutSchema).optional(),
+    crossingPresets: z.array(crossingPresetSchema).optional(),
     acknowledgedCrossings: z
       .array(z.string().regex(/^[A-Za-z0-9_.-]+\|[A-Za-z0-9_.-]+$/, 'forventet «idA|idB»'))
       .optional(),
@@ -349,6 +406,29 @@ export function validateProject(raw: unknown): ProjectValidation {
   const project = parsed.data as unknown as RailProject;
   const errors: string[] = [];
 
+  const custom: readonly CustomTurnoutType[] = project.customTurnouts ?? [];
+  const catalogIds = new Set(TURNOUT_CATALOG.map((t) => t.catalogId));
+  const customIds = new Set<string>();
+  custom.forEach((c, i) => {
+    if (customIds.has(c.id) || catalogIds.has(c.id))
+      errors.push(`customTurnouts[${i}].id: duplikat ID «${c.id}»`);
+    customIds.add(c.id);
+    for (const msg of validateCustomTurnout(c))
+      errors.push(`customTurnouts[${i}] (${c.id}): ${msg}`);
+  });
+  const presetIds = new Set<string>();
+  (project.crossingPresets ?? []).forEach((c: CrossingPreset, i) => {
+    if (presetIds.has(c.id)) errors.push(`crossingPresets[${i}].id: duplikat ID «${c.id}»`);
+    presetIds.add(c.id);
+    if (c.slip) {
+      const tangent = c.slip.radiusM * Math.tan(Math.atan(1 / c.ratioN) / 2);
+      if (tangent > c.halfLengthM)
+        errors.push(
+          `crossingPresets[${i}] (${c.id}): tangentlengden R·tan(α/2) overstiger lengden fra M til enden`,
+        );
+    }
+  });
+
   const ids = new Map<string, string>();
   project.objects.forEach((o, i) => {
     if (ids.has(o.id)) errors.push(`objects[${i}].id: duplikat ID «${o.id}»`);
@@ -366,7 +446,7 @@ export function validateProject(raw: unknown): ProjectValidation {
         );
       }
     }
-    if (o.type === 'turnout' && !getTurnoutType(o.turnout.catalogId)) {
+    if (o.type === 'turnout' && !findTurnoutDefinition(o.turnout.catalogId, custom)) {
       errors.push(
         `objects[${i}] (${o.id}): ukjent sporvekseltype «${o.turnout.catalogId}» (finnes ikke i biblioteket)`,
       );
@@ -407,6 +487,7 @@ export function validateProject(raw: unknown): ProjectValidation {
       if (e) errors.push(`backgrounds[${i}] (${b.id}): ${e}`);
     }
   });
+  const objectsById = new Map(project.objects.map((o) => [o.id, o] as const));
   const usedPorts = new Set<string>();
   project.connections.forEach((c, i) => {
     for (const end of [c.a, c.b]) {
@@ -414,8 +495,19 @@ export function validateProject(raw: unknown): ProjectValidation {
       if (kind !== 'track_segment' && kind !== 'turnout' && kind !== 'crossing') {
         errors.push(`connections[${i}]: viser til ukjent sporobjekt «${end.objectId}»`);
       } else {
+        const owner = objectsById.get(end.objectId);
+        const def =
+          owner?.type === 'turnout'
+            ? findTurnoutDefinition(owner.turnout.catalogId, custom)
+            : undefined;
         const allowed: readonly string[] =
-          kind === 'turnout' ? TURNOUT_PORTS : kind === 'crossing' ? CROSSING_PORTS : TRACK_PORTS;
+          kind === 'turnout'
+            ? def
+              ? turnoutPortsFor(def)
+              : TURNOUT_PORTS
+            : kind === 'crossing'
+              ? CROSSING_PORTS
+              : TRACK_PORTS;
         if (!allowed.includes(end.port)) {
           errors.push(
             `connections[${i}]: porten «${end.port}» finnes ikke på ${kind === 'turnout' ? 'sporveksel' : kind === 'crossing' ? 'sporkryss' : 'spor'} «${end.objectId}»`,

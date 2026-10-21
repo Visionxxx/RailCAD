@@ -1,6 +1,8 @@
 import type {
   Background,
   Connection,
+  CrossingPreset,
+  CustomTurnoutType,
   DesignParameters,
   ProjectLayer,
   RailObject,
@@ -23,6 +25,9 @@ export interface Patch {
   layers?: { before: ProjectLayer[]; after: ProjectLayer[] };
   portElevations?: { before: Record<string, number>; after: Record<string, number> };
   designParameters?: { before: DesignParameters; after: DesignParameters };
+  /** Egendefinerte veksltyper (hele listen før/etter). */
+  customTurnouts?: { before: CustomTurnoutType[]; after: CustomTurnoutType[] };
+  crossingPresets?: { before: CrossingPreset[]; after: CrossingPreset[] };
 }
 
 export interface ModelState {
@@ -33,6 +38,8 @@ export interface ModelState {
   layers: ProjectLayer[];
   portElevations: Record<string, number>;
   designParameters: DesignParameters;
+  customTurnouts: CustomTurnoutType[];
+  crossingPresets: CrossingPreset[];
 }
 
 export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'undo'): ModelState {
@@ -84,6 +91,15 @@ export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'u
     designParameters =
       direction === 'do' ? patch.designParameters.after : patch.designParameters.before;
   }
+  let customTurnouts = state.customTurnouts;
+  if (patch.customTurnouts) {
+    customTurnouts = direction === 'do' ? patch.customTurnouts.after : patch.customTurnouts.before;
+  }
+  let crossingPresets = state.crossingPresets;
+  if (patch.crossingPresets) {
+    crossingPresets =
+      direction === 'do' ? patch.crossingPresets.after : patch.crossingPresets.before;
+  }
   return {
     objects: result,
     connections,
@@ -92,5 +108,7 @@ export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'u
     layers,
     portElevations,
     designParameters,
+    customTurnouts,
+    crossingPresets,
   };
 }

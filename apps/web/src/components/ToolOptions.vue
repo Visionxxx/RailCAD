@@ -5,9 +5,11 @@ import { TOLERANCES } from '@railcad/geometry-api';
 import {
   TURNOUT_CATALOG,
   TURNOUT_CATALOG_REVISION,
-  getTurnoutType,
+  findTurnoutDefinition,
   isCrossing,
   isTurnout,
+  turnoutKindLabel,
+  type TurnoutDefinition,
 } from '@railcad/domain';
 import { cachedBounds } from '../rendering/paths';
 import { crossingFromView } from '../tools/crossing';
@@ -29,13 +31,27 @@ const view = useViewStore();
 const lineForm = reactive({ x: '0', y: '0', heading: '0', length: '' });
 const arcForm = reactive({ x: '0', y: '0', heading: '0', radius: '', side: 'left', sweep: '' });
 const turnoutForm = reactive({ x: '0', y: '0', heading: '0' });
-const turnoutType = computed(() => getTurnoutType(view.turnoutTypeId));
+/** Katalogtyper og prosjektets egne typer, i den rekkefølgen de vises i valglistene. */
+const turnoutDefinitions = computed<TurnoutDefinition[]>(() => [
+  ...TURNOUT_CATALOG.map((t) => findTurnoutDefinition(t.catalogId)!),
+  ...project.customTurnouts.map((c) => findTurnoutDefinition(c.id, project.customTurnouts)!),
+]);
+/** Sovitet sporkryss bygges av enkle venstreveksler (stamspor og én gren mot venstre). */
+const scissorsDefinitions = computed(() =>
+  turnoutDefinitions.value.filter(
+    (d) => d.stemLengthM !== null && d.branches.length === 1 && d.branches[0]!.hand === 'left',
+  ),
+);
+const turnoutType = computed(() => {
+  void project.customTurnouts;
+  return findTurnoutDefinition(view.turnoutTypeId, project.customTurnouts);
+});
 function createTurnoutNumeric() {
   const v = readAll(turnoutForm, { x: 'X', y: 'Y', heading: 'Retning' });
   if (!v || !turnoutType.value) return;
   error.value = '';
   const id = project.addTurnout({
-    catalogId: turnoutType.value.catalogId,
+    catalogId: turnoutType.value.id,
     catalogRevision: TURNOUT_CATALOG_REVISION,
     position: [v.x!, v.y!],
     headingRad: degToRad(v.heading!),
@@ -108,7 +124,7 @@ function createScissorsNumeric() {
   });
   if (!v) return;
   syncScissorsParams();
-  const type = getTurnoutType(view.scissorsTurnoutId);
+  const type = findTurnoutDefinition(view.scissorsTurnoutId, project.customTurnouts);
   if (!type) {
     error.value = 'Velg en veksltype.';
     return;
@@ -391,7 +407,7 @@ function applyRotation() {
     <label
       >Type
       <select v-model="view.turnoutTypeId" data-testid="turnout-type" style="width: 190px">
-        <option v-for="t in TURNOUT_CATALOG" :key="t.catalogId" :value="t.catalogId">
+        <option v-for="t in turnoutDefinitions" :key="t.id" :value="t.id">
           {{ t.name }}
         </option>
       </select>
@@ -422,8 +438,9 @@ function applyRotation() {
       style="flex-basis: 100%; font-size: 12px"
       data-testid="turnout-note"
     >
-      {{ turnoutType.source.drawing }} · {{ TURNOUT_CATALOG_REVISION }} ·
-      <b style="color: var(--warn)">delvis verifisert</b> – akser avledet fra TRV-hovedmål.
+      {{ turnoutType.sourceText }} · {{ turnoutKindLabel(turnoutType) }} ·
+      <b style="color: var(--warn)">{{ turnoutType.verificationLabel.toLowerCase() }}</b> –
+      {{ turnoutType.verificationNote }}
     </div>
     <div v-if="error" class="err" role="alert">{{ error }}</div>
   </form>
@@ -517,7 +534,7 @@ function applyRotation() {
     <label
       >Veksltype
       <select v-model="view.scissorsTurnoutId" data-testid="scissors-type" style="width: 190px">
-        <option v-for="t in TURNOUT_CATALOG" :key="t.catalogId" :value="t.catalogId">
+        <option v-for="t in scissorsDefinitions" :key="t.id" :value="t.id">
           {{ t.name }}
         </option>
       </select>

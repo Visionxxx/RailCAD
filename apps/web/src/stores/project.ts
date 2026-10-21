@@ -3,6 +3,9 @@ import { computed, ref, shallowRef } from 'vue';
 import {
   createEmptyProject,
   type TurnoutPortName,
+  type CrossingPreset,
+  type CustomTurnoutType,
+  setCustomTurnoutTypes,
   DEFAULT_LAYER_ID,
   nextId,
   type DesignParameters,
@@ -66,7 +69,7 @@ import {
 } from '@railcad/geometry-ts';
 import { cachedCrossingLayout } from '../rendering/crossings';
 import { objectBounds } from '../rendering/objectBounds';
-import { cachedTurnoutLayout } from '../rendering/turnouts';
+import { cachedTurnoutLayout, turnoutTypesVersion } from '../rendering/turnouts';
 
 /** Spesifikasjonen krever minst 50 reverserbare handlinger. */
 export const HISTORY_LIMIT = 200;
@@ -94,6 +97,8 @@ export const useProjectStore = defineStore('project', () => {
   const layers = shallowRef<ProjectLayer[]>([defaultLayer()]);
   const portElevations = shallowRef<Record<string, number>>({});
   const designParameters = shallowRef<DesignParameters>({});
+  const customTurnouts = shallowRef<CustomTurnoutType[]>([]);
+  const crossingPresets = shallowRef<CrossingPreset[]>([]);
   /** Nye objekter legges på dette laget. */
   const activeLayerId = ref(DEFAULT_LAYER_ID);
   const clipboard = shallowRef<Clipboard | null>(null);
@@ -338,6 +343,12 @@ export const useProjectStore = defineStore('project', () => {
     if (kept.length !== selection.value.length) selection.value = kept;
   }
 
+  /** Gjør prosjektets egne veksltyper kjent for geometri og validering. */
+  function syncTurnoutTypes() {
+    setCustomTurnoutTypes(customTurnouts.value);
+    turnoutTypesVersion.value++;
+  }
+
   function modelState(): ModelState {
     return {
       objects: objects.value,
@@ -347,6 +358,8 @@ export const useProjectStore = defineStore('project', () => {
       layers: layers.value,
       portElevations: portElevations.value,
       designParameters: designParameters.value,
+      customTurnouts: customTurnouts.value,
+      crossingPresets: crossingPresets.value,
     };
   }
 
@@ -358,6 +371,8 @@ export const useProjectStore = defineStore('project', () => {
     layers: ProjectLayer[];
     portElevations: Record<string, number>;
     designParameters: DesignParameters;
+    customTurnouts: CustomTurnoutType[];
+    crossingPresets: CrossingPreset[];
   }) {
     objects.value = next.objects;
     connections.value = next.connections;
@@ -366,6 +381,9 @@ export const useProjectStore = defineStore('project', () => {
     layers.value = next.layers;
     portElevations.value = next.portElevations;
     designParameters.value = next.designParameters;
+    customTurnouts.value = next.customTurnouts;
+    crossingPresets.value = next.crossingPresets;
+    syncTurnoutTypes();
     if (!layers.value.some((l) => l.id === activeLayerId.value))
       activeLayerId.value = DEFAULT_LAYER_ID;
     revision.value++;
@@ -468,6 +486,21 @@ export const useProjectStore = defineStore('project', () => {
       label,
       objects: {},
       designParameters: { before: designParameters.value, after: next },
+    });
+  }
+
+  function setCustomTurnouts(next: CustomTurnoutType[], label: string): boolean {
+    return execute({
+      label,
+      objects: {},
+      customTurnouts: { before: customTurnouts.value, after: next },
+    });
+  }
+  function setCrossingPresets(next: CrossingPreset[], label: string): boolean {
+    return execute({
+      label,
+      objects: {},
+      crossingPresets: { before: crossingPresets.value, after: next },
     });
   }
 
@@ -639,6 +672,9 @@ export const useProjectStore = defineStore('project', () => {
     layers.value = normalizeLayers(project.layers);
     portElevations.value = project.portElevations ?? {};
     designParameters.value = project.designParameters ?? {};
+    customTurnouts.value = project.customTurnouts ?? [];
+    crossingPresets.value = project.crossingPresets ?? [];
+    syncTurnoutTypes();
     activeLayerId.value = DEFAULT_LAYER_ID;
     selection.value = [];
     undoStack.value = [];
@@ -669,6 +705,8 @@ export const useProjectStore = defineStore('project', () => {
       ...(Object.keys(designParameters.value).length
         ? { designParameters: { ...designParameters.value } }
         : {}),
+      ...(customTurnouts.value.length ? { customTurnouts: [...customTurnouts.value] } : {}),
+      ...(crossingPresets.value.length ? { crossingPresets: [...crossingPresets.value] } : {}),
     };
   }
 
@@ -707,6 +745,10 @@ export const useProjectStore = defineStore('project', () => {
     toggleCrossingAck,
     portElevations,
     designParameters,
+    customTurnouts,
+    crossingPresets,
+    setCustomTurnouts,
+    setCrossingPresets,
     elevations,
     elevationConflicts,
     segmentElevationsOf,

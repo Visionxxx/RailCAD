@@ -24,7 +24,11 @@ export interface Profile {
 /** Porten på «andre siden» av et objekt (gjennomgående rute) – null der ruten ikke er entydig/gjennomgående. */
 function otherPort(o: RailObject, port: string): string | null {
   if (isTrack(o)) return port === 'start' ? 'end' : port === 'end' ? 'start' : null;
-  if (isTurnout(o)) return port === 'stem_in' ? 'stem_out' : port === 'stem_out' ? 'stem_in' : null; // avviket følges ikke
+  if (isTurnout(o)) {
+    // Bare stamsporet følges (avvik følges ikke), og bare når vekselen har et gjennomgående stamspor.
+    if (!cachedTurnoutLayout(o)?.ports.stem_out) return null;
+    return port === 'stem_in' ? 'stem_out' : port === 'stem_out' ? 'stem_in' : null;
+  }
   if (isCrossing(o)) {
     const m: Record<string, string> = {
       a_start: 'a_end',
@@ -39,15 +43,11 @@ function otherPort(o: RailObject, port: string): string | null {
 
 function routeLength(o: RailObject, enter: string): number {
   if (isTrack(o)) return engine.length(o.geometry);
-  if (isTurnout(o))
-    return engine.length(
-      cachedTurnoutLayout(o)?.segments[0] ?? {
-        kind: 'line',
-        start: [0, 0],
-        headingRad: 0,
-        lengthM: 0,
-      },
-    );
+  if (isTurnout(o)) {
+    const layout = cachedTurnoutLayout(o);
+    const stem = layout?.routes.find((r) => r.port === 'stem_out');
+    return stem ? engine.length(layout!.segments[stem.segments[0]!]!) : 0;
+  }
   if (isCrossing(o)) return 2 * o.crossing.halfLengthM * (enter.startsWith('a') ? 1 : 1);
   return 0;
 }

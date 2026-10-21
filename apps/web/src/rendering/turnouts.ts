@@ -1,7 +1,11 @@
 import { findTurnoutDefinition, type TurnoutDefinition, type TurnoutObject } from '@railcad/domain';
 import type { Bounds, TurnoutLayout } from '@railcad/geometry-api';
+import { shallowRef } from 'vue';
 import { geometryEngine as engine } from '../engine';
 import { cachedBounds } from './paths';
+
+/** Telles opp når de egendefinerte veksltypene endres, slik at beregninger som bruker oppsettet oppdateres. */
+export const turnoutTypesVersion = shallowRef(0);
 
 const layoutCache = new WeakMap<
   TurnoutObject,
@@ -17,6 +21,7 @@ const boundsCache = new WeakMap<
  * nøkkel. Null hvis katalogtypen ikke finnes (skal ikke skje etter validering).
  */
 export function cachedTurnoutLayout(o: TurnoutObject): TurnoutLayout | null {
+  void turnoutTypesVersion.value;
   const def = findTurnoutDefinition(o.turnout.catalogId);
   const hit = layoutCache.get(o);
   if (hit && hit.def === def) return hit.layout;

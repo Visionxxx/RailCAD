@@ -37,6 +37,7 @@ const PORT_LABELS: Record<string, string> = {
   stem_in: 'stamspor inn',
   stem_out: 'stamspor ut',
   diverging_out: 'avvik ut',
+  diverging2_out: 'avvik 2 ut',
   a_start: 'spor A start',
   a_end: 'spor A slutt',
   b_start: 'spor B start',
