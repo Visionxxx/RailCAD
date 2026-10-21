@@ -59,6 +59,22 @@ const menus = computed<MenuDef[]>(() => [
       },
       { label: '', separator: true },
       {
+        label: 'Veksler og kryss (editor) …',
+        run: () => (ui.turnoutEditorOpen = true),
+        testid: 'menu-turnout-editor',
+      },
+      {
+        label: 'Importer vekselbibliotek …',
+        run: actions.importLibrary,
+        testid: 'menu-import-library',
+      },
+      {
+        label: 'Eksporter vekselbibliotek …',
+        run: actions.exportLibrary,
+        testid: 'menu-export-library',
+      },
+      { label: '', separator: true },
+      {
         label: 'Prosjektinnstillinger …',
         run: () => (ui.settingsOpen = true),
         testid: 'menu-settings',

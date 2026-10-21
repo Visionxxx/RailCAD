@@ -78,6 +78,18 @@ function syncCrossingParams() {
   if (h !== null && h > 0 && h <= 1e4) view.crossingHalfLengthM = h;
   if (rad !== null && rad > 0 && rad <= 1e5) view.crossingSlipRadiusM = rad;
 }
+const presetPick = ref('');
+/** Fyller skjemaet fra en forhåndsinnstilling (egne mål; samme brukerdefinerte status som ellers). */
+function applyPreset() {
+  const p = project.crossingPresets.find((x) => x.id === presetPick.value);
+  presetPick.value = '';
+  if (!p) return;
+  crossingForm.ratio = fmt(p.ratioN, 3);
+  crossingForm.half = fmt(p.halfLengthM, 3);
+  view.crossingSlip = p.slip ? p.slip.arcs : 'none';
+  if (p.slip) crossingForm.radius = fmt(p.slip.radiusM, 3);
+  syncCrossingParams();
+}
 function createCrossingNumeric() {
   const v = readAll(crossingForm, {
     x: 'X (M)',
@@ -479,6 +491,20 @@ function applyRotation() {
         <option value="ab">Enkel kryssveksel (A→B)</option>
         <option value="ba">Enkel kryssveksel (B→A)</option>
         <option value="both">Dobbel kryssveksel</option>
+      </select>
+    </label>
+    <label v-if="project.crossingPresets.length"
+      >Forhåndsinnstilling
+      <select
+        v-model="presetPick"
+        data-testid="crossing-preset"
+        style="width: 150px"
+        @change="applyPreset"
+      >
+        <option value="">Velg …</option>
+        <option v-for="p in project.crossingPresets" :key="p.id" :value="p.id">
+          {{ p.name }}
+        </option>
       </select>
     </label>
     <label

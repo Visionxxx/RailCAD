@@ -504,6 +504,16 @@ export const useProjectStore = defineStore('project', () => {
     });
   }
 
+  /** Setter egne veksltyper og forhåndsinnstillinger samlet (f.eks. ved bibliotekimport) – ett angretrinn. */
+  function applyLibrary(turnouts: CustomTurnoutType[], presets: CrossingPreset[]): boolean {
+    return execute({
+      label: 'Importer bibliotek',
+      objects: {},
+      customTurnouts: { before: customTurnouts.value, after: turnouts },
+      crossingPresets: { before: crossingPresets.value, after: presets },
+    });
+  }
+
   function toggleCrossingAck(key: string) {
     return execute(toggleCrossingAckPatch(crossingAcks.value, key));
   }
@@ -749,6 +759,7 @@ export const useProjectStore = defineStore('project', () => {
     crossingPresets,
     setCustomTurnouts,
     setCrossingPresets,
+    applyLibrary,
     elevations,
     elevationConflicts,
     segmentElevationsOf,

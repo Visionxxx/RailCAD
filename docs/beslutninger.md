@@ -26,4 +26,5 @@ Tekniske valg tatt under utviklingen:
 - **Skinnevisning:** sporvidde 1,435 m brukes kun til skjematisk tegning.
 - **DXF:** R12 (håndskrevet, ASCII) og R2007 (bibliotek, UTF-8). R2000 ble ønsket, men biblioteket skriver R2007 og er merket slik. Måltall eksporteres som tekst, ikke DIMENSION.
 - **Sporveksler** lagres som katalog-ID + plassering; geometrien utledes. Se `docs/vekseldata-trv.md`.
+- **Egne veksltyper** lagres i prosjektfilen (`customTurnouts`) og er alltid «brukerdefinert – ikke verifisert»; katalogtypene er uendret. Veksel-geometri er generalisert til definisjoner med ruter (stamspor og 1–2 grener) i stedet for fast stamspor + én avviksbue. Import av bibliotekfil endrer aldri eksisterende oppføringer (ID-konflikt gir ny ID). Egne typer kan ikke slettes mens de brukes, og en port som er koblet kan ikke fjernes fra typen.
 - **Eksempelplanen (Lodalen-inspirert)** genereres av `scripts/generate-lodalen.ts` ved å kjede objekter port-til-port med geometrimotoren, slik at alle koblinger er eksakte. Sporavstand 5 m er en illustrasjonsverdi.

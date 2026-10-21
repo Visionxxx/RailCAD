@@ -9,11 +9,12 @@ import {
   downloadProject,
   downloadText,
   dxfFileNameFor,
+  fileNameFor,
   pickProjectFile,
   readProjectFile,
   type OpenResult,
 } from './io/files';
-import { loadProject } from '@railcad/domain';
+import { loadProject, mergeLibrary, parseLibrary, serializeLibrary } from '@railcad/domain';
 import { useProjectStore } from './stores/project';
 import { useUiStore } from './stores/ui';
 
@@ -86,6 +87,48 @@ export function useActions() {
     const name = dxfFileNameFor(p.project.name, version);
     downloadText(name, text, 'application/dxf');
     ui.notify(`Eksporterte ${name} (DXF ${version}, meter).`);
+  }
+
+  /** Lagrer prosjektets egne veksltyper og krysningsforhåndsinnstillinger som delbar bibliotekfil. */
+  function exportLibrary() {
+    if (!project.customTurnouts.length && !project.crossingPresets.length) {
+      ui.notify('Prosjektet har ingen egne veksltyper eller forhåndsinnstillinger å eksportere.');
+      return;
+    }
+    const name = `${fileNameFor(project.meta.name).replace(/\.railcad\.json$/, '')}.bibliotek.json`;
+    downloadText(
+      name,
+      serializeLibrary(project.customTurnouts, project.crossingPresets),
+      'application/json',
+    );
+    ui.notify(`Eksporterte ${name}.`);
+  }
+  /** Leser en bibliotekfil og legger oppføringene til i prosjektet (ett angretrinn). */
+  async function importLibrary() {
+    const file = await pickProjectFile();
+    if (!file) return;
+    const parsed = parseLibrary(await file.text());
+    if (!parsed.ok) {
+      ui.showDialog({
+        title: 'Kunne ikke importere bibliotek',
+        lines: parsed.errors.slice(0, 12),
+      });
+      return;
+    }
+    const merged = mergeLibrary(project.customTurnouts, project.crossingPresets, parsed.library);
+    if (!merged.added) {
+      ui.notify(`Ingen nye oppføringer (${merged.skipped} fantes allerede).`);
+      return;
+    }
+    project.applyLibrary(merged.turnouts, merged.crossingPresets);
+    const lines = [
+      `${merged.added} oppføring${merged.added > 1 ? 'er' : ''} lagt til, ${merged.skipped} fantes allerede.`,
+      ...merged.renamed.map(
+        (r) => `«${r.from}» fantes med annet innhold – importert som «${r.to}».`,
+      ),
+      'Importerte veksltyper er brukerdefinerte og ikke verifisert, uansett hvem som har laget dem.',
+    ];
+    ui.showDialog({ title: 'Bibliotek importert', lines });
   }
 
   /** Importerer DXF, PDF eller bilde som referansebakgrunn (valgfri plassering/skala settes etterpå). */
@@ -179,5 +222,7 @@ export function useActions() {
     openLodalenDemo,
     save,
     exportDxfFile,
+    exportLibrary,
+    importLibrary,
   };
 }

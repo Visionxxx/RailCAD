@@ -1754,3 +1754,236 @@ test('prosjektinnstillinger: ugyldig fri høyde og ufullstendig kjøretøy gir f
   await page.getByTestId('settings-ok').click();
   await expect(page.getByTestId('settings')).toHaveCount(0);
 });
+
+// ---------- Vekseleditor ----------
+
+async function openEditor(page: import('@playwright/test').Page) {
+  await menu(page, 'file', 'menu-turnout-editor');
+  await expect(page.getByTestId('turnout-editor')).toBeVisible();
+}
+
+test('vekseleditor: egen enkel veksel med live forhåndsvisning, lagring, plassering og lagring/åpning av prosjekt', async ({
+  page,
+}, info) => {
+  const errors = await openApp(page);
+  await openEditor(page);
+  await expect(page.getByTestId('te-warning')).toContainText('ikke verifisert');
+
+  await page.getByTestId('te-name').fill('Min 1:9');
+  await page.getByTestId('te-stem').fill('28');
+  await page.getByTestId('te-ratio-0').fill('9');
+  await page.getByTestId('te-radius-0').fill('250');
+  await page.getByTestId('te-straight-0').fill('4');
+  await expect(page.getByTestId('te-preview')).toBeVisible();
+  await expect(page.getByTestId('te-kind')).toContainText('Enkel veksel');
+  await page.getByTestId('te-save').click();
+  await expect(page.getByTestId('te-item')).toHaveCount(1);
+  await page.getByTestId('te-close').click();
+
+  await placeTurnoutNumeric(page, { type: 'egen-001', hand: 'left' });
+  await expect(page.getByTestId('prop-turnout-type')).toHaveText('Min 1:9');
+  await expect(page.getByTestId('prop-verification')).toHaveText(
+    'Brukerdefinert – ikke verifisert',
+  );
+  for (const p of ['stem_in', 'stem_out', 'diverging_out'])
+    await expect(page.getByTestId(`prop-port-${p}`)).toHaveText('ledig');
+  await expect(page.getByTestId('turnout-label-turnout-001')).toContainText('ikke verifisert');
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-save').click(),
+  ]);
+  const path = info.outputPath('egen.railcad.json');
+  await download.saveAs(path);
+  const saved = JSON.parse(readFileSync(path, 'utf8'));
+  expect(saved.customTurnouts[0]).toMatchObject({ id: 'egen-001', stemLengthM: 28 });
+  expect(saved.objects[0].turnout.catalogId).toBe('egen-001');
+
+  await menu(page, 'file', 'menu-new');
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-open').click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByTestId('object-turnout-001')).toContainText('Min 1:9');
+  expect(errors).toEqual([]);
+});
+
+test('vekseleditor: symmetrisk veksel uten stamspor og tresporsveksel får riktige porter', async ({
+  page,
+}) => {
+  await openApp(page);
+  await openEditor(page);
+  await page.getByTestId('te-name').fill('Sym');
+  await page.getByTestId('te-has-stem').uncheck();
+  await page.getByTestId('te-add-branch').click();
+  await expect(page.getByTestId('te-hand-1')).toHaveValue('right');
+  await expect(page.getByTestId('te-kind')).toContainText('Symmetrisk veksel');
+  await page.getByTestId('te-save').click();
+
+  await page.getByTestId('te-new').click();
+  await page.getByTestId('te-name').fill('Tre');
+  await page.getByTestId('te-add-branch').click();
+  await expect(page.getByTestId('te-kind')).toContainText('Tresporsveksel');
+  await page.getByTestId('te-save').click();
+  await page.getByTestId('te-close').click();
+
+  await placeTurnoutNumeric(page, { type: 'egen-001' });
+  for (const p of ['stem_in', 'diverging_out', 'diverging2_out'])
+    await expect(page.getByTestId(`prop-port-${p}`)).toHaveText('ledig');
+  await expect(page.getByTestId('prop-port-stem_out')).toHaveCount(0);
+
+  await placeTurnoutNumeric(page, { type: 'egen-002', x: '100' });
+  for (const p of ['stem_in', 'stem_out', 'diverging_out', 'diverging2_out'])
+    await expect(page.getByTestId(`prop-port-${p}`)).toHaveText('ledig');
+});
+
+test('vekseleditor: hovedmål A–F utleder radius og varsler om avvik; ugyldig skjema kan ikke lagres', async ({
+  page,
+}) => {
+  await openApp(page);
+  await openEditor(page);
+  await page.getByTestId('te-name').fill('Fra mål');
+  await page.getByTestId('te-mode-dimensions').check();
+  await page.getByTestId('te-ratio-0').fill('9');
+  await page.getByTestId('te-dim-A').fill('14000');
+  await page.getByTestId('te-dim-C').fill('14000');
+  await page.getByTestId('te-dim-D').fill('0');
+  await page.getByTestId('te-dim-B').fill('14000');
+  await page.getByTestId('te-dim-L').fill('28000');
+  await expect(page.getByTestId('te-derived')).toContainText('R = ');
+  await expect(page.getByTestId('te-dim-warning')).toHaveCount(0);
+  await page.getByTestId('te-dim-B').fill('15000');
+  await expect(page.getByTestId('te-dim-warning').first()).toContainText('B (15000)');
+
+  await page.getByTestId('te-ratio-0').fill('0,5');
+  await expect(page.getByTestId('te-error').first()).toBeVisible();
+  await page.getByTestId('te-save').click();
+  await expect(page.getByTestId('te-item')).toHaveCount(0);
+});
+
+test('vekseleditor: brukt type kan ikke slettes; sletting av ubrukt type kan angres', async ({
+  page,
+}) => {
+  await openApp(page);
+  await openEditor(page);
+  await page.getByTestId('te-name').fill('Tre');
+  await page.getByTestId('te-add-branch').click();
+  await page.getByTestId('te-save').click();
+  await page.getByTestId('te-close').click();
+  await placeTurnoutNumeric(page, { type: 'egen-001' });
+
+  await openEditor(page);
+  await page.getByTestId('te-delete').click();
+  await expect(page.getByTestId('te-message')).toContainText('brukes av 1 objekt');
+  await expect(page.getByTestId('te-item')).toHaveCount(1);
+  await page.getByTestId('te-close').click();
+
+  await page.getByTestId('undo-btn').click(); // fjerner veksel-objektet
+  await openEditor(page);
+  await page.getByTestId('te-delete').click();
+  await expect(page.getByTestId('te-item')).toHaveCount(0);
+  await page.getByTestId('te-close').click();
+  await page.getByTestId('undo-btn').click(); // angre sletting
+  await openEditor(page);
+  await expect(page.getByTestId('te-item')).toHaveCount(1);
+});
+
+test('forhåndsinnstillinger for sporkryss/kryssveksel: lagres, velges i verktøyet og valideres', async ({
+  page,
+}) => {
+  await openApp(page);
+  await openEditor(page);
+  await page.getByTestId('te-tab-crossings').click();
+  await page.getByTestId('tp-name').fill('KV 1:9 R200');
+  await page.getByTestId('tp-ratio').fill('9');
+  await page.getByTestId('tp-half').fill('20');
+  await page.getByTestId('tp-slip').check();
+  await page.getByTestId('tp-radius').fill('5000');
+  await page.getByTestId('tp-save').click();
+  await expect(page.getByTestId('tp-message')).toContainText('Tangentlengden');
+  await page.getByTestId('tp-radius').fill('200');
+  await page.getByTestId('tp-save').click();
+  await expect(page.getByTestId('tp-item')).toHaveCount(1);
+  await page.getByTestId('te-close').click();
+
+  await selectTool(page, 'crossing');
+  await page.getByTestId('crossing-preset').selectOption('kryss-001');
+  await expect(page.getByTestId('crossing-slip')).toHaveValue('both');
+  await expect(page.getByTestId('crossing-half')).toHaveValue('20,000');
+  await expect(page.getByTestId('crossing-radius')).toHaveValue('200,000');
+});
+
+test('bibliotek: eksport og import mellom prosjekter, ID-konflikt får ny ID, ugyldig fil avvises', async ({
+  page,
+}, info) => {
+  await openApp(page);
+  await openEditor(page);
+  await page.getByTestId('te-name').fill('Delt veksel');
+  await page.getByTestId('te-save').click();
+  await page.getByTestId('te-tab-crossings').click();
+  await page.getByTestId('tp-name').fill('Delt kryss');
+  await page.getByTestId('tp-save').click();
+  await page.getByTestId('te-close').click();
+
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-export-library').click(),
+  ]);
+  const path = info.outputPath('lib.bibliotek.json');
+  await download.saveAs(path);
+  const lib = JSON.parse(readFileSync(path, 'utf8'));
+  expect(lib.format).toBe('railcad-bibliotek');
+  expect(lib.turnouts).toHaveLength(1);
+  expect(lib.crossingPresets).toHaveLength(1);
+
+  await menu(page, 'file', 'menu-new');
+  await page.getByRole('button', { name: 'Forkast og fortsett' }).click(); // prosjektet er ulagret
+  await page.getByTestId('menu-file').click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-import-library').click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByRole('dialog')).toContainText('Bibliotek importert');
+  await expect(page.getByRole('dialog')).toContainText('ikke verifisert');
+  await page.getByRole('button', { name: 'Lukk' }).click();
+  await openEditor(page);
+  await expect(page.getByTestId('te-item')).toHaveCount(1);
+  await page.getByTestId('te-close').click();
+
+  // Ugyldig fil (en prosjektfil) avvises.
+  await page.getByTestId('menu-file').click();
+  const [chooser2] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByTestId('menu-import-library').click(),
+  ]);
+  await chooser2.setFiles({
+    name: 'x.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"schemaVersion":"0.1.0"}'),
+  });
+  await expect(page.getByRole('dialog')).toContainText('prosjektfil');
+});
+
+test('DXF-eksport merker egen veksel som ikke verifisert', async ({ page }, info) => {
+  await openApp(page);
+  await openEditor(page);
+  await page.getByTestId('te-name').fill('DXF-veksel');
+  await page.getByTestId('te-save').click();
+  await page.getByTestId('te-close').click();
+  await placeTurnoutNumeric(page, { type: 'egen-001' });
+  await page.getByTestId('menu-file').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('menu-export-dxf-r2007').click(),
+  ]);
+  const path = info.outputPath('egen.dxf');
+  await download.saveAs(path);
+  const dxf = readFileSync(path, 'utf8');
+  expect(dxf).toContain('DXF-veksel');
+  expect(dxf.toLowerCase()).toContain('ikke verifisert');
+});

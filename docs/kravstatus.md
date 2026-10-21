@@ -74,6 +74,8 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Kryssveksel (enkel/dobbel) og sovitet sporkryss** (brukerdefinert/delvis verifisert): `geometry-ts/crossing.ts`, `scissors.ts`, `tools/scissors.ts`. Tester: enhet `scissors.test.ts` (7), kryssveksel (3+1), e2e (3).
 
+- **Vekseleditor og bibliotek:** egne veksltyper (enkel, tresporsveksel, symmetrisk/dobbel; geometri eller hovedmål A–F), forhåndsinnstillinger for sporkryss/kryssveksel, bibliotekfil for deling, live forhåndsvisning. Alt «brukerdefinert – ikke verifisert». `domain/custom-turnouts.ts`, `library.ts`, `geometry-ts/turnout.ts` (ruter), `TurnoutEditor.vue`, `docs/vekseleditor.md`. Tester: enhet `custom-turnout.test.ts` (6) + `custom-turnouts.test.ts` (12); e2e (7).
+
 - **Høyder (RC-015 trinn 1) og planskilt:** kote per port (delt via koblinger), stigning, lengdeprofil langs sporkjede, kote-konflikter, automatisk planskilt ut fra kote og en fri høyde du selv setter i prosjektinnstillingene. `geometry-ts/elevation.ts`, `ElevationFields.vue`, `ProfileChart.vue`. Tester: enhet (4+4+2), e2e (3).
 
 ### Kjente åpne punkter

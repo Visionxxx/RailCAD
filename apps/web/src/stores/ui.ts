@@ -45,6 +45,8 @@ export const useUiStore = defineStore('ui', () => {
   const toasts = ref<Toast[]>([]);
   const dialog = ref<DialogState | null>(null);
   const settingsOpen = ref(false);
+  /** Vekseleditoren (egne veksltyper og krysningsforhåndsinnstillinger). */
+  const turnoutEditorOpen = ref(false);
   const prompt = ref<(NumberPrompt & { resolve: (v: number | null) => void }) | null>(null);
   /** Skjult «Kom i gang»-kort (gjelder økten). */
   const welcomeDismissed = ref(false);
@@ -85,6 +87,7 @@ export const useUiStore = defineStore('ui', () => {
     toasts,
     dialog,
     settingsOpen,
+    turnoutEditorOpen,
     prompt,
     promptNumber,
     welcomeDismissed,

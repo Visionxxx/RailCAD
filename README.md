@@ -48,6 +48,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Høyder og planskilt:** sett **kote** per port i egenskapspanelet (tomt = ukjent). Koblede porter deler kote; stigning og **lengdeprofil** langs sporkjeden vises. Setter du **minste fri høyde** i Prosjektinnstillinger (ingen standardverdi), avgjøres planskilte kryssinger automatisk ut fra høydeforskjellen (Δh vises i kontrollfanen). Kote-konflikter ved koblinger varsles.
 
+**Egne veksler og kryss:** **Fil → Veksler og kryss (editor)** lar deg definere veksltyper (enkel, tresporsveksel, symmetrisk – med radius/1:n eller TRV-lignende hovedmål A–F) og forhåndsinnstillinger for sporkryss/kryssveksel, med live forhåndsvisning. Alt er «brukerdefinert – ikke verifisert». Typene lagres i prosjektfilen og kan deles som bibliotekfil (Fil → Importer/Eksporter vekselbibliotek). Se `docs/vekseleditor.md`.
+
 **Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
 
 **Valg og tegning:** dra på tom flate for _valgboks_ (mot høyre: helt innenfor, mot venstre: alt som berøres, Skift legger til). Hold **Skift** mens du tegner et rett spor for å låse retningen til 15°. Pil opp/ned i tallfelt justerer verdien (Skift ×10, Alt ×0,1). Objekter opprettet via skjema utenfor skjermen blir vist automatisk.
@@ -101,7 +103,7 @@ Se `docs/` for filformat og beslutninger.
 ## Kjente begrensninger
 
 - **Ikke regelverkskontrollert.** Ingen kontroller mot Bane NOR/TRV. Panelet viser «ikke vurdert»; ingenting presenteres som godkjent.
-- **Sporveksler er delvis verifisert** (3 typer, akser avledet fra TRV-hovedmål, ikke kontrollert mot KO-tegning – se `docs/vekseldata-trv.md`). Dobbel kryssveksel, sporsløyfer og EVB-typer er ikke lagt inn.
+- **Sporveksler er delvis verifisert** (3 typer, akser avledet fra TRV-hovedmål, ikke kontrollert mot KO-tegning – se `docs/vekseldata-trv.md`). Sporsløyfer og EVB-typer er ikke lagt inn i biblioteket; egne typer kan lages i vekseleditoren (brukerdefinert, ikke verifisert).
 - **Tangenttoleranse for koblinger er en foreløpig testverdi.**
 - **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
 - **Bakgrunn:** bare side 1 av PDF, ingen georeferering, DXF uten HATCH/DIMENSION.

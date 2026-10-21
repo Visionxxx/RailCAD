@@ -13,7 +13,7 @@ JSON, lagret som `*.railcad.json`. Alle lengder i meter, alle vinkler i radianer
     "coordinateSystem": { "type": "local_xy" },
   },
   "objects": [/* spor og mål, se under */],
-  "connections": [], // { "a": {"objectId","port"}, "b": {…} }  port: spor = start|end, veksel = stem_in|stem_out|diverging_out
+  "connections": [], // { "a": {"objectId","port"}, "b": {…} }  port: spor = start|end, veksel = stem_in|stem_out|diverging_out|diverging2_out (portene avhenger av typen)
 }
 ```
 
@@ -33,3 +33,5 @@ JSON, lagret som `*.railcad.json`. Alle lengder i meter, alle vinkler i radianer
 **Bakgrunner** (valgfritt toppnivåfelt `backgrounds`, se `docs/bakgrunn.md`): `{kind:"dxf"|"image", id, name, visible, opacity, placement:{origin, scaleMPerUnit, rotationRad, scaleConfirmed}, …}`. Felt for DXF: `layers`, `prims`, `sourceUnits`, `extents`. Felt for bilde: `source`, `dataUrl`, `widthPx`, `heightPx`. Feltet er additivt – `schemaVersion` er uendret.
 
 **Lås og lag** (valgfrie felt): `locked: true` på et objekt, `layerId` på et objekt og toppnivåfeltet `layers: [{id, name, visible, locked}]` (standardlaget har id `standard` og er implisitt – listen skrives bare når lagoppsettet avviker fra standard). Objekter på skjulte lag tegnes ikke og kan ikke velges eller snappes mot; låste objekter/lag kan ikke endres.
+
+**Egne veksltyper og krysningsinnstillinger** (valgfrie toppnivåfelt, se `docs/vekseleditor.md`): `customTurnouts: [{id, name, stemLengthM|null, branches:[{hand, ratioN, radiusM, straightM}], inputMode, mainDimensionsMm?, source?, note?}]` og `crossingPresets: [{id, name, ratioN, halfLengthM, slip?:{arcs, radiusM}, note?}]`. Et veksel-objekt viser til en egen type med `turnout.catalogId` = typens `id`. Porter valideres per type (`diverging2_out` finnes bare med to grener, `stem_out` bare med stamspor). Feltene er additive – `schemaVersion` er uendret. Bibliotekfilen (`railcad-bibliotek`) er et eget format for deling.
