@@ -319,3 +319,29 @@ describe('kryssveksel i prosjektfil', () => {
     expect(withSlip({ arcs: 'ab', radiusM: 0 }).ok).toBe(false);
   });
 });
+
+describe('koter og designparametre i prosjektfil', () => {
+  const base = () => {
+    const p: any = demo();
+    p.portElevations = { 'track-001:start': 100.5, 'track-001:end': 102 };
+    p.designParameters = {
+      minVerticalClearanceM: 6.5,
+      vehicle: { name: 'Test', lengthM: 20, bogieCentreM: 14, widthM: 3, marginM: 0.3 },
+    };
+    return p;
+  };
+  it('godtar gyldige verdier', () => {
+    expect(validateProject(base()).ok).toBe(true);
+  });
+  it.each([
+    ['kote utenfor grensen', (p: any) => (p.portElevations['track-001:end'] = 1e9)],
+    ['ugyldig nøkkel', (p: any) => (p.portElevations['feil nokkel'] = 1)],
+    ['negativ fri høyde', (p: any) => (p.designParameters.minVerticalClearanceM = -1)],
+    ['boggiavstand > lengde', (p: any) => (p.designParameters.vehicle.bogieCentreM = 30)],
+    ['bredde 0', (p: any) => (p.designParameters.vehicle.widthM = 0)],
+  ])('avviser: %s', (_n, mutate) => {
+    const p = base();
+    mutate(p);
+    expect(validateProject(p).ok).toBe(false);
+  });
+});

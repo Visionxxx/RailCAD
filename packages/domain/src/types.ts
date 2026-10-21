@@ -164,6 +164,26 @@ export interface ProjectMeta {
   coordinateSystem: { type: 'local_xy' };
 }
 
+/** Brukerdefinert kjøretøy for geometriske kontroller (ingen regelverk eller fri profil). */
+export interface VehicleParams {
+  name: string;
+  /** Lengde over buffere/kropp, meter. */
+  lengthM: number;
+  /** Avstand mellom boggisentre (tapper), meter. */
+  bogieCentreM: number;
+  /** Største bredde, meter. */
+  widthM: number;
+  /** Ekstra sideklaring brukeren krever, meter. */
+  marginM: number;
+}
+
+/** Prosjektparametre brukeren selv setter (ingen standardverdier – ingenting er «riktig» uten kilde). */
+export interface DesignParameters {
+  /** Minste høydeforskjell (skinneoverkant til skinneoverkant) for at en kryssing regnes som planskilt, meter. */
+  minVerticalClearanceM?: number;
+  vehicle?: VehicleParams;
+}
+
 export interface RailProject {
   schemaVersion: string;
   project: ProjectMeta;
@@ -178,6 +198,12 @@ export interface RailProject {
   acknowledgedCrossings?: string[];
   /** Lag utover standardlaget (og evt. endringer i standardlagets synlighet/lås). Valgfritt. */
   layers?: ProjectLayer[];
+  /**
+   * Kote (høyde, meter) per port, nøkkel `<objektId>:<port>`. Tilkoblede porter deler kote.
+   * Mangler = ukjent. Valgfritt.
+   */
+  portElevations?: Record<string, number>;
+  designParameters?: DesignParameters;
 }
 
 export function isTrack(o: RailObject): o is TrackSegment {

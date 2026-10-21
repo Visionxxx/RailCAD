@@ -74,6 +74,8 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Kryssveksel (enkel/dobbel) og sovitet sporkryss** (brukerdefinert/delvis verifisert): `geometry-ts/crossing.ts`, `scissors.ts`, `tools/scissors.ts`. Tester: enhet `scissors.test.ts` (7), kryssveksel (3+1), e2e (3).
 
+- **Høyder (RC-015 trinn 1) og planskilt:** kote per port (delt via koblinger), stigning, lengdeprofil langs sporkjede, kote-konflikter, automatisk planskilt ut fra kote og en fri høyde du selv setter i prosjektinnstillingene. `geometry-ts/elevation.ts`, `ElevationFields.vue`, `ProfileChart.vue`. Tester: enhet (4+4+2), e2e (3).
+
 ### Kjente åpne punkter
 
 - Sporkryss og kryssveksler mangler i biblioteket (ingen åpne måltabeller; se `docs/kryssing.md`, `docs/henvendelse-leverandor.md`).

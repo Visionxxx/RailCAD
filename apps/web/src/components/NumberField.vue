@@ -6,18 +6,22 @@ const props = withDefaults(
   defineProps<{
     id: string;
     label: string;
-    modelValue: number;
+    modelValue: number | null;
     decimals?: number;
     unit?: string;
     disabled?: boolean;
+    /** Tomt felt er gyldig og betyr «ukjent/ikke satt» (sender `clear`). */
+    nullable?: boolean;
     /** Returnerer feilmelding, eller null hvis verdien er gyldig. */
     validate?: (n: number) => string | null;
   }>(),
-  { decimals: 3, unit: '', validate: undefined, disabled: false },
+  { decimals: 3, unit: '', validate: undefined, disabled: false, nullable: false },
 );
-const emit = defineEmits<{ commit: [value: number] }>();
+const emit = defineEmits<{ commit: [value: number]; clear: [] }>();
 
-const shown = computed(() => fmt(props.modelValue, props.decimals));
+const shown = computed(() =>
+  props.modelValue === null ? '' : fmt(props.modelValue, props.decimals),
+);
 const text = ref(shown.value);
 const error = ref('');
 
@@ -30,6 +34,11 @@ function commit() {
   // Uendret tekst = ingen endring (unngår å avrunde den lagrede verdien ved å bare tabbe forbi).
   if (text.value === shown.value) {
     error.value = '';
+    return;
+  }
+  if (props.nullable && text.value.trim() === '') {
+    error.value = '';
+    emit('clear');
     return;
   }
   const n = parseNumber(text.value);
@@ -50,7 +59,7 @@ function commit() {
 function nudge(e: KeyboardEvent) {
   const dir = e.key === 'ArrowUp' ? 1 : -1;
   const step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
-  const current = parseNumber(text.value) ?? props.modelValue;
+  const current = parseNumber(text.value) ?? props.modelValue ?? 0;
   const next = Math.round((current + dir * step) * 1e9) / 1e9;
   text.value = fmt(next, props.decimals);
   commit();

@@ -636,3 +636,91 @@ describe('lås, lag og kopiér/lim inn', () => {
     expect(store.byId.get(id!)!.locked).toBeUndefined();
   });
 });
+
+describe('høyder (koter ved porter) og planskilte kryssinger', () => {
+  let store: ReturnType<typeof useProjectStore>;
+  beforeEach(() => {
+    store = setup();
+    store.reset();
+  });
+  const cross = () => {
+    store.addTrack({ kind: 'line', start: [-10, 0], headingRad: 0, lengthM: 20 }); // track-001 langs x
+    store.addTrack({ kind: 'line', start: [0, -10], headingRad: Math.PI / 2, lengthM: 20 }); // track-002 langs y
+  };
+
+  it('kote settes per port, deles av koblede porter, kan fjernes og angres', () => {
+    store.addTrack(line(0, 10)); // track-001
+    store.addTrackFromPort(
+      { kind: 'line', start: [10, 0], headingRad: 0, lengthM: 10 },
+      { objectId: 'track-001', port: 'end' },
+    ); // track-002
+    store.setPortElevation('track-001:end', 105);
+    expect(store.elevations.effective.get('track-002:start')).toBe(105); // delt via koblingen
+    expect(store.portElevations['track-002:start']).toBe(105);
+    store.setPortElevation('track-001:start', 100);
+    const se = store.segmentElevationsOf(store.byId.get('track-001')!)!;
+    expect(se.z).toEqual([{ zStart: 100, zEnd: 105 }]);
+    store.setPortElevation('track-002:start', null); // fjerner for hele gruppen
+    expect(store.elevations.effective.has('track-001:end')).toBe(false);
+    store.undo();
+    expect(store.elevations.effective.get('track-001:end')).toBe(105);
+  });
+
+  it('konflikt rapporteres når koblede porter har ulik kote (innlest fil)', () => {
+    store.addTrack(line(0, 10));
+    store.addTrackFromPort(
+      { kind: 'line', start: [10, 0], headingRad: 0, lengthM: 10 },
+      { objectId: 'track-001', port: 'end' },
+    );
+    const saved = store.toProject();
+    saved.portElevations = { 'track-001:end': 105, 'track-002:start': 106 };
+    store.load(saved);
+    expect(store.elevationConflicts).toHaveLength(1);
+  });
+
+  it('planskilt automatisk når høydeforskjellen ≥ satt fri høyde; ellers lav fri høyde; uten parameter bare Δh', () => {
+    cross();
+    for (const [k, z] of [
+      ['track-001:start', 100],
+      ['track-001:end', 100],
+      ['track-002:start', 107],
+      ['track-002:end', 107],
+    ] as const) {
+      store.setPortElevation(k, z);
+    }
+    const x = store.crossingIssues[0]!;
+    expect(x).toMatchObject({ zA: 100, zB: 107, separation: null }); // ingen fri høyde satt → ingen vurdering
+    expect(x.deltaM).toBeCloseTo(7, 9);
+    expect(store.openCrossingCount).toBe(1);
+
+    store.setDesignParameters({ minVerticalClearanceM: 6.5 }, 'Sett fri høyde');
+    expect(store.crossingIssues[0]!.separation).toBe('grade_separated');
+    expect(store.openCrossingCount).toBe(0);
+
+    store.setDesignParameters({ minVerticalClearanceM: 8 }, 'Sett fri høyde');
+    expect(store.crossingIssues[0]!.separation).toBe('low_clearance');
+    expect(store.openCrossingCount).toBe(1); // fortsatt åpen: for lav fri høyde
+    store.undo();
+    expect(store.crossingIssues[0]!.separation).toBe('grade_separated');
+  });
+
+  it('ukjent kote på ett av sporene gir ingen planskilt-vurdering; kote og parametre lagres og prunes', () => {
+    cross();
+    store.setDesignParameters({ minVerticalClearanceM: 6.5 }, 'x');
+    store.setPortElevation('track-001:start', 100);
+    store.setPortElevation('track-001:end', 100);
+    expect(store.crossingIssues[0]!).toMatchObject({
+      zA: 100,
+      zB: null,
+      deltaM: null,
+      separation: null,
+    });
+    const saved = store.toProject();
+    expect(saved.portElevations).toEqual({ 'track-001:start': 100, 'track-001:end': 100 });
+    expect(saved.designParameters).toEqual({ minVerticalClearanceM: 6.5 });
+    store.deleteIds(['track-001', 'track-002']);
+    expect(store.toProject().portElevations).toBeUndefined(); // koter for slettede objekter droppes
+    store.undo();
+    expect(store.toProject().portElevations).toBeDefined();
+  });
+});

@@ -63,8 +63,20 @@ function ratioText(angleRad: number): string {
   return ` (1:${fmt(1 / Math.tan(angleRad), 1)})`;
 }
 
+function heightText(x: Issue): string {
+  if (x.deltaM === null) return '';
+  const c = project.designParameters.minVerticalClearanceM;
+  const status =
+    x.separation === 'grade_separated'
+      ? ' – planskilt'
+      : x.separation === 'low_clearance'
+        ? ` – under fri høyde ${fmtM(c ?? 0, 2)}`
+        : '';
+  return ` · Δh ${fmtM(x.deltaM, 2)}${status}`;
+}
+
 function crossingText(x: Issue): string {
-  const where = `(${fmt(x.point[0], 1)}; ${fmt(x.point[1], 1)})`;
+  const where = `(${fmt(x.point[0], 1)}; ${fmt(x.point[1], 1)})${heightText(x)}`;
   if (x.kind === 'overlap')
     return `${x.a} og ${x.b} overlapper ${fmtM(x.overlapM ?? 0, 1)} ${where}`;
   if (x.kind === 'touch') {
@@ -151,13 +163,28 @@ function showCrossing(x: Issue) {
       Kryssende spor ({{ project.openCrossingCount }})
       <span class="badge" style="color: var(--warn)">ikke vurdert</span>
     </h2>
+    <template v-if="project.elevationConflicts.length">
+      <h2 style="margin-top: 14px" data-testid="elev-conflicts-heading">
+        Kote-konflikter ({{ project.elevationConflicts.length }})
+      </h2>
+      <div
+        v-for="(c, i) in project.elevationConflicts"
+        :key="i"
+        class="conn-row"
+        :data-testid="`elev-conflict-${i}`"
+      >
+        <span class="who st position"
+          >{{ c.ports.join(' = ') }}: {{ c.values.map((v) => fmt(v, 3)).join(' ≠ ') }}</span
+        >
+      </div>
+    </template>
     <p v-if="!project.crossingIssues.length" class="muted" data-testid="no-crossings">
       Ingen kryssende spor funnet.
     </p>
     <div
       v-for="(x, i) in project.crossingIssues"
       :key="`${x.key}-${x.kind}-${x.point[0]}-${x.point[1]}`"
-      :class="['conn-row', { acked: x.acknowledged }]"
+      :class="['conn-row', { acked: x.acknowledged || x.separation === 'grade_separated' }]"
       :data-testid="`cross-row-${i}`"
       :data-kind="x.kind"
     >
@@ -174,7 +201,13 @@ function showCrossing(x: Issue) {
         :data-testid="`cross-ack-${i}`"
         @click="project.toggleCrossingAck(x.key)"
       >
-        {{ x.acknowledged ? 'Angre' : 'Planskilt' }}
+        {{
+          x.acknowledged
+            ? 'Angre'
+            : x.separation === 'grade_separated'
+              ? 'Planskilt ✓'
+              : 'Planskilt'
+        }}
       </button>
     </div>
     <p class="muted" style="margin-top: 6px; font-size: 11px">

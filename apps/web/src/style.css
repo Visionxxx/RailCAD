@@ -1174,3 +1174,28 @@ button {
 .project-title b {
   cursor: text;
 }
+
+.profile svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.profile .axis-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.profile .axis-text {
+  fill: var(--text-dim);
+  font: 9px var(--font);
+}
+.profile .prof-line {
+  stroke: var(--text-dim);
+  stroke-width: 2;
+}
+.profile .prof-line.sel {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}

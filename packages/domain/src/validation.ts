@@ -195,6 +195,33 @@ const projectSchema = z
     objects: z.array(objectSchema),
     connections: z.array(z.object({ a: endpointRef, b: endpointRef }).passthrough()),
     backgrounds: z.array(backgroundSchema).optional(),
+    portElevations: z
+      .record(
+        z.string().regex(/^[A-Za-z0-9_.-]+:[a-z_]+$/, 'forventet «objektId:port»'),
+        finite.refine((n) => Math.abs(n) <= 1e4, 'kote må være innenfor ±10 000 m'),
+      )
+      .optional(),
+    designParameters: z
+      .object({
+        minVerticalClearanceM: finite
+          .refine((n) => n >= 0 && n <= 100, 'fri høyde må være mellom 0 og 100 m')
+          .optional(),
+        vehicle: z
+          .object({
+            name: z.string().max(80),
+            lengthM: finite.refine((n) => n > 0 && n <= 100, 'lengde må være mellom 0 og 100 m'),
+            bogieCentreM: finite.refine(
+              (n) => n > 0 && n <= 100,
+              'boggiavstand må være mellom 0 og 100 m',
+            ),
+            widthM: finite.refine((n) => n > 0 && n <= 10, 'bredde må være mellom 0 og 10 m'),
+            marginM: finite.refine((n) => n >= 0 && n <= 5, 'margin må være mellom 0 og 5 m'),
+          })
+          .passthrough()
+          .optional(),
+      })
+      .passthrough()
+      .optional(),
     layers: z
       .array(
         z
@@ -355,6 +382,10 @@ export function validateProject(raw: unknown): ProjectValidation {
       errors.push(`objects[${i}] (${o.id}): punktene i målet er sammenfallende`);
     }
   });
+  const v = project.designParameters?.vehicle;
+  if (v && v.bogieCentreM > v.lengthM) {
+    errors.push('designParameters.vehicle: boggiavstanden kan ikke være lengre enn kjøretøyet');
+  }
   const layerIds = new Set<string>([DEFAULT_LAYER_ID]);
   (project.layers ?? []).forEach((l, i) => {
     if (l.id !== DEFAULT_LAYER_ID && layerIds.has(l.id)) {

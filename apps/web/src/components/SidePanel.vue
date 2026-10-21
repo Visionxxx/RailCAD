@@ -14,7 +14,9 @@ const ui = useUiStore();
 /** Avvik som trenger oppmerksomhet: koblingsavvik og kryssende spor som ikke er bekreftet. */
 const connectionIssues = computed(
   () =>
-    project.connectionResults.filter((r) => r.status !== 'ok').length + project.openCrossingCount,
+    project.connectionResults.filter((r) => r.status !== 'ok').length +
+    project.openCrossingCount +
+    project.elevationConflicts.length,
 );
 
 const tabs = computed(() => [

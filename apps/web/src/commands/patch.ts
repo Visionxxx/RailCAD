@@ -1,4 +1,10 @@
-import type { Background, Connection, ProjectLayer, RailObject } from '@railcad/domain';
+import type {
+  Background,
+  Connection,
+  DesignParameters,
+  ProjectLayer,
+  RailObject,
+} from '@railcad/domain';
 
 /**
  * En redigering som data: hvert berørt objekt har før/etter-tilstand og posisjon i
@@ -15,6 +21,8 @@ export interface Patch {
   crossingAcks?: { before: string[]; after: string[] };
   /** Lagliste (inkl. standardlaget). */
   layers?: { before: ProjectLayer[]; after: ProjectLayer[] };
+  portElevations?: { before: Record<string, number>; after: Record<string, number> };
+  designParameters?: { before: DesignParameters; after: DesignParameters };
 }
 
 export interface ModelState {
@@ -23,6 +31,8 @@ export interface ModelState {
   backgrounds: Background[];
   crossingAcks: string[];
   layers: ProjectLayer[];
+  portElevations: Record<string, number>;
+  designParameters: DesignParameters;
 }
 
 export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'undo'): ModelState {
@@ -65,5 +75,22 @@ export function applyPatch(state: ModelState, patch: Patch, direction: 'do' | 'u
   if (patch.layers) {
     layers = direction === 'do' ? patch.layers.after : patch.layers.before;
   }
-  return { objects: result, connections, backgrounds, crossingAcks, layers };
+  let portElevations = state.portElevations;
+  if (patch.portElevations) {
+    portElevations = direction === 'do' ? patch.portElevations.after : patch.portElevations.before;
+  }
+  let designParameters = state.designParameters;
+  if (patch.designParameters) {
+    designParameters =
+      direction === 'do' ? patch.designParameters.after : patch.designParameters.before;
+  }
+  return {
+    objects: result,
+    connections,
+    backgrounds,
+    crossingAcks,
+    layers,
+    portElevations,
+    designParameters,
+  };
 }

@@ -46,6 +46,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Kopiér/lim inn, lås og lag:** `Ctrl+C`/`Ctrl+V` kopierer og limer inn (ved markøren; nye ID-er, koblinger mellom limte objekter og lengdemål følger med, ett angretrinn), `Ctrl+D` dupliserer. **Lås** et objekt i egenskapspanelet (eller et helt lag): det kan velges, men ikke flyttes, redigeres eller slettes. **Lag** (fanen Objekter): synlighet, lås, aktivt lag for nye objekter, flytting av valgte til lag; lag skrives også til DXF (`RAILCAD_SPORAKSE_<LAGNAVN>`). Prosjektnavnet endres ved dobbeltklikk på tittelen.
 
+**Høyder og planskilt:** sett **kote** per port i egenskapspanelet (tomt = ukjent). Koblede porter deler kote; stigning og **lengdeprofil** langs sporkjeden vises. Setter du **minste fri høyde** i Prosjektinnstillinger (ingen standardverdi), avgjøres planskilte kryssinger automatisk ut fra høydeforskjellen (Δh vises i kontrollfanen). Kote-konflikter ved koblinger varsles.
+
 **Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
 
 **Valg og tegning:** dra på tom flate for _valgboks_ (mot høyre: helt innenfor, mot venstre: alt som berøres, Skift legger til). Hold **Skift** mens du tegner et rett spor for å låse retningen til 15°. Pil opp/ned i tallfelt justerer verdien (Skift ×10, Alt ×0,1). Objekter opprettet via skjema utenfor skjermen blir vist automatisk.

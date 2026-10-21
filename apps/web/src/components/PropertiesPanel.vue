@@ -23,7 +23,9 @@ import {
 import { TOLERANCES } from '@railcad/geometry-api';
 import { geometryEngine as engine } from '../engine';
 import { degToRad, fmt, fmtM, portLabel, radToDeg } from '../format';
+import ElevationFields from './ElevationFields.vue';
 import NumberField from './NumberField.vue';
+import ProfileChart from './ProfileChart.vue';
 import { crossingTitle, slipTangentM } from '../crossing-labels';
 import { useProjectStore } from '../stores/project';
 import { useUiStore } from '../stores/ui';
@@ -507,6 +509,14 @@ const dimBy = dimPoint('b', 1);
       <div v-if="center" class="field ro">
         <label>Senter X / Y</label><output>{{ fmt(center[0]) }} / {{ fmt(center[1]) }}</output>
       </div>
+      <ElevationFields
+        :object-id="track.id"
+        :ports="['start', 'end']"
+        :disabled="isLocked"
+        show-grade
+        :length-m="totalLength"
+      />
+      <ProfileChart :object-id="track.id" />
       <div v-for="p in portInfo" :key="p.port" class="field ro">
         <label>Kobling {{ portLabel(p.port) }}</label>
         <output :data-testid="`prop-port-${p.port}`" :class="p.cls">{{ p.text }}</output>
@@ -620,6 +630,11 @@ const dimBy = dimPoint('b', 1);
         <label>Krysningsvinkel</label
         ><output data-testid="prop-angle">{{ fmt(crossingAngleDeg, 3) }}°</output>
       </div>
+      <ElevationFields
+        :object-id="crossing.id"
+        :ports="['a_start', 'a_end', 'b_start', 'b_end']"
+        :disabled="isLocked"
+      />
       <div v-for="p in portInfo" :key="p.port" class="field ro">
         <label>Kobling {{ portLabel(p.port) }}</label>
         <output :data-testid="`prop-port-${p.port}`" :class="p.cls">{{ p.text }}</output>
@@ -696,6 +711,11 @@ const dimBy = dimPoint('b', 1);
         :decimals="4"
         :model-value="radToDeg(turnout.turnout.headingRad)"
         @commit="tHeading.commit"
+      />
+      <ElevationFields
+        :object-id="turnout.id"
+        :ports="['stem_in', 'stem_out', 'diverging_out']"
+        :disabled="isLocked"
       />
       <div v-for="p in portInfo" :key="p.port" class="field ro">
         <label>Kobling {{ portLabel(p.port) }}</label>

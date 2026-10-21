@@ -236,7 +236,12 @@ const crossingMarks = computed(() => {
         x.point[1] >= rect.minY &&
         x.point[1] <= rect.maxY,
     )
-    .map(({ x, i }) => ({ i, acked: x.acknowledged, kind: x.kind, p: worldToScreen(v, x.point) }));
+    .map(({ x, i }) => ({
+      i,
+      acked: x.acknowledged || x.separation === 'grade_separated',
+      kind: x.kind,
+      p: worldToScreen(v, x.point),
+    }));
 });
 const freePortMarks = computed(() => {
   if (ctrl.activeId.value !== 'connect') return [];

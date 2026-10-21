@@ -1664,3 +1664,93 @@ test('sovitet sporkryss kan plasseres med to museklikk (M og retning)', async ({
   await page.mouse.click(p.x, p.y);
   await expect(page.getByTestId('tab-count-objects')).toHaveText('11');
 });
+
+// ---------- Høyder, profil og planskilt ----------
+test('kote ved porter: delt via koblinger, stigning, profil og konflikt-varsel', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await createLineNumeric(page, { length: '100' }); // track-001
+  await setField(page, 'elev-start', '100');
+  await setField(page, 'elev-end', '102');
+  await expect(page.getByTestId('prop-grade')).toHaveText('20,00 ‰');
+
+  // Forlengelse fra slutten: får delt kote automatisk
+  await selectTool(page, 'connect');
+  await clickWorld(page, 100, 0).catch(() => undefined);
+  await createLineNumeric(page, { x: '100', length: '100' }); // track-002 starter i (100,0)
+  await openTab(page, 'connections');
+  await page.getByTestId('suggest-connect-0').click();
+  await selectInList(page, 'track-002');
+  await expect(field(page, 'elev-start')).toHaveValue('102,000'); // delt via koblingen
+  await expect(page.getByTestId('prop-grade')).toHaveText('ukjent'); // slutt-kote mangler
+  await setField(page, 'elev-end', '101');
+  await expect(page.getByTestId('prop-grade')).toHaveText('-10,00 ‰');
+  await expect(page.getByTestId('profile')).toBeVisible();
+  await expect(page.getByTestId('profile-seg-track-001')).toBeAttached(); // hele kjeden i profilet
+
+  // Tom verdi fjerner kote igjen (og for hele gruppen)
+  await setField(page, 'elev-start', '');
+  await expect(field(page, 'elev-start')).toHaveValue('');
+  await selectInList(page, 'track-001');
+  await expect(field(page, 'elev-end')).toHaveValue('');
+
+  // Konflikt: sett ulike koter på koblede porter via fil er testet i enhetstester; her bekreftes ingen konflikt i UI
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('elev-conflicts-heading')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('planskilt kryssing avgjøres av koter og fri høyde fra prosjektinnstillingene', async ({
+  page,
+}) => {
+  await openApp(page);
+  await createLineNumeric(page, { x: '-10', length: '20' }); // track-001 langs x
+  await createLineNumeric(page, { x: '0', y: '-10', heading: '90', length: '20' }); // track-002 langs y
+  await setField(page, 'elev-start', '107');
+  await setField(page, 'elev-end', '107');
+  await selectInList(page, 'track-001');
+  await setField(page, 'elev-start', '100');
+  await setField(page, 'elev-end', '100');
+
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('cross-row-0')).toContainText('Δh 7,00 m');
+  await expect(page.getByTestId('crossings-heading')).toContainText('(1)'); // fri høyde ikke satt: ikke vurdert
+
+  await menu(page, 'file', 'menu-settings');
+  await page.getByTestId('project-clearance').fill('8');
+  await page.getByTestId('settings-ok').click();
+  await expect(page.getByTestId('cross-row-0')).toContainText('under fri høyde 8,00 m');
+  await expect(page.getByTestId('crossings-heading')).toContainText('(1)');
+
+  await menu(page, 'file', 'menu-settings');
+  await page.getByTestId('project-clearance').fill('6,5');
+  await page.getByTestId('settings-ok').click();
+  await expect(page.getByTestId('cross-row-0')).toContainText('planskilt');
+  await expect(page.getByTestId('crossings-heading')).toContainText('(0)');
+  await expect(page.getByTestId('crossing-mark-0')).toHaveAttribute('data-acked', 'true'); // dempet
+  await expect(page.getByTestId('tab-count-connections')).toHaveCount(0);
+
+  await page.getByTestId('undo-btn').click(); // fri høyde tilbake til 8
+  await expect(page.getByTestId('cross-row-0')).toContainText('under fri høyde 8,00 m');
+});
+
+test('prosjektinnstillinger: ugyldig fri høyde og ufullstendig kjøretøy gir feilmelding', async ({
+  page,
+}) => {
+  await openApp(page);
+  await menu(page, 'file', 'menu-settings');
+  await page.getByTestId('project-clearance').fill('abc');
+  await page.getByTestId('settings-ok').click();
+  await expect(page.getByTestId('settings-error')).toContainText('Fri høyde');
+  await page.getByTestId('project-clearance').fill('');
+  await page.getByTestId('vehicle-length').fill('20');
+  await page.getByTestId('settings-ok').click();
+  await expect(page.getByTestId('settings-error')).toContainText(
+    'fyll ut lengde, boggiavstand og bredde',
+  );
+  await page.getByTestId('vehicle-bogie').fill('14');
+  await page.getByTestId('vehicle-width').fill('3');
+  await page.getByTestId('settings-ok').click();
+  await expect(page.getByTestId('settings')).toHaveCount(0);
+});

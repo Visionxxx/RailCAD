@@ -2,8 +2,10 @@ import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import {
   createEmptyProject,
+  getTurnoutType,
   DEFAULT_LAYER_ID,
   nextId,
+  type DesignParameters,
   type ProjectLayer,
   type Background,
   isTrack,
@@ -26,7 +28,7 @@ import {
   type PortRef,
   type TrackRef,
 } from '@railcad/geometry-api';
-import { applyPatch, type Patch } from '../commands/patch';
+import { applyPatch, type ModelState, type Patch } from '../commands/patch';
 import {
   addBackgroundPatch,
   addLayerPatch,
@@ -54,6 +56,14 @@ import {
 } from '../commands/builders';
 import { geometryEngine as engine } from '../engine';
 import { useUiStore } from './ui';
+import {
+  crossingSegmentElevations,
+  elevationNear,
+  portClusters,
+  resolveElevations,
+  turnoutSegmentElevations,
+  type SegmentElevation,
+} from '@railcad/geometry-ts';
 import { cachedCrossingLayout } from '../rendering/crossings';
 import { objectBounds } from '../rendering/objectBounds';
 import { cachedTurnoutLayout } from '../rendering/turnouts';
@@ -82,6 +92,8 @@ export const useProjectStore = defineStore('project', () => {
   const backgrounds = shallowRef<Background[]>([]);
   const crossingAcks = shallowRef<string[]>([]);
   const layers = shallowRef<ProjectLayer[]>([defaultLayer()]);
+  const portElevations = shallowRef<Record<string, number>>({});
+  const designParameters = shallowRef<DesignParameters>({});
   /** Nye objekter legges på dette laget. */
   const activeLayerId = ref(DEFAULT_LAYER_ID);
   const clipboard = shallowRef<Clipboard | null>(null);
@@ -223,16 +235,93 @@ export const useProjectStore = defineStore('project', () => {
     }
     return engine.findIntersections(items);
   });
+  /** Effektive koter per port (tilkoblede porter deler kote) og konflikter der koblede porter har ulik kote. */
+  const elevations = computed(() => resolveElevations(portElevations.value, connections.value));
+  const elevationConflicts = computed(() => elevations.value.conflicts);
+
+  /** Kote ved start/slutt av et objekts segmenter (null = ukjent). */
+  function segmentElevationsOf(
+    o: RailObject,
+  ): { segments: TrackGeometry[]; z: SegmentElevation[] } | null {
+    const eff = elevations.value.effective;
+    const zOf = (port: string) => eff.get(`${o.id}:${port}`);
+    if (isTrack(o)) {
+      return {
+        segments: [o.geometry],
+        z: [{ zStart: zOf('start') ?? null, zEnd: zOf('end') ?? null }],
+      };
+    }
+    if (isTurnout(o)) {
+      const type = getTurnoutType(o.turnout.catalogId);
+      const layout = cachedTurnoutLayout(o);
+      if (!type || !layout) return null;
+      return {
+        segments: layout.segments,
+        z: turnoutSegmentElevations(type, layout.segments, {
+          stemIn: zOf('stem_in'),
+          stemOut: zOf('stem_out'),
+          divergingOut: zOf('diverging_out'),
+        }),
+      };
+    }
+    if (isCrossing(o)) {
+      const layout = cachedCrossingLayout(o);
+      return {
+        segments: layout.segments,
+        z: crossingSegmentElevations(o.crossing, layout.segments, {
+          aStart: zOf('a_start'),
+          aEnd: zOf('a_end'),
+          bStart: zOf('b_start'),
+          bEnd: zOf('b_end'),
+        }),
+      };
+    }
+    return null;
+  }
+  /** Kote for et objekt i et punkt nær aksen (null = ukjent). */
+  function elevationOfObjectAt(id: string, point: readonly [number, number]): number | null {
+    const o = byId.value.get(id);
+    const se = o ? segmentElevationsOf(o) : null;
+    return se ? elevationNear(se.segments, se.z, point as [number, number]) : null;
+  }
+
   const crossingIssues = computed(() =>
-    intersections.value.map((x) => ({
-      ...x,
-      key: `${x.a}|${x.b}`,
-      acknowledged: crossingAcks.value.includes(`${x.a}|${x.b}`),
-    })),
+    intersections.value.map((x) => {
+      const zA = x.kind === 'crossing' ? elevationOfObjectAt(x.a, x.point) : null;
+      const zB = x.kind === 'crossing' ? elevationOfObjectAt(x.b, x.point) : null;
+      const deltaM = zA !== null && zB !== null ? Math.abs(zA - zB) : null;
+      const clearance = designParameters.value.minVerticalClearanceM;
+      // Planskilt: kjent høydeforskjell som er minst den fri høyden brukeren har satt.
+      const separation =
+        deltaM === null || clearance === undefined
+          ? null
+          : deltaM >= clearance
+            ? 'grade_separated'
+            : 'low_clearance';
+      return {
+        ...x,
+        key: `${x.a}|${x.b}`,
+        acknowledged: crossingAcks.value.includes(`${x.a}|${x.b}`),
+        zA,
+        zB,
+        deltaM,
+        separation: separation as 'grade_separated' | 'low_clearance' | null,
+      };
+    }),
   );
   const openCrossingCount = computed(
-    () => crossingIssues.value.filter((x) => !x.acknowledged).length,
+    () =>
+      crossingIssues.value.filter((x) => !x.acknowledged && x.separation !== 'grade_separated')
+        .length,
   );
+  /** Koter som fortsatt gjelder eksisterende objekter (ellers droppes de ved lagring). */
+  function livePortElevations(): Record<string, number> | undefined {
+    const out: Record<string, number> = {};
+    for (const [k, z] of Object.entries(portElevations.value)) {
+      if (byId.value.has(k.slice(0, k.lastIndexOf(':')))) out[k] = z;
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
   /** Skrives bare i filen når lagene avviker fra standardoppsettet (en synlig, ulåst «Standard»). */
   function layersCustomised(): boolean {
     const d = layers.value[0];
@@ -249,18 +338,34 @@ export const useProjectStore = defineStore('project', () => {
     if (kept.length !== selection.value.length) selection.value = kept;
   }
 
+  function modelState(): ModelState {
+    return {
+      objects: objects.value,
+      connections: connections.value,
+      backgrounds: backgrounds.value,
+      crossingAcks: crossingAcks.value,
+      layers: layers.value,
+      portElevations: portElevations.value,
+      designParameters: designParameters.value,
+    };
+  }
+
   function commit(next: {
     objects: RailObject[];
     connections: Connection[];
     backgrounds: Background[];
     crossingAcks: string[];
     layers: ProjectLayer[];
+    portElevations: Record<string, number>;
+    designParameters: DesignParameters;
   }) {
     objects.value = next.objects;
     connections.value = next.connections;
     backgrounds.value = next.backgrounds;
     crossingAcks.value = next.crossingAcks;
     layers.value = next.layers;
+    portElevations.value = next.portElevations;
+    designParameters.value = next.designParameters;
     if (!layers.value.some((l) => l.id === activeLayerId.value))
       activeLayerId.value = DEFAULT_LAYER_ID;
     revision.value++;
@@ -270,19 +375,7 @@ export const useProjectStore = defineStore('project', () => {
   /** Utfører en redigering og legger den på angre-stakken. */
   function execute(patch: Patch | null): boolean {
     if (!patch) return false;
-    commit(
-      applyPatch(
-        {
-          objects: objects.value,
-          connections: connections.value,
-          backgrounds: backgrounds.value,
-          crossingAcks: crossingAcks.value,
-          layers: layers.value,
-        },
-        patch,
-        'do',
-      ),
-    );
+    commit(applyPatch(modelState(), patch, 'do'));
     undoStack.value = [...undoStack.value, patch].slice(-HISTORY_LIMIT);
     redoStack.value = [];
     return true;
@@ -291,19 +384,7 @@ export const useProjectStore = defineStore('project', () => {
   function undo() {
     const patch = undoStack.value.at(-1);
     if (!patch) return;
-    commit(
-      applyPatch(
-        {
-          objects: objects.value,
-          connections: connections.value,
-          backgrounds: backgrounds.value,
-          crossingAcks: crossingAcks.value,
-          layers: layers.value,
-        },
-        patch,
-        'undo',
-      ),
-    );
+    commit(applyPatch(modelState(), patch, 'undo'));
     undoStack.value = undoStack.value.slice(0, -1);
     redoStack.value = [...redoStack.value, patch];
     historyEpoch.value++;
@@ -312,19 +393,7 @@ export const useProjectStore = defineStore('project', () => {
   function redo() {
     const patch = redoStack.value.at(-1);
     if (!patch) return;
-    commit(
-      applyPatch(
-        {
-          objects: objects.value,
-          connections: connections.value,
-          backgrounds: backgrounds.value,
-          crossingAcks: crossingAcks.value,
-          layers: layers.value,
-        },
-        patch,
-        'do',
-      ),
-    );
+    commit(applyPatch(modelState(), patch, 'do'));
     redoStack.value = redoStack.value.slice(0, -1);
     undoStack.value = [...undoStack.value, patch];
     historyEpoch.value++;
@@ -373,6 +442,35 @@ export const useProjectStore = defineStore('project', () => {
     execute(patch);
     return connected;
   }
+  /** Setter (eller fjerner med null) kote for en port og alle porter den er koblet til. */
+  function setPortElevation(portKeyStr: string, z: number | null): boolean {
+    const cluster = portClusters(connections.value);
+    const root = cluster.get(portKeyStr);
+    const members = root
+      ? [...cluster].filter(([, r]) => r === root).map(([k]) => k)
+      : [portKeyStr];
+    const next = { ...portElevations.value };
+    for (const k of members) {
+      if (z === null) delete next[k];
+      else next[k] = z;
+    }
+    return execute({
+      label: z === null ? 'Fjern kote' : 'Sett kote',
+      objects: {},
+      portElevations: { before: portElevations.value, after: next },
+    });
+  }
+  function setDesignParameters(change: Partial<DesignParameters>, label: string): boolean {
+    const next: DesignParameters = { ...designParameters.value, ...change };
+    for (const k of Object.keys(next) as Array<keyof DesignParameters>)
+      if (next[k] === undefined) delete next[k];
+    return execute({
+      label,
+      objects: {},
+      designParameters: { before: designParameters.value, after: next },
+    });
+  }
+
   function toggleCrossingAck(key: string) {
     return execute(toggleCrossingAckPatch(crossingAcks.value, key));
   }
@@ -539,6 +637,8 @@ export const useProjectStore = defineStore('project', () => {
     backgrounds.value = project.backgrounds ?? [];
     crossingAcks.value = project.acknowledgedCrossings ?? [];
     layers.value = normalizeLayers(project.layers);
+    portElevations.value = project.portElevations ?? {};
+    designParameters.value = project.designParameters ?? {};
     activeLayerId.value = DEFAULT_LAYER_ID;
     selection.value = [];
     undoStack.value = [];
@@ -565,6 +665,10 @@ export const useProjectStore = defineStore('project', () => {
       ...(backgrounds.value.length ? { backgrounds: [...backgrounds.value] } : {}),
       ...(liveAcks().length ? { acknowledgedCrossings: liveAcks() } : {}),
       ...(layersCustomised() ? { layers: [...layers.value] } : {}),
+      ...(livePortElevations() ? { portElevations: livePortElevations() } : {}),
+      ...(Object.keys(designParameters.value).length
+        ? { designParameters: { ...designParameters.value } }
+        : {}),
     };
   }
 
@@ -601,6 +705,14 @@ export const useProjectStore = defineStore('project', () => {
     openCrossingCount,
     crossingAcks,
     toggleCrossingAck,
+    portElevations,
+    designParameters,
+    elevations,
+    elevationConflicts,
+    segmentElevationsOf,
+    elevationOfObjectAt,
+    setPortElevation,
+    setDesignParameters,
     layers,
     activeLayerId,
     layerById,
