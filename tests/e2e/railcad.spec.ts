@@ -2005,3 +2005,35 @@ test('3D-oversikt: åpnes fra Visning, viser merknad, antall akser og overdrivel
   await expect(page.getByTestId('view3d')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('3D-oversikt: klikk på en skinne gir informasjon om objektet (og kote)', async ({ page }) => {
+  const errors = await openApp(page);
+  await menu(page, 'file', 'menu-demo');
+  await menu(page, 'view', 'menu-3d');
+  const canvas = page.getByTestId('v3-canvas').locator('canvas');
+  await expect(canvas).toHaveCount(1);
+  // Velg via testkroken (WebGL-treff avhenger av kamera): informasjonen skal vises.
+  await page.evaluate(() =>
+    (window as never as { __v3select: (id: string) => void }).__v3select('track-001'),
+  );
+  await expect(page.getByTestId('v3-info')).toBeVisible();
+  await expect(page.getByTestId('v3-info-title')).toHaveText('Rett spor');
+  await expect(page.getByTestId('v3-info')).toContainText('track-001');
+  await expect(page.getByTestId('v3-info')).toContainText('Lengde');
+  await expect(page.getByTestId('v3-info')).toContainText('Kote');
+  // Ekte museklikk: skann tegneflaten til en skinne treffes.
+  await page.evaluate(() =>
+    (window as never as { __v3select: (id: string | null) => void }).__v3select(null),
+  );
+  await expect(page.getByTestId('v3-info')).toHaveCount(0);
+  const box = (await canvas.boundingBox())!;
+  let hit = false;
+  for (let iy = 1; iy < 40 && !hit; iy++) {
+    for (let ix = 1; ix < 60 && !hit; ix++) {
+      await page.mouse.click(box.x + (box.width * ix) / 60, box.y + (box.height * iy) / 40);
+      hit = (await page.getByTestId('v3-info').count()) > 0;
+    }
+  }
+  expect(hit).toBe(true);
+  expect(errors).toEqual([]);
+});

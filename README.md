@@ -50,7 +50,7 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Egne veksler og kryss:** **Fil → Veksler og kryss (editor)** lar deg definere veksltyper (enkel, tresporsveksel, symmetrisk – med radius/1:n eller TRV-lignende hovedmål A–F) og forhåndsinnstillinger for sporkryss/kryssveksel, med live forhåndsvisning. Alt er «brukerdefinert – ikke verifisert». Typene lagres i prosjektfilen og kan deles som bibliotekfil (Fil → Importer/Eksporter vekselbibliotek). Se `docs/vekseleditor.md`.
 
-**3D-oversikt:** Visning → 3D-oversikt viser sporakser med kote fra portene i 3D (dra = roter, høyreknapp = flytt, hjul = zoom). Skrivebeskyttet, med skyver for **vertikal overdrivelse** (standard ×10) – ikke egnet til måling. Spor uten kote tegnes grått på nivå 0. `three` lastes først når oversikten åpnes.
+**3D-oversikt:** Visning → 3D-oversikt viser sporene som **skinner** (to per akse, skjematisk sporvidde 1,435 m; tverrsnittet forstørres ved store anlegg) med kote fra portene. Dra = roter, høyreknapp = flytt, hjul = zoom. **Klikk på en skinne** viser objektinfo (type, lengde/radius, status, kote per port, stigning); skrivebeskyttet. Skyver for **vertikal overdrivelse** (standard ×10) – ikke egnet til måling. Spor uten kote tegnes grått på nivå 0. `three` lastes først når oversikten åpnes.
 
 **Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
 

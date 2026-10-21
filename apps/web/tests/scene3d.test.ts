@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RailObject } from '@railcad/domain';
-import { collectPolylines } from '../src/rendering/scene3d';
+import { GAUGE_M, collectPolylines, railPoint } from '../src/rendering/scene3d';
 
 const track: RailObject = {
   id: 'track-001',
@@ -30,5 +30,17 @@ describe('3D-punktrekker', () => {
       dimension: { kind: 'length', targetId: 'track-001', offsetM: 1 },
     };
     expect(collectPolylines([dim], () => null)).toEqual([]);
+  });
+  it('skinnene ligger ±halv sporvidde vinkelrett på retningen', () => {
+    const p = { x: 5, y: 2, headingRad: 0 };
+    expect(railPoint(p, 1).y).toBeCloseTo(2 + GAUGE_M / 2, 12);
+    expect(railPoint(p, -1).y).toBeCloseTo(2 - GAUGE_M / 2, 12);
+    const q = { x: 0, y: 0, headingRad: Math.PI / 2 }; // retning +Y: venstre er −X
+    expect(railPoint(q, 1).x).toBeCloseTo(-GAUGE_M / 2, 12);
+    const d = Math.hypot(
+      railPoint(q, 1).x - railPoint(q, -1).x,
+      railPoint(q, 1).y - railPoint(q, -1).y,
+    );
+    expect(d).toBeCloseTo(GAUGE_M, 12);
   });
 });

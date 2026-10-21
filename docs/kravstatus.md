@@ -76,7 +76,7 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Vekseleditor og bibliotek:** egne veksltyper (enkel, tresporsveksel, symmetrisk/dobbel; geometri eller hovedmål A–F), forhåndsinnstillinger for sporkryss/kryssveksel, bibliotekfil for deling, live forhåndsvisning. Alt «brukerdefinert – ikke verifisert». `domain/custom-turnouts.ts`, `library.ts`, `geometry-ts/turnout.ts` (ruter), `TurnoutEditor.vue`, `docs/vekseleditor.md`. Tester: enhet `custom-turnout.test.ts` (6) + `custom-turnouts.test.ts` (12); e2e (7).
 
-- **3D-oversikt (RC-015 trinn 2):** skrivebeskyttet, `rendering/scene3d.ts` (punktrekker med kote), `rendering/three-scene.ts` (lazy), `View3D.vue`. Overdrevet høyde og «ikke vurdert mot regelverk» står i dialogen. Tester: enhet `scene3d.test.ts` (2), e2e (1). Ikke testet visuelt mot andre nettlesere enn Chromium.
+- **3D-oversikt (RC-015 trinn 2):** skrivebeskyttet, skinner (skjematisk sporvidde) og klikk-for-info, `rendering/scene3d.ts` (punktrekker med kote og retning), `rendering/three-scene.ts` (lazy), `View3D.vue`. Overdrevet høyde og «ikke vurdert mot regelverk» står i dialogen. Tester: enhet `scene3d.test.ts` (3), e2e (2, inkl. ekte museklikk). Ikke testet visuelt mot andre nettlesere enn Chromium.
 
 - **Høyder (RC-015 trinn 1) og planskilt:** kote per port (delt via koblinger), stigning, lengdeprofil langs sporkjede, kote-konflikter, automatisk planskilt ut fra kote og en fri høyde du selv setter i prosjektinnstillingene. `geometry-ts/elevation.ts`, `ElevationFields.vue`, `ProfileChart.vue`. Tester: enhet (4+4+2), e2e (3).
 
