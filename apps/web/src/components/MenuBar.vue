@@ -144,6 +144,12 @@ const menus = computed<MenuDef[]>(() => [
         testid: 'menu-rails',
       },
       {
+        label: '3D-oversikt …',
+        run: () => (ui.view3dOpen = true),
+        disabled: !project.objects.length,
+        testid: 'menu-3d',
+      },
+      {
         label: view.theme === 'dark' ? 'Lyst tema' : 'Mørkt tema',
         run: () => view.setTheme(view.theme === 'dark' ? 'light' : 'dark'),
         testid: 'menu-theme',

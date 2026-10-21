@@ -6,6 +6,7 @@ import { useAutosave } from './io/autosave';
 import MenuBar from './components/MenuBar.vue';
 import ModalDialog from './components/ModalDialog.vue';
 import PromptDialog from './components/PromptDialog.vue';
+import View3D from './components/View3D.vue';
 import TurnoutEditor from './components/TurnoutEditor.vue';
 import ProjectSettings from './components/ProjectSettings.vue';
 import WelcomeCard from './components/WelcomeCard.vue';
@@ -38,7 +39,7 @@ const byShortcut = new Map(
 );
 
 function onKeyDown(e: KeyboardEvent) {
-  if (ui.dialog || ui.settingsOpen || ui.turnoutEditorOpen) return; // dialoger håndterer sine egne taster
+  if (ui.dialog || ui.settingsOpen || ui.turnoutEditorOpen || ui.view3dOpen) return; // dialoger håndterer sine egne taster
   if (isTypingTarget(e)) return;
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key.toLowerCase();
@@ -115,6 +116,7 @@ onBeforeUnmount(() => {
     <ModalDialog />
     <ProjectSettings />
     <TurnoutEditor />
+    <View3D />
     <PromptDialog />
   </div>
 </template>

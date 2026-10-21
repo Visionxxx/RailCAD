@@ -50,6 +50,8 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Egne veksler og kryss:** **Fil → Veksler og kryss (editor)** lar deg definere veksltyper (enkel, tresporsveksel, symmetrisk – med radius/1:n eller TRV-lignende hovedmål A–F) og forhåndsinnstillinger for sporkryss/kryssveksel, med live forhåndsvisning. Alt er «brukerdefinert – ikke verifisert». Typene lagres i prosjektfilen og kan deles som bibliotekfil (Fil → Importer/Eksporter vekselbibliotek). Se `docs/vekseleditor.md`.
 
+**3D-oversikt:** Visning → 3D-oversikt viser sporakser med kote fra portene i 3D (dra = roter, høyreknapp = flytt, hjul = zoom). Skrivebeskyttet, med skyver for **vertikal overdrivelse** (standard ×10) – ikke egnet til måling. Spor uten kote tegnes grått på nivå 0. `three` lastes først når oversikten åpnes.
+
 **Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
 
 **Valg og tegning:** dra på tom flate for _valgboks_ (mot høyre: helt innenfor, mot venstre: alt som berøres, Skift legger til). Hold **Skift** mens du tegner et rett spor for å låse retningen til 15°. Pil opp/ned i tallfelt justerer verdien (Skift ×10, Alt ×0,1). Objekter opprettet via skjema utenfor skjermen blir vist automatisk.
@@ -107,7 +109,7 @@ Se `docs/` for filformat og beslutninger.
 - **Tangenttoleranse for koblinger er en foreløpig testverdi.**
 - **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
 - **Bakgrunn:** bare side 1 av PDF, ingen georeferering, DXF uten HATCH/DIMENSION.
-- **Ingen lag, klotoider, vertikalgeometri eller 3D** (P1/P2 eller eksplisitt utelatt).
+- **Ingen klotoider, vertikalkurver eller redigerbar 3D (3D er kun oversikt)** (P1/P2 eller eksplisitt utelatt).
 - **Sporkryss** er brukerdefinert (to rette akser, vinkel atan(1/n), lengde angitt av deg) og alltid «ikke verifisert». Kryssveksel og sovitet sporkryss er brukerdefinert (se `docs/sporkryss-sovitet.md`). Høyder finnes ikke i modellen.
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.

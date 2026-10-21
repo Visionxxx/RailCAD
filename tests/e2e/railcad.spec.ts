@@ -1987,3 +1987,21 @@ test('DXF-eksport merker egen veksel som ikke verifisert', async ({ page }, info
   expect(dxf).toContain('DXF-veksel');
   expect(dxf.toLowerCase()).toContain('ikke verifisert');
 });
+
+test('3D-oversikt: åpnes fra Visning, viser merknad, antall akser og overdrivelse; lukkes med Esc', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await expect(page.getByTestId('menu-view')).toBeVisible();
+  await menu(page, 'file', 'menu-demo');
+  await menu(page, 'view', 'menu-3d');
+  await expect(page.getByTestId('view3d')).toBeVisible();
+  await expect(page.getByTestId('v3-note')).toContainText('overdrevet');
+  await expect(page.getByTestId('v3-stats')).toContainText('akser');
+  await expect(page.getByTestId('v3-canvas').locator('canvas')).toHaveCount(1);
+  await page.getByTestId('v3-exaggeration').fill('40');
+  await expect(page.getByTestId('view3d')).toContainText('×40');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('view3d')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

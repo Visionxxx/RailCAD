@@ -47,6 +47,8 @@ export const useUiStore = defineStore('ui', () => {
   const settingsOpen = ref(false);
   /** Vekseleditoren (egne veksltyper og krysningsforhåndsinnstillinger). */
   const turnoutEditorOpen = ref(false);
+  /** Skrivebeskyttet 3D-oversikt. */
+  const view3dOpen = ref(false);
   const prompt = ref<(NumberPrompt & { resolve: (v: number | null) => void }) | null>(null);
   /** Skjult «Kom i gang»-kort (gjelder økten). */
   const welcomeDismissed = ref(false);
@@ -88,6 +90,7 @@ export const useUiStore = defineStore('ui', () => {
     dialog,
     settingsOpen,
     turnoutEditorOpen,
+    view3dOpen,
     prompt,
     promptNumber,
     welcomeDismissed,
