@@ -20,17 +20,19 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { railPoint, type Polyline3D } from './scene3d';
+import {
+  RAIL_H,
+  RAIL_W,
+  SLEEPER_H,
+  SLEEPER_LEN,
+  SLEEPER_W,
+  railPoint,
+  type StripKind,
+} from './scene3d';
+import type { SceneModel } from './scene-model';
 
-// Skjematiske mål (meter). Ikke overbygningsprosjektering.
-const RAIL_W = 0.12; // litt bredere enn et skinnehode (≈ 0,07) for å synes
-const RAIL_H = 0.18;
 const BALLAST_HALF_W = 1.8;
 const BALLAST_H = 0.3;
-const SLEEPER_LEN = 2.6;
-const SLEEPER_W = 0.26;
-const SLEEPER_H = 0.2;
-const SLEEPER_SPACING = 0.6;
 const MAX_SLEEPERS = 60000;
 
 type P3 = { x: number; y: number; z: number };
@@ -89,7 +91,7 @@ function stripGeometry(
  */
 export function createScene(
   host: HTMLElement,
-  lines: Polyline3D[],
+  model: SceneModel,
   exaggeration: number,
   onPick: (objectId: string | null) => void,
 ) {
@@ -116,8 +118,16 @@ export function createScene(
   const railPicked = new MeshLambertMaterial({ color: 0xffb020 });
   const ballastMat = new MeshLambertMaterial({ color: dark ? 0x4a4d52 : 0x9a9fa6 });
   const ballastPicked = new MeshLambertMaterial({ color: 0x8a6a2a });
+  const kindMat: Record<StripKind, MeshLambertMaterial> = {
+    blade: new MeshLambertMaterial({ color: 0xf2f5f9 }),
+    frog: new MeshLambertMaterial({ color: 0x9a6232 }),
+    check: new MeshLambertMaterial({ color: dark ? 0xb9c0ca : 0x59626e }),
+    machine: new MeshLambertMaterial({ color: 0xc9a92e }),
+    stretcher: new MeshLambertMaterial({ color: 0x2f3338 }),
+  };
   const sleeperMat = new MeshLambertMaterial({ color: dark ? 0x2b2622 : 0x5a4a3c });
 
+  const { lines, strips: stripParts } = model;
   const meshes: Mesh[] = []; // kan treffes med klikk
   let sleepers: InstancedMesh | null = null;
   let selected: string | null = null;
@@ -147,15 +157,19 @@ export function createScene(
   const size = Math.max(maxX - minX, maxY - minY, 20);
 
   const materialFor = (m: Mesh) =>
-    m.userData.kind === 'ballast'
+    m.userData.part
       ? m.userData.objectId === selected
-        ? ballastPicked
-        : ballastMat
-      : m.userData.objectId === selected
         ? railPicked
-        : m.userData.unknown
-          ? railUnknown
-          : railMat;
+        : kindMat[m.userData.part as StripKind]
+      : m.userData.kind === 'ballast'
+        ? m.userData.objectId === selected
+          ? ballastPicked
+          : ballastMat
+        : m.userData.objectId === selected
+          ? railPicked
+          : m.userData.unknown
+            ? railUnknown
+            : railMat;
   const refreshMaterials = () => meshes.forEach((m) => (m.material = materialFor(m)));
 
   const sleeperBox = new BoxGeometry(SLEEPER_W, SLEEPER_H, SLEEPER_LEN);
@@ -186,29 +200,28 @@ export function createScene(
         const pts = l.points.map((p) => ({ ...railPoint(p, side), z: p.z ?? 0 }));
         add(stripGeometry(pts, k, cx, cy, RAIL_W, SLEEPER_H, RAIL_H), 'rail');
       }
-      // Sviller med fast avstand langs aksen (posisjon og retning interpoleres mellom punktene).
-      let acc = 0; // lengde til starten av dette punktparet
-      let next = SLEEPER_SPACING / 2;
-      for (let i = 1; i < l.points.length && mats.length < MAX_SLEEPERS; i++) {
-        const a = l.points[i - 1]!;
-        const b = l.points[i]!;
-        const seg = Math.hypot(b.x - a.x, b.y - a.y);
-        for (; next <= acc + seg && mats.length < MAX_SLEEPERS; next += SLEEPER_SPACING) {
-          const t = seg > 0 ? (next - acc) / seg : 0;
-          const x = a.x + (b.x - a.x) * t - cx;
-          const z = (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t;
-          const yy = -(a.y + (b.y - a.y) * t - cy);
-          const heading = a.headingRad + (b.headingRad - a.headingRad) * t;
-          mats.push(
-            new Matrix4().compose(
-              new Vector3(x, z * k + SLEEPER_H / 2, yy),
-              new Quaternion().setFromEuler(new Euler(0, heading, 0)),
-              new Vector3(1, 1, 1),
-            ),
-          );
-        }
-        acc += seg;
-      }
+    }
+    // Vekseldeler (tunger, hjerte, ledeskinner, stillverk, stagstang).
+    for (const part of stripParts) {
+      const pts = part.points.map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0 }));
+      const mesh = new Mesh(
+        stripGeometry(pts, k, cx, cy, part.widthM, part.baseM, part.heightM),
+        ballastMat,
+      );
+      mesh.userData = { objectId: part.objectId, part: part.kind };
+      mesh.material = materialFor(mesh);
+      scene.add(mesh);
+      meshes.push(mesh);
+    }
+    // Sviller (egen lengde per svelle).
+    for (const sl of model.sleepers.slice(0, MAX_SLEEPERS)) {
+      mats.push(
+        new Matrix4().compose(
+          new Vector3(sl.x - cx, (sl.z ?? 0) * k + SLEEPER_H / 2, -(sl.y - cy)),
+          new Quaternion().setFromEuler(new Euler(0, sl.headingRad, 0)),
+          new Vector3(1, 1, sl.lengthM / SLEEPER_LEN),
+        ),
+      );
     }
     if (mats.length) {
       sleepers = new InstancedMesh(sleeperBox, sleeperMat, mats.length);
@@ -289,7 +302,15 @@ export function createScene(
       for (const m of meshes) m.geometry.dispose();
       sleepers?.dispose();
       sleeperBox.dispose();
-      for (const m of [railMat, railUnknown, railPicked, ballastMat, ballastPicked, sleeperMat])
+      for (const m of [
+        railMat,
+        railUnknown,
+        railPicked,
+        ballastMat,
+        ballastPicked,
+        sleeperMat,
+        ...Object.values(kindMat),
+      ])
         m.dispose();
       renderer.dispose();
       el.remove();

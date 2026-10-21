@@ -10,7 +10,7 @@ import {
 } from '@railcad/domain';
 import { geometryEngine as engine } from '../engine';
 import { fmt, portLabel } from '../format';
-import { collectPolylines } from '../rendering/scene3d';
+import { buildSceneModel } from '../rendering/scene-model';
 import { useProjectStore } from '../stores/project';
 import { useUiStore } from '../stores/ui';
 
@@ -79,7 +79,10 @@ let handle: Handle | null = null;
 
 async function start() {
   status.value = 'Laster 3D …';
-  const lines = collectPolylines(project.objects, project.segmentElevationsOf);
+  const model = buildSceneModel(project.objects, project.segmentElevationsOf, (id) =>
+    findTurnoutDefinition(id, project.customTurnouts),
+  );
+  const lines = model.lines;
   stats.value = {
     lines: lines.length,
     unknown: lines.filter((l) => l.points.some((p) => p.z === null)).length,
@@ -88,7 +91,7 @@ async function start() {
   if (!host.value) return;
   try {
     const { createScene } = await import('../rendering/three-scene');
-    handle = createScene(host.value, lines, exaggeration.value, (id) => (pickedId.value = id));
+    handle = createScene(host.value, model, exaggeration.value, (id) => (pickedId.value = id));
     status.value = '';
   } catch (e) {
     status.value = `Kunne ikke starte 3D (${(e as Error).message}). Nettleseren støtter kanskje ikke WebGL.`;
