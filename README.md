@@ -48,9 +48,11 @@ Andre hurtigtaster: `Ctrl+Z` angre, `Ctrl+Y`/`Ctrl+Shift+Z` gjør om (200 trinn)
 
 **Høyder og planskilt:** sett **kote** per port i egenskapspanelet (tomt = ukjent). Koblede porter deler kote; stigning og **lengdeprofil** langs sporkjeden vises. Setter du **minste fri høyde** i Prosjektinnstillinger (ingen standardverdi), avgjøres planskilte kryssinger automatisk ut fra høydeforskjellen (Δh vises i kontrollfanen). Kote-konflikter ved koblinger varsles.
 
-**Egne veksler og kryss:** **Fil → Veksler og kryss (editor)** lar deg definere veksltyper (enkel, tresporsveksel, symmetrisk – med radius/1:n eller TRV-lignende hovedmål A–F) og forhåndsinnstillinger for sporkryss/kryssveksel, med live forhåndsvisning. Alt er «brukerdefinert – ikke verifisert». Typene lagres i prosjektfilen og kan deles som bibliotekfil (Fil → Importer/Eksporter vekselbibliotek). Se `docs/vekseleditor.md`.
+**Egne veksler og kryss:** **Fil → Veksler og kryss (editor)** lar deg definere veksltyper (enkel, tresporsveksel, symmetrisk – med radius/1:n eller TRV-lignende hovedmål A–F) og forhåndsinnstillinger for sporkryss/kryssveksel, med live forhåndsvisning. Alt er «brukerdefinert – ikke verifisert». Typene lagres i prosjektfilen og kan deles som bibliotekfil (Fil → Importer/Eksporter vekselbibliotek). Se `docs/vekseleditor.md`. Drift/distribusjon: `docs/distribusjon.md`. Test med egne filer og eget CAD-program: `docs/testsjekkliste.md`.
 
 **3D-oversikt:** Visning → 3D-oversikt viser sporene som en skjematisk **sporbygning**: sporbunn (singel), sviller (0,6 m) og to skinner per akse (sporvidde 1,435 m) – ikke overbygningsprosjektering; skinnehodet er tegnet litt bredere enn virkeligheten. **Veksler** vises med illustrativ mekanikk: tunger (6 m), hjerte, ledeskinner, stillverk, stagstenger og vekselsviller (svillefelt som dekker alle spor, delt når sporene ligger langt fra hverandre). Delene utledes av aksene med generiske proporsjoner – **ikke produktgeometri**, og hjertets plassering følger akseskjæringen i modellen, ikke en leverandørtegning. Kote fra portene gir høyden. Dra = roter, høyreknapp = flytt, hjul = zoom; knapper for Oversikt / Rett ovenfra / Fra siden. **Klikk på en skinne eller sporbunn** viser objektinfo (type, lengde/radius, status, kote per port, stigning); skrivebeskyttet. Skyver for **vertikal overdrivelse** (standard ×10) – ikke egnet til måling. Spor uten kote tegnes i avvikende farge på nivå 0. `three` lastes først når oversikten åpnes.
+
+**Kjøretøykontroll (RC-015):** sett dine egne kjøretøymål i Prosjektinnstillinger (lengde, boggiavstand, bredde, sideklaring per side – ingen standardverdier). Under **Kontroll → Kjøretøykontroll** beregnes utsving i hver sirkelkurve (innover δi = R − √(R² − (B/2)²), utover δo = √((B/2+O)² + R² − (B/2)²) − R) og avstanden mellom nabospor (1–15 m) mot nødvendig senteravstand (bredde + 2 × klaring + utsving for begge spor ved nærmeste punkt). Alltid «ikke vurdert mot regelverk»: ingen kantsteg, overhøyde, vertikalkurver eller regelverkskrav.
 
 **Å bli fort kjent:** i et tomt prosjekt vises et «Kom i gang»-kort (eksempler, åpne fil, import, hjelp). **Hjelp → Hurtigtaster og tips** (eller `?`) viser alle snarveier. Angre/gjør om og zoom/tilpass har egne knapper.
 
@@ -110,7 +112,7 @@ Se `docs/` for filformat og beslutninger.
 - **DXF-eksport er ikke testet i AutoCAD** (kun ezdxf og egne tester); måltall eksporteres som tekst.
 - **Bakgrunn:** bare side 1 av PDF, ingen georeferering, DXF uten HATCH/DIMENSION.
 - **Ingen klotoider, vertikalkurver eller redigerbar 3D (3D er kun oversikt)** (P1/P2 eller eksplisitt utelatt).
-- **Sporkryss** er brukerdefinert (to rette akser, vinkel atan(1/n), lengde angitt av deg) og alltid «ikke verifisert». Kryssveksel og sovitet sporkryss er brukerdefinert (se `docs/sporkryss-sovitet.md`). Høyder finnes ikke i modellen.
+- **Sporkryss** er brukerdefinert (to rette akser, vinkel atan(1/n), lengde angitt av deg) og alltid «ikke verifisert». Kryssveksel og sovitet sporkryss er brukerdefinert (se `docs/sporkryss-sovitet.md`).
 - Parallellføring støtter kun **rette** spor. Kopien er en uavhengig kopi (ingen parametrisk kobling).
 - Lokalt XY-system. Svært store koordinater (f.eks. UTM ~6 000 000 m) er ikke testet i visningen og bør løses sammen med georeferering.
 - Mål: «Mål avstand» er punkt-til-punkt. Vinkelrett sporavstand må settes via endepunkter/snapping; egen funksjon kan komme i P1.
@@ -119,6 +121,11 @@ Se `docs/` for filformat og beslutninger.
 - Ytelse: tegnet og testet med 5 000 spor (utsnittskulling; ca. 20–40 ms per zoomsteg i testmiljøet). Objektlisten tegner alle rader.
 - Lagring skjer som nedlastet fil. Automatisk sikkerhetskopi i nettleseren (kladd) beskytter mot tap ved oppdatering/krasj, men kan utebli for svært store prosjekter eller hvis nettleseren blokkerer lokal lagring.
 
-## Neste steg (P1)
+## Neste steg
 
-Verifisert sporvekselgeometri fra KO-tegninger (se `docs/henvendelse-bane-nor.md`), flere vekseltyper, DXF-eksport (med lag), referansebakgrunn, parametriske sammenhenger mellom spor. MVP skal være ferdig verifisert før dette starter.
+Gjort: MVP, P1 (topologi, sporveksler, DXF, bakgrunn), kryss/kryssveksel/sovitet sporkryss, høyder og planskilt, vekseleditor og bibliotek, 3D-oversikt og kjøretøykontroll. Gjenstår, og krever data eller beslutninger utenfra:
+
+1. **Verifiserte vekselmål** fra KO-tegninger og leverandørdata (`docs/henvendelse-bane-nor.md`, `docs/henvendelse-leverandor.md` er ikke sendt).
+2. **Regelverkskontroll (RC-014)** – krever avklaring av hvilke krav som skal kontrolleres.
+3. **Test med egne filer og eget CAD-program** (`docs/testsjekkliste.md`), og Safari/WebKit.
+4. Georeferering, klotoider og vertikalkurver (ikke i omfang så langt).

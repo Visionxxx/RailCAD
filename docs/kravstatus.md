@@ -76,6 +76,8 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - **Vekseleditor og bibliotek:** egne veksltyper (enkel, tresporsveksel, symmetrisk/dobbel; geometri eller hovedmål A–F), forhåndsinnstillinger for sporkryss/kryssveksel, bibliotekfil for deling, live forhåndsvisning. Alt «brukerdefinert – ikke verifisert». `domain/custom-turnouts.ts`, `library.ts`, `geometry-ts/turnout.ts` (ruter), `TurnoutEditor.vue`, `docs/vekseleditor.md`. Tester: enhet `custom-turnout.test.ts` (6) + `custom-turnouts.test.ts` (12); e2e (7).
 
+- **Kjøretøykontroll (RC-015 trinn 3):** `geometry-ts/vehicle.ts` (utsving, nabosporavstand), seksjonen «Kjøretøykontroll» i Kontroll-fanen. Brukerens egne mål, ingen standardverdier; alltid «ikke vurdert mot regelverk». Tester: enhet `vehicle.test.ts` (7), e2e (2). **RC-015 er dermed ferdig som avtalt** (koter ved porter, planskilt, 3D-oversikt, kjøretøykontroll med egne mål) – uten regelverkskontroll.
+
 - **3D-oversikt (RC-015 trinn 2):** skrivebeskyttet, skinner (skjematisk sporvidde) og klikk-for-info, `rendering/scene3d.ts` (punktrekker med kote og retning), `rendering/three-scene.ts` (lazy), `View3D.vue`. Sporbygning (sporbunn, sviller, skinner), overdrevet høyde og «ikke vurdert mot regelverk» står i dialogen. Vekseldeler (tunger, hjerte, ledeskinner, stillverk, stagstenger, vekselsviller) er illustrative (`rendering/turnout-parts.ts`, generiske proporsjoner, ikke produktgeometri). Tester: enhet `scene3d.test.ts` (3) + `turnout-parts.test.ts` (8), e2e (2, inkl. ekte museklikk). Ikke testet visuelt mot andre nettlesere enn Chromium.
 
 - **Høyder (RC-015 trinn 1) og planskilt:** kote per port (delt via koblinger), stigning, lengdeprofil langs sporkjede, kote-konflikter, automatisk planskilt ut fra kote og en fri høyde du selv setter i prosjektinnstillingene. `geometry-ts/elevation.ts`, `ElevationFields.vue`, `ProfileChart.vue`. Tester: enhet (4+4+2), e2e (3).
@@ -86,5 +88,5 @@ Kjørt fra en ren `git clone` (`npm ci`): `npm run typecheck`, `npm run lint`, `
 
 - Sporveksler venter på KO-tegninger (se `docs/henvendelse-bane-nor.md`). Tangenttoleranse for koblinger er en foreløpig testverdi.
 - Speilede sirkler/polylinjer (negativ ekstrusjon) i DXF-bakgrunn støttes ikke; bare buer.
-- Ikke implementert: verifiserte mål for kryss/kryssveksel, høyder, 3D/profil/kjøretøykontroll (RC-015).
+- Ikke implementert: verifiserte mål for kryss/kryssveksel og regelverkskontroll (RC-014). Se `docs/testsjekkliste.md` for det som må testes med egne filer/CAD-program, og `docs/distribusjon.md` for drift.
 - Bare side 1 av PDF; ingen georeferering.

@@ -65,6 +65,7 @@ import {
   portClusters,
   resolveElevations,
   turnoutSegmentElevations,
+  vehicleCheck,
   type SegmentElevation,
 } from '@railcad/geometry-ts';
 import { cachedCrossingLayout } from '../rendering/crossings';
@@ -228,7 +229,8 @@ export const useProjectStore = defineStore('project', () => {
     engine.findCoincidentFreePorts(portPoses.value, connections.value),
   );
   /** Steder der akser fra ulike objekter krysser, berører eller overlapper (ikke vurdert mot regelverk). */
-  const intersections = computed(() => {
+  /** Alle sporakser (spor, veksler, kryss) som segmenter – grunnlag for kryssings- og kjøretøykontroll. */
+  const axisItems = computed(() => {
     const items: IntersectionItem[] = [];
     for (const o of objects.value) {
       if (isTrack(o)) items.push({ id: o.id, segments: [o.geometry] });
@@ -238,7 +240,20 @@ export const useProjectStore = defineStore('project', () => {
       } else if (isCrossing(o))
         items.push({ id: o.id, segments: cachedCrossingLayout(o).segments });
     }
-    return engine.findIntersections(items);
+    return items;
+  });
+  const intersections = computed(() => engine.findIntersections(axisItems.value));
+  /** Kjøretøykontroll med brukerens egne mål (null uten kjøretøy). Beregnes først når den leses. */
+  const vehicleResult = computed(() => {
+    const v = designParameters.value.vehicle;
+    return v
+      ? vehicleCheck(axisItems.value, {
+          lengthM: v.lengthM,
+          bogieCentreM: v.bogieCentreM,
+          widthM: v.widthM,
+          marginM: v.marginM,
+        })
+      : null;
   });
   /** Effektive koter per port (tilkoblede porter deler kote) og konflikter der koblede porter har ulik kote. */
   const elevations = computed(() => resolveElevations(portElevations.value, connections.value));
@@ -749,6 +764,7 @@ export const useProjectStore = defineStore('project', () => {
     connectionResults,
     connectionSuggestions,
     intersections,
+    vehicleResult,
     crossingIssues,
     openCrossingCount,
     crossingAcks,

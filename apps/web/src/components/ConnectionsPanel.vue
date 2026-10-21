@@ -211,10 +211,75 @@ function showCrossing(x: Issue) {
       </button>
     </div>
     <p class="muted" style="margin-top: 6px; font-size: 11px">
-      Spor kan ikke krysse hverandre i samme plan uten sporkryss eller kryssveksel (finnes ikke i
-      biblioteket ennå), og en T-forbindelse krever sporveksel. «Planskilt» bekrefter at du bevisst
-      har tegnet en kryssing i ulik høyde – høyder finnes ikke i modellen ennå. Ikke vurdert mot
-      regelverk.
+      Spor kan ikke krysse hverandre i samme plan uten sporkryss eller kryssveksel, og en
+      T-forbindelse krever sporveksel. «Planskilt» bekrefter at du bevisst har tegnet en kryssing i
+      ulik høyde (eller settes automatisk ut fra kote og fri høyde i Prosjektinnstillinger). Ikke
+      vurdert mot regelverk.
     </p>
+
+    <h2 style="margin-top: 14px" data-testid="vehicle-heading">
+      Kjøretøykontroll
+      <span class="badge" style="color: var(--warn)">ikke vurdert mot regelverk</span>
+    </h2>
+    <p v-if="!project.vehicleResult" class="muted" data-testid="vehicle-none">
+      Ingen kjøretøy er satt. Oppgi lengde, boggiavstand, bredde og sideklaring (dine egne mål) i
+      Fil → Prosjektinnstillinger.
+    </p>
+    <template v-else>
+      <p class="muted" style="font-size: 11px" data-testid="vehicle-summary">
+        {{ project.designParameters.vehicle?.name }}: L
+        {{ fmt(project.designParameters.vehicle?.lengthM ?? 0, 2) }} m, boggiavstand
+        {{ fmt(project.designParameters.vehicle?.bogieCentreM ?? 0, 2) }} m, bredde
+        {{ fmt(project.designParameters.vehicle?.widthM ?? 0, 2) }} m, klaring
+        {{ fmt(project.designParameters.vehicle?.marginM ?? 0, 2) }} m per side.
+      </p>
+      <p
+        v-for="id in project.vehicleResult.tooTight"
+        :key="id"
+        class="warn-line"
+        :data-testid="`vehicle-toosmall-${id}`"
+      >
+        ⚠ {{ id }}: radien er for liten for dette kjøretøyet (R ≤ halve boggiavstanden).
+      </p>
+      <h3 class="overview-h">Sporavstand mellom nabospor</h3>
+      <p
+        v-if="!project.vehicleResult.spacing.length"
+        class="muted"
+        data-testid="vehicle-no-spacing"
+      >
+        Ingen nabospor funnet (1–15 m fra hverandre).
+      </p>
+      <div
+        v-for="(s, i) in project.vehicleResult.spacing"
+        :key="`${s.a}|${s.b}`"
+        :class="['conn-row', { acked: s.status === 'ok' }]"
+        :data-testid="`vehicle-spacing-${i}`"
+        :data-status="s.status"
+      >
+        <button class="who" @click="project.select([s.a, s.b])">
+          {{ s.a }} ↔ {{ s.b }}: {{ fmt(s.distanceM, 2) }} m (kreves {{ fmt(s.requiredM, 2) }} m) –
+          {{ s.status === 'ok' ? 'tilstrekkelig etter dine mål' : 'for liten' }}
+        </button>
+      </div>
+      <h3 class="overview-h">Utsving i kurver</h3>
+      <p v-if="!project.vehicleResult.curves.length" class="muted">Ingen sirkelkurver.</p>
+      <div
+        v-for="(c, i) in project.vehicleResult.curves"
+        :key="`${c.id}-${c.radiusM}`"
+        class="conn-row"
+        :data-testid="`vehicle-curve-${i}`"
+      >
+        <button class="who" @click="project.select([c.id])">
+          {{ c.id }}: R {{ fmt(c.radiusM, 1) }} m – utsving innover
+          {{ fmt(c.innerM * 1000, 0) }} mm, utover {{ fmt(c.outerM * 1000, 0) }} mm
+        </button>
+      </div>
+      <p class="muted" style="margin-top: 6px; font-size: 11px">
+        Beregnet med dine mål: boggisentrene på aksen, utsving δi = R − √(R² − (B/2)²) innover og δo
+        = √((B/2+O)² + R² − (B/2)²) − R utover. Nødvendig senteravstand = bredde + 2 × klaring +
+        utsving for begge spor ved nærmeste punkt. Ingen kantsteg, overhøyde, vertikalkurver eller
+        regelverkskrav er vurdert – dette er <b>ikke</b> en godkjent frihøydekontroll.
+      </p>
+    </template>
   </section>
 </template>

@@ -2040,3 +2040,62 @@ test('3D-oversikt: klikk på en skinne gir informasjon om objektet (og kote)', a
   expect(hit).toBe(true);
   expect(errors).toEqual([]);
 });
+
+// ---------- Kjøretøykontroll ----------
+
+async function setVehicle(
+  page: import('@playwright/test').Page,
+  v = { length: '20', bogie: '14', width: '3', margin: '0,2' },
+) {
+  await menu(page, 'file', 'menu-settings');
+  await page.getByTestId('vehicle-name').fill('Mitt kjøretøy');
+  await page.getByTestId('vehicle-length').fill(v.length);
+  await page.getByTestId('vehicle-bogie').fill(v.bogie);
+  await page.getByTestId('vehicle-width').fill(v.width);
+  await page.getByTestId('vehicle-margin').fill(v.margin);
+  await page.getByTestId('settings-ok').click();
+}
+
+test('kjøretøykontroll: uten kjøretøy vises veiledning; med egne mål vurderes sporavstand og kurver', async ({
+  page,
+}) => {
+  const errors = await openApp(page);
+  await createLineNumeric(page, { y: '0', length: '50' });
+  await createLineNumeric(page, { y: '3', length: '50' }); // for tett for 3 m bredde + 0,4 klaring
+  await createLineNumeric(page, { y: '9', length: '50' });
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('vehicle-none')).toBeVisible();
+
+  await setVehicle(page);
+  await expect(page.getByTestId('vehicle-summary')).toContainText('Mitt kjøretøy');
+  await expect(page.getByTestId('vehicle-heading')).toContainText('ikke vurdert mot regelverk');
+  await expect(page.getByTestId('vehicle-spacing-0')).toHaveAttribute('data-status', 'tight');
+  await expect(page.getByTestId('vehicle-spacing-0')).toContainText('3,00 m (kreves 3,40 m)');
+  await expect(page.getByTestId('vehicle-spacing-1')).toHaveAttribute('data-status', 'ok');
+
+  // Kurve: utsving i mm vises.
+  await selectTool(page, 'arc');
+  const f = page.getByTestId('options-arc');
+  await f.getByTestId('new-x').fill('100');
+  await f.getByTestId('new-y').fill('0');
+  await f.getByTestId('new-heading').fill('0');
+  await f.getByTestId('new-radius').fill('300');
+  await f.getByTestId('new-sweep').fill('10');
+  await page.getByTestId('create-arc').click();
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('vehicle-curve-0')).toContainText('R 300,0 m');
+  await expect(page.getByTestId('vehicle-curve-0')).toContainText('innover 82 mm'); // 49/(2·300)
+  expect(errors).toEqual([]);
+});
+
+test('kjøretøykontroll: for liten radius for boggiavstanden gir advarsel', async ({ page }) => {
+  await openApp(page);
+  await selectTool(page, 'arc');
+  const f = page.getByTestId('options-arc');
+  await f.getByTestId('new-radius').fill('6');
+  await f.getByTestId('new-sweep').fill('30');
+  await page.getByTestId('create-arc').click();
+  await setVehicle(page);
+  await openTab(page, 'connections');
+  await expect(page.getByTestId('vehicle-toosmall-track-001')).toBeVisible();
+});

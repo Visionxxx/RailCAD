@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:firefox": "E2E_FIREFOX=1 playwright test --project=firefox",
     "lint": "eslint .",
     "format": "prettier --write .",
     "samples:dxf": "tsx scripts/generate-dxf-samples.ts",

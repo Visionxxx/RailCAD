@@ -1199,3 +1199,9 @@ button {
   stroke: var(--accent);
   stroke-width: 2.5;
 }
+
+.warn-line {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--warn);
+}

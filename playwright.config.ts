@@ -11,6 +11,16 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1400, height: 850 } },
     },
+    // Firefox er valgfritt (E2E_FIREFOX=1, krever `npx playwright install firefox`): 3D- og
+    // ytelsestestene kan nå tidsgrensene når mange arbeidere deler én maskin.
+    ...(process.env.E2E_FIREFOX
+      ? [
+          {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'], viewport: { width: 1400, height: 850 } },
+          },
+        ]
+      : []),
   ],
   webServer: {
     command: 'npx vite --port 5199 --strictPort',
