@@ -162,7 +162,9 @@ onBeforeUnmount(stop);
       <p class="muted" style="font-size: 12px" data-testid="v3-stats">
         {{ stats.lines }} akser, {{ stats.unknown }} med ukjent kote. Dra = roter · høyreknapp =
         flytt · hjul = zoom · klikk på skinne eller sporbunn = informasjon. Sporbygningen er
-        skjematisk (sporvidde 1,435 m, sviller hver 0,6 m).
+        skjematisk (sporvidde 1,435 m, sviller hver 0,6 m). Vekseldeler (tunger, hjerte,
+        ledeskinner, stillverk, stagstenger og vekselsviller) er <b>illustrative</b>: generiske
+        proporsjoner utledet av aksene, ikke produktgeometri.
       </p>
       <div class="actions">
         <button class="btn secondary" data-testid="v3-close" @click="ui.view3dOpen = false">
