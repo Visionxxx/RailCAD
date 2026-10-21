@@ -40,5 +40,24 @@
     "vite": "^8.3.4",
     "vitest": "^5.0.5",
     "vue-tsc": "^3.3.13"
-  }
+  },
+  "license": "MIT",
+  "author": "Visionxxx",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Visionxxx/RailCAD.git"
+  },
+  "homepage": "https://github.com/Visionxxx/RailCAD#readme",
+  "bugs": {
+    "url": "https://github.com/Visionxxx/RailCAD/issues"
+  },
+  "keywords": [
+    "railway",
+    "cad",
+    "track",
+    "turnout",
+    "vue",
+    "typescript",
+    "dxf"
+  ]
 }

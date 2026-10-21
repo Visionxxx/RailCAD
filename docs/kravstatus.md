@@ -1,6 +1,6 @@
 # Kravstatus – MVP (P0)
 
-Kontrollert mot `RailCAD_konsept_og_AI_spesifikasjon.md`. Enhetstester: `packages/*/tests`, `apps/web/tests`. E2E: `tests/e2e/railcad.spec.ts`.
+Kontrollert mot [`docs/spesifikasjon/RailCAD_konsept_og_AI_spesifikasjon.md`](spesifikasjon/RailCAD_konsept_og_AI_spesifikasjon.md). Enhetstester: `packages/*/tests`, `apps/web/tests`. E2E: `tests/e2e/railcad.spec.ts`.
 
 ## Funksjonskrav (kap. 6)
 

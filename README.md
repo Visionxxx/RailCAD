@@ -1,8 +1,55 @@
 # RailCAD
 
-Parametrisk 2D-CAD for jernbanespor, kjørbart lokalt i nettleseren uten server. Dette er **MVP (P0)** i henhold til `RailCAD_konsept_og_AI_spesifikasjon.md`.
+[![CI](https://github.com/Visionxxx/RailCAD/actions/workflows/ci.yml/badge.svg)](https://github.com/Visionxxx/RailCAD/actions/workflows/ci.yml)
+[![Lisens: MIT](https://img.shields.io/badge/lisens-MIT-blue.svg)](LICENSE)
+![Status: tidlig versjon (0.1)](https://img.shields.io/badge/status-tidlig%20versjon%200.1-orange)
 
-> **Viktig:** RailCAD er et skisse- og geometriverktøy. Ingenting i programmet er regelverkskontrollert, og eksempelprosjektet er illustrativt. Se [Kjente begrensninger](#kjente-begrensninger).
+**Parametrisk 2D-CAD for jernbanespor som kjører lokalt i nettleseren – uten server, uten innlogging.** Tegn spor (rette og sirkelkurver), koble dem topologisk, sett inn sporveksler, kryss og kryssveksler, legg inn høyder, mål, importer kart som bakgrunn, se anlegget i 3D og eksporter til DXF.
+
+> **English:** RailCAD is a browser-based parametric 2D CAD sketching tool for railway track layouts (tracks, turnouts, crossings, elevations, DXF export, 3D overview). It runs entirely client-side (Vue 3 + TypeScript). It is an early sketching tool: **nothing is checked against regulations, and turnout data is only partly verified** – see the disclaimer below. UI and docs are in Norwegian (bokmål).
+
+![Sporfelt i 2D](docs/img/plan-2d.png)
+
+> **Viktig – les dette først:** RailCAD er et **skisse- og geometriverktøy**, ikke et prosjekteringsverktøy. Ingenting er kontrollert mot regelverk (Bane NOR/TRV m.fl.), sporveksler er bare **delvis verifisert**, og alt du selv definerer er **«ikke verifisert»**. Ikke bruk resultatene som underlag for bygging eller godkjenning uten uavhengig faglig kontroll. Se [NOTICE.md](NOTICE.md).
+
+## Om prosjektet
+
+RailCAD startet som en MVP bygget etter en [konsept- og kravspesifikasjon](docs/spesifikasjon/RailCAD_konsept_og_AI_spesifikasjon.md) og er utviklet i små, testede steg. Geometrien regnes av en ren TypeScript-motor bak et stabilt grensesnitt (`GeometryEngine`), og prosjekter lagres som lesbar JSON ([filformat](docs/filformat.md)). Alt som ikke er verifisert merkes som uverifisert – i grensesnittet, i DXF-filer og i dokumentasjonen.
+
+| ![Vekseleditor](docs/img/vekseleditor.png) | ![3D-oversikt](docs/img/oversikt-3d.png)     |
+| ------------------------------------------ | -------------------------------------------- |
+| Vekseleditor med live forhåndsvisning      | 3D-oversikt med sporbunn, sviller og skinner |
+
+## Status
+
+| Område                                                                                            | Status                                                              |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Tegne/redigere spor (rett, kurve, parallell), snapping, mål, angre/gjør om, lag, kopiér/lim inn   | Ferdig og testet                                                    |
+| Topologi (koblinger, toleransekontroll), kryssende spor-advarsel                                  | Ferdig (tangenttoleranse er en **foreløpig testverdi**)             |
+| Sporveksler (3 TRV-typer), sporkryss, kryssveksel, sovitet sporkryss                              | Fungerer; veksler **delvis verifisert**, resten **ikke verifisert** |
+| Vekseleditor (egne typer, tresporsveksel, hovedmål A–F), forhåndsinnstillinger, delbart bibliotek | Fungerer; alt brukerdefinert                                        |
+| Høyder (kote per port), lengdeprofil, automatisk planskilt                                        | Fungerer                                                            |
+| Kjøretøykontroll (utsving, sporavstand) med egne mål                                              | Fungerer; **ikke** regelverkskontroll                               |
+| DXF-eksport (R12/R2007), bakgrunn (DXF/PDF/PNG/JPEG)                                              | Fungerer; **ikke testet i AutoCAD/andre CAD-program**               |
+| 3D-oversikt (skrivebeskyttet, klikk for info)                                                     | Fungerer; vekseldeler er **illustrative**                           |
+
+Tester: 240 enhetstester og 77 e2e-tester (Chromium; Firefox valgfritt). Detaljert kravstatus: [docs/kravstatus.md](docs/kravstatus.md).
+
+## Hva som mangler
+
+- **Regelverkskontroll (RC-014):** ingen kontroll mot Bane NOR/TRV eller andre krav. Programmet viser alltid «ikke vurdert».
+- **Verifiserte vekselmål:** biblioteket har 3 typer, avledet fra TRV-hovedmål (ikke KO-tegninger). Ingen åpne norske mål for kryss/kryssveksler finnes i systemet. Ekte vekselmekanikk (tunger, hjerte, ledeskinner) i 3D er illustrasjon med generiske mål. Se [henvendelsene](docs/henvendelse-bane-nor.md) om data.
+- **Testing utenfor utviklingsmiljøet:** DXF er bare verifisert med ezdxf; Safari/WebKit er ikke testet; ytelse med svært store anlegg er ikke målt utover 5 000 spor. Se [testsjekkliste](docs/testsjekkliste.md).
+- **Ikke i omfang ennå:** georeferering/koordinatsystemer (kun lokalt XY), klotoider, vertikalkurver, redigerbar 3D, flere sider fra PDF, parametriske sammenhenger mellom spor (kopier er uavhengige).
+- Flere kjente begrensninger: [se nedenfor](#kjente-begrensninger).
+
+## Bidra
+
+Bidrag og tilbakemeldinger er velkomne – særlig **kontrollerte vekselmål med kilde**, feilrapporter med eksempelfiler og testing i andre nettlesere/CAD-program. Se [CONTRIBUTING.md](CONTRIBUTING.md). Sikkerhetsfunn: [SECURITY.md](SECURITY.md). Drift og distribusjon: [docs/distribusjon.md](docs/distribusjon.md).
+
+## Lisens
+
+[MIT](LICENSE) for koden. Data og kilder (bl.a. Bane NOR TRV) har egne rettigheter – se [NOTICE.md](NOTICE.md).
 
 ## Installasjon og oppstart
 
