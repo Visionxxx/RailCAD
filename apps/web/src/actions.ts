@@ -1,0 +1,228 @@
+import demo from '@fixtures/demo-verksted.json';
+import demoSporfelt from '@fixtures/demo-sporfelt.json';
+import { exportDxf, type DxfVersion } from '@railcad/dxf';
+import { geometryEngine } from './engine';
+import { importBackgroundFile, pickBackgroundFile } from './io/background';
+import { useViewStore } from './stores/view';
+import { backgroundWorldBounds } from './rendering/background';
+import {
+  downloadProject,
+  downloadText,
+  dxfFileNameFor,
+  fileNameFor,
+  pickProjectFile,
+  readProjectFile,
+  type OpenResult,
+} from './io/files';
+import { loadProject, mergeLibrary, parseLibrary, serializeLibrary } from '@railcad/domain';
+import { useProjectStore } from './stores/project';
+import { useUiStore } from './stores/ui';
+
+/** Filhandlinger delt mellom meny og hurtigtaster. */
+export function useActions() {
+  const project = useProjectStore();
+  const ui = useUiStore();
+  const viewStore = useViewStore();
+
+  /** Utfører `action` – etter bekreftelse hvis det finnes ulagrede endringer. */
+  function guardDirty(action: () => void) {
+    if (!project.dirty) return action();
+    ui.showDialog({
+      title: 'Ulagrede endringer',
+      lines: ['Prosjektet har ulagrede endringer som går tapt hvis du fortsetter.'],
+      confirmLabel: 'Forkast og fortsett',
+      onConfirm: action,
+    });
+  }
+
+  function showOpenErrors(result: Extract<OpenResult, { ok: false }>) {
+    const shown = result.errors.slice(0, 12);
+    if (result.errors.length > shown.length)
+      shown.push(`… og ${result.errors.length - shown.length} til`);
+    ui.showDialog({ title: 'Kunne ikke åpne prosjektet', lines: shown });
+  }
+
+  function newProject() {
+    guardDirty(() => {
+      project.reset();
+      ui.notify('Nytt prosjekt opprettet.');
+    });
+  }
+
+  function openFile() {
+    guardDirty(async () => {
+      const file = await pickProjectFile();
+      if (!file) return;
+      const result = await readProjectFile(file);
+      if (!result.ok) return showOpenErrors(result);
+      project.load(result.project);
+      ui.notify(`Åpnet «${result.project.project.name}».`);
+    });
+  }
+
+  function openDemo() {
+    openFixture(demo);
+  }
+  function openSporfeltDemo() {
+    openFixture(demoSporfelt);
+  }
+  function openFixture(data: unknown) {
+    guardDirty(() => {
+      const result = loadProject(data);
+      if (!result.ok) return showOpenErrors(result);
+      project.load(result.project);
+    });
+  }
+
+  function save() {
+    const name = downloadProject(project.toProject());
+    project.markSaved();
+    ui.notify(`Lagret som ${name}.`);
+  }
+
+  /** Eksporterer sporakser, sporveksler og mål til DXF (lag: sporakse, sporveksel, mål, tekst). */
+  function exportDxfFile(version: DxfVersion) {
+    const p = project.toProject();
+    const text = exportDxf(p, geometryEngine, version);
+    const name = dxfFileNameFor(p.project.name, version);
+    downloadText(name, text, 'application/dxf');
+    ui.notify(`Eksporterte ${name} (DXF ${version}, meter).`);
+  }
+
+  /** Lagrer prosjektets egne veksltyper og krysningsforhåndsinnstillinger som delbar bibliotekfil. */
+  function exportLibrary() {
+    if (!project.customTurnouts.length && !project.crossingPresets.length) {
+      ui.notify('Prosjektet har ingen egne veksltyper eller forhåndsinnstillinger å eksportere.');
+      return;
+    }
+    const name = `${fileNameFor(project.meta.name).replace(/\.railcad\.json$/, '')}.bibliotek.json`;
+    downloadText(
+      name,
+      serializeLibrary(project.customTurnouts, project.crossingPresets),
+      'application/json',
+    );
+    ui.notify(`Eksporterte ${name}.`);
+  }
+  /** Leser en bibliotekfil og legger oppføringene til i prosjektet (ett angretrinn). */
+  async function importLibrary() {
+    const file = await pickProjectFile();
+    if (!file) return;
+    const parsed = parseLibrary(await file.text());
+    if (!parsed.ok) {
+      ui.showDialog({
+        title: 'Kunne ikke importere bibliotek',
+        lines: parsed.errors.slice(0, 12),
+      });
+      return;
+    }
+    const merged = mergeLibrary(project.customTurnouts, project.crossingPresets, parsed.library);
+    if (!merged.added) {
+      ui.notify(`Ingen nye oppføringer (${merged.skipped} fantes allerede).`);
+      return;
+    }
+    project.applyLibrary(merged.turnouts, merged.crossingPresets);
+    const lines = [
+      `${merged.added} oppføring${merged.added > 1 ? 'er' : ''} lagt til, ${merged.skipped} fantes allerede.`,
+      ...merged.renamed.map(
+        (r) => `«${r.from}» fantes med annet innhold – importert som «${r.to}».`,
+      ),
+      'Importerte veksltyper er brukerdefinerte og ikke verifisert, uansett hvem som har laget dem.',
+    ];
+    ui.showDialog({ title: 'Bibliotek importert', lines });
+  }
+
+  /** Importerer DXF, PDF eller bilde som referansebakgrunn (valgfri plassering/skala settes etterpå). */
+  async function importBackground() {
+    const file = await pickBackgroundFile();
+    if (!file) return;
+    importBackgroundFrom(file);
+  }
+  async function importBackgroundFrom(file: File) {
+    if (file.size > 2_000_000 || file.name.toLowerCase().endsWith('.pdf'))
+      ui.notify(`Leser ${file.name} …`);
+    const result = await importBackgroundFile(file, {
+      existingIds: project.backgrounds.map((b) => b.id),
+      viewCenter: [viewStore.view.cx, viewStore.view.cy],
+      pickPage: (numPages, name) =>
+        ui.promptNumber({
+          title: `Velg PDF-side: ${name}`,
+          label: `Side (1–${numPages})`,
+          value: 1,
+          min: 1,
+          max: numPages,
+          integer: true,
+        }),
+    });
+    if (!result.ok) {
+      if (result.cancelled) return; // brukeren avbrøt sidevalget
+      ui.showDialog({ title: 'Kunne ikke importere bakgrunn', lines: [result.error] });
+      return;
+    }
+    const bg = result.background;
+    project.addBackground(bg);
+    viewStore.activeBackgroundId = bg.id;
+    ui.showTab('backgrounds');
+    viewStore.fitToBounds(backgroundWorldBounds(bg));
+    if (result.notes.length) {
+      ui.showDialog({ title: `Bakgrunn importert: ${bg.name}`, lines: result.notes });
+    } else {
+      ui.notify(`Importerte bakgrunn «${bg.name}».`);
+    }
+  }
+
+  /** Kopierer valgte objekter til programmets utklippstavle. */
+  function copy() {
+    const n = project.copySelection();
+    ui.notify(n ? `Kopierte ${n} objekt${n > 1 ? 'er' : ''}.` : 'Velg objekter å kopiere først.');
+  }
+  /** Limer inn der markøren er (ellers forskjøvet 5 m). Nye ID-er; koblinger mellom de limte bevares. */
+  function paste() {
+    if (!project.clipboard) {
+      ui.notify('Utklippstavlen er tom. Kopier objekter med Ctrl+C først.');
+      return;
+    }
+    const at = viewStore.cursor ?? undefined;
+    const ids = project.pasteClipboard(at);
+    if (ids.length) ui.showTab('properties');
+  }
+  function duplicate() {
+    if (!project.selection.length) {
+      ui.notify('Velg objekter å duplisere først.');
+      return;
+    }
+    project.duplicateSelection();
+  }
+
+  /** Hurtigtaster og tips (Hjelp-menyen, «?»). */
+  function showHelp() {
+    ui.showDialog({
+      title: 'Hurtigtaster og tips',
+      lines: [
+        'Verktøy: V marker · H panorer · L rett spor · C sirkelkurve · P parallelt spor · T sporveksel · X sporkryss/kryssveksel · S sovitet sporkryss · K koble · R roter · M mål lengde · D mål avstand · E slett.',
+        'Mus: hjul = zoom rundt markøren · midtknapp eller Mellomrom + dra = panorer · klikk = velg · Skift + klikk = flervalg · dra et objekt = flytt · dra et endepunkt = rediger.',
+        'Valgboks: dra på tom flate. Mot høyre = objekter helt innenfor, mot venstre = alt boksen berører. Skift legger til i valget.',
+        'Tastatur: Esc avbryter · Del sletter · Ctrl+C/V kopier og lim inn · Ctrl+D dupliser · Ctrl+Z angre · Ctrl+Y gjør om · Ctrl+S lagre · Ctrl+O åpne · F tilpass visning · ? denne hjelpen.',
+        'Rett spor: hold Skift for å låse retningen til hele 15°. Alle tallfelt tar komma eller punktum; pil opp/ned justerer (Skift ×10, Alt ×0,1).',
+        'Snapping slås av/på i bunnlinjen. Tegneskjemaene øverst i tegneflaten lar deg angi koordinater, retning og lengde numerisk.',
+        'Husk: planene er skisser – ikke regelverkskontrollert. Sporveksler er delvis verifisert (akser avledet fra TRV-hovedmål).',
+      ],
+    });
+  }
+
+  return {
+    copy,
+    paste,
+    duplicate,
+    showHelp,
+    importBackground,
+    importBackgroundFrom,
+    newProject,
+    openFile,
+    openDemo,
+    openSporfeltDemo,
+    save,
+    exportDxfFile,
+    exportLibrary,
+    importLibrary,
+  };
+}

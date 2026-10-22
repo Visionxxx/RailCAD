@@ -1,0 +1,18 @@
+name: Feil
+description: Noe fungerer ikke som forventet
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Hva skjedde, og hva forventet du?
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Slik gjenskaper jeg det
+      description: Gjerne vedlegg en prosjektfil (.railcad.json) eller skjermbilde.
+  - type: input
+    id: env
+    attributes:
+      label: Nettleser og operativsystem

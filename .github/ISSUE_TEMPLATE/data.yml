@@ -1,0 +1,12 @@
+name: Vekseldata / kilde
+description: Forslag til verifiserte mål (veksler, kryss) – med kilde
+labels: [data]
+body:
+  - type: markdown
+    attributes:
+      value: Oppgi alltid kilden (dokument, revisjon/dato, tegningsnummer). Ikke send inn data du ikke har lov til å dele.
+  - type: textarea
+    id: data
+    attributes:
+      label: Hva slags data, og hva er kilden?
+    validations: { required: true }

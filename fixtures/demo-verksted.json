@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "0.1.0",
+  "project": {
+    "id": "demo-verksted-01",
+    "name": "Verkstedspor – demoprosjekt",
+    "description": "Illustrativt anlegg med tre parallelle spor à 140 m og en sirkelkurve. Ikke en dokumentert eller kontrollert situasjonsplan, og ikke regelverkskontrollert.",
+    "units": "m",
+    "coordinateSystem": {
+      "type": "local_xy"
+    }
+  },
+  "objects": [
+    {
+      "id": "track-001",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [0, 0],
+        "headingRad": 0,
+        "lengthM": 140
+      }
+    },
+    {
+      "id": "track-002",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [0, 5],
+        "headingRad": 0,
+        "lengthM": 140
+      }
+    },
+    {
+      "id": "track-003",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "line",
+        "start": [0, 10],
+        "headingRad": 0,
+        "lengthM": 140
+      }
+    },
+    {
+      "id": "track-004",
+      "type": "track_segment",
+      "geometry": {
+        "kind": "arc",
+        "start": [140, 0],
+        "headingRad": 0,
+        "signedRadiusM": 300,
+        "sweepRad": 0.15
+      }
+    },
+    {
+      "id": "dim-001",
+      "type": "dimension",
+      "dimension": {
+        "kind": "length",
+        "targetId": "track-001",
+        "offsetM": -3
+      }
+    },
+    {
+      "id": "dim-002",
+      "type": "dimension",
+      "dimension": {
+        "kind": "distance",
+        "a": [0, 0],
+        "b": [0, 10],
+        "offsetM": -4
+      }
+    }
+  ],
+  "connections": []
+}
